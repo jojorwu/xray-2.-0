@@ -9,8 +9,7 @@
 #include <direct.h>
 #include <fcntl.h>
 #include <sys\stat.h>
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#include <experimental\filesystem>
+#include <filesystem>
 #pragma warning(default:4995)
 
 #include "FS_internal.h"
@@ -27,7 +26,8 @@ const u32 BIG_FILE_READER_WINDOW_SIZE = 1024 * 1024;
 # include <malloc.h>
 # pragma warning(pop)
 
-CLocatorAPI* xr_FS = NULL;
+CLocatorAPI* xr_FS = nullptr;
+static xrCriticalSection g_open_files_lock;
 
 #ifdef _EDITOR
 # define FSLTX "fs.ltx"
@@ -35,7 +35,7 @@ CLocatorAPI* xr_FS = NULL;
 # define FSLTX "fsgame.ltx"
 #endif
 
-std::experimental::filesystem::path fsRoot;
+std::filesystem::path fsRoot;
 
 struct _open_file
 {
@@ -89,7 +89,7 @@ struct eq_fname_free
 
 	bool operator ()(_open_file& itm)
 	{
-		return (_val == itm._fn && itm._reader == NULL);
+		return (_val == itm._fn && itm._reader == nullptr);
 	}
 };
 
@@ -100,7 +100,7 @@ struct eq_fname_check
 
 	bool operator ()(_open_file& itm)
 	{
-		return (_val == itm._fn && itm._reader != NULL);
+		return (_val == itm._fn && itm._reader != nullptr);
 	}
 };
 
@@ -140,8 +140,7 @@ void setup_reader(IReader* _r, _open_file& _of)
 template <typename T>
 void _register_open_file(T* _r, LPCSTR _fname)
 {
-	xrCriticalSection _lock;
-	_lock.Enter();
+	xrCriticalSectionGuard guard(g_open_files_lock);
 
 	shared_str f = _fname;
 	_check_open_file(f);
@@ -149,21 +148,17 @@ void _register_open_file(T* _r, LPCSTR _fname)
 	_open_file& _of = find_free_item(_fname);
 	setup_reader(_r, _of);
 	_of._used += 1;
-
-	_lock.Leave();
 }
 
 template <typename T>
 void _unregister_open_file(T* _r)
 {
-	xrCriticalSection _lock;
-	_lock.Enter();
+	xrCriticalSectionGuard guard(g_open_files_lock);
 
 	xr_vector<_open_file>::iterator it = std::find_if(g_open_files.begin(), g_open_files.end(), eq_pointer<T>(_r));
 	VERIFY(it != g_open_files.end());
 	_open_file& _of = *it;
-	_of._reader = NULL;
-	_lock.Leave();
+	_of._reader = nullptr;
 }
 
 XRCORE_API void _dump_open_files(int mode)
@@ -177,7 +172,7 @@ XRCORE_API void _dump_open_files(int mode)
 		for (; it != it_e; ++it)
 		{
 			_open_file& _of = *it;
-			if (_of._reader != NULL)
+			if (_of._reader != nullptr)
 			{
 				if (!bShow)
 					Log("----opened files");
@@ -193,7 +188,7 @@ XRCORE_API void _dump_open_files(int mode)
 		for (it = g_open_files.begin(); it != it_e; ++it)
 		{
 			_open_file& _of = *it;
-			if (_of._reader == NULL)
+			if (_of._reader == nullptr)
 				Msg("[%d] fname:%s", _of._used, _of._fn.c_str());
 		}
 	}
@@ -298,12 +293,12 @@ IReader* open_chunk(void* ptr, u32 ID)
 	{
 		res = ReadFile(ptr, &dwType, 4, &read_byte, 0);
 		if (read_byte == 0)
-			return NULL;
+			return nullptr;
 		//. VERIFY(res&&(read_byte==4));
 
 		res = ReadFile(ptr, &dwSize, 4, &read_byte, 0);
 		if (read_byte == 0)
-			return NULL;
+			return nullptr;
 		//. VERIFY(res&&(read_byte==4));
 
 		if ((dwType & (~CFS_CompressMark)) == ID)
@@ -387,12 +382,12 @@ void CLocatorAPI::LoadArchive(archive& A, LPCSTR entrypoint)
 		xr_strcpy(fs_entry_point, sizeof(fs_entry_point), entrypoint);
 
 
-	// DUMMY_STUFF *g_temporary_stuff_subst = NULL;
+	// DUMMY_STUFF *g_temporary_stuff_subst = nullptr;
 	//
 	// if(strstr(A.path.c_str(),".xdb"))
 	// {
 	// g_temporary_stuff_subst = g_temporary_stuff;
-	// g_temporary_stuff = NULL;
+	// g_temporary_stuff = nullptr;
 	// }
 
 	// Read FileSystem
@@ -454,9 +449,9 @@ void CLocatorAPI::archive::open()
 void CLocatorAPI::archive::close()
 {
 	CloseHandle(hSrcMap);
-	hSrcMap = NULL;
+	hSrcMap = nullptr;
 	CloseHandle(hSrcFile);
-	hSrcFile = NULL;
+	hSrcFile = nullptr;
 }
 
 void CLocatorAPI::ProcessArchive(LPCSTR _path)
@@ -478,9 +473,9 @@ void CLocatorAPI::ProcessArchive(LPCSTR _path)
 	// Read header
 	BOOL bProcessArchiveLoading = TRUE;
 
-	// DUMMY_STUFF *g_temporary_stuff_subst = NULL;
+	// DUMMY_STUFF *g_temporary_stuff_subst = nullptr;
 	// g_temporary_stuff_subst = g_temporary_stuff;
-	// g_temporary_stuff = NULL;
+	// g_temporary_stuff = nullptr;
 
 	IReader* hdr = open_chunk(A.hSrcFile, CFS_HeaderChunkID);
 	if (hdr)
@@ -525,7 +520,7 @@ bool CLocatorAPI::load_all_unloaded_archives()
 	for (; it != it_e; ++it)
 	{
 		archive& A = *it;
-		if (A.hSrcFile == NULL)
+		if (A.hSrcFile == nullptr)
 		{
 			LoadArchive(A);
 			res = true;
@@ -584,8 +579,8 @@ bool ignore_name(const char* _name)
 
 bool ignore_path(const char* _path)
 {
-	HANDLE h = CreateFile(_path, 0, 0, NULL, OPEN_EXISTING,
-	                      FILE_ATTRIBUTE_READONLY | FILE_FLAG_NO_BUFFERING, NULL);
+	HANDLE h = CreateFile(_path, 0, 0, nullptr, OPEN_EXISTING,
+	                      FILE_ATTRIBUTE_READONLY | FILE_FLAG_NO_BUFFERING, nullptr);
 
 	if (h != INVALID_HANDLE_VALUE)
 	{
@@ -666,7 +661,6 @@ void* FileDownload(LPCSTR file_name, const int& file_handle, u32& file_size);
 
 static void searchForFsltx(const char* fs_name, string_path& fsltxPath)
 {
-	//#TODO: Update code, when std::filesystem is out (not much work, standards don't change dramatically)
 	const char* realFsltxName = nullptr;
 	if (fs_name)
 	{
@@ -678,18 +672,18 @@ static void searchForFsltx(const char* fs_name, string_path& fsltxPath)
 	}
 
 	//try in working dir
-	if (std::experimental::filesystem::exists(realFsltxName))
+	if (std::filesystem::exists(realFsltxName))
 	{
 		xr_strcpy(fsltxPath, realFsltxName);
 		return;
 	}
 
-	auto tryPathFunc = [realFsltxName](std::experimental::filesystem::path possibleLocationFsltx,
+	auto tryPathFunc = [realFsltxName](std::filesystem::path possibleLocationFsltx,
 	                                   string_path& fsltxPath) -> bool
 	{
 		possibleLocationFsltx.append(realFsltxName);
 
-		if (std::experimental::filesystem::exists(possibleLocationFsltx))
+		if (std::filesystem::exists(possibleLocationFsltx))
 		{
 			xr_strcpy(fsltxPath, possibleLocationFsltx.generic_string().c_str());
 			return true;
@@ -704,7 +698,7 @@ static void searchForFsltx(const char* fs_name, string_path& fsltxPath)
 	if (tryPathFunc(Core.ApplicationPath, fsltxPath)) return;
 
 	//parent directory again
-	std::experimental::filesystem::path test_path;
+	std::filesystem::path test_path;
 	test_path.assign(Core.ApplicationPath);
 	test_path.append("../");
 
@@ -720,7 +714,7 @@ IReader* CLocatorAPI::setup_fs_ltx(LPCSTR fs_name)
 	              make_string("Cannot find fsltx file: \"%s\"\nCheck your working directory", fs_name));
 	xr_strlwr(fs_path);
 	fsRoot = fs_path;
-	fsRoot = std::experimental::filesystem::absolute(fsRoot);
+	fsRoot = std::filesystem::absolute(fsRoot);
 	fsRoot = fsRoot.parent_path();
 
 	Msg("using fs-ltx %s", fs_path);
