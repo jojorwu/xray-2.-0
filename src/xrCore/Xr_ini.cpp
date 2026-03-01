@@ -12,8 +12,8 @@
 #include <sstream>
 #include "mezz_stringbuffer.h"
 
-XRCORE_API CInifile const* pSettings = NULL;
-XRCORE_API CInifile const* pSettingsAuth = NULL;
+XRCORE_API CInifile const* pSettings = nullptr;
+XRCORE_API CInifile const* pSettingsAuth = nullptr;
 
 BOOL print_dltx_warnings = FALSE;
 
@@ -562,7 +562,7 @@ void CInifile::LTXLoad (
 			MezzStringBuffer split_dir;
 			MezzStringBuffer split_name;
 
-			_splitpath_s(m_file_name, split_drive, split_drive.GetSize(), split_dir, split_dir.GetSize(), split_name, split_name.GetSize(), NULL, 0);
+			_splitpath_s(m_file_name, split_drive, split_drive.GetSize(), split_dir, split_dir.GetSize(), split_name, split_name.GetSize(), nullptr, 0);
 
 			xr_string FilePath = xr_string(split_drive) + xr_string(split_dir);
 			xr_string FileName = split_name;
@@ -866,14 +866,14 @@ void CInifile::LTXLoad (
 			}
 
 			Item I;
-			I.first = (name[0] ? name : NULL);
+			I.first = (name[0] ? name : nullptr);
 			if (!I.first)
 			{
                 if (print_dltx_warnings)
 				    Msg("~[DLTX] WARNING: Malformed line %s in file %s, can't get key name, skipping, section data might be altered unexpectedly", currentLine.c_str(), currentFileName);
 				continue;
 			}
-			I.second = bIsDelete ? DLTX_DELETE.c_str() : (str2[0] ? str2.GetBuffer() : NULL);
+			I.second = bIsDelete ? DLTX_DELETE.c_str() : (str2[0] ? str2.GetBuffer() : nullptr);
 
 			auto fname = toLowerCaseCopy(trimCopy(getFilename(std::string(currentFileName))));
 			I.filename = fname.c_str();
@@ -1200,7 +1200,7 @@ CInifile::Items CInifile::EvaluateSection(
 			{
 				// If we have a modification, check if it's valid (has a value)
 				if (mod_it != overrideData.end()) {
-					if (mod_it->second == NULL) {
+					if (mod_it->second == nullptr) {
 						mod_it++; // Skip modification with empty value
 						continue;
 					}
@@ -1249,7 +1249,7 @@ CInifile::Items CInifile::EvaluateSection(
 					// Apply all mods for this key (e.g., <item, then >newitem1, then >newitem3)
 					while (mod_it != overrideData.end() && xr_strcmp((*mod_it->first) + 1, active_key) == 0)
 					{
-						if (exists_in_output && mod_it->second != NULL)
+						if (exists_in_output && mod_it->second != nullptr)
 						{
 							ModifyListType op = static_cast<ModifyListType>((*mod_it->first)[0]);
 
@@ -1685,7 +1685,7 @@ u64 CInifile::r_u64(LPCSTR S, LPCSTR L) const
 {
 	LPCSTR C = r_string(S, L);
 #ifndef _EDITOR
-	return _strtoui64(C, NULL, 10);
+	return _strtoui64(C, nullptr, 10);
 #else
     return (u64)_atoi64(C);
 #endif

@@ -65,7 +65,7 @@ static DWORD __stdcall
     // Find the last '\' mark.
     char * pStart = strrchr ( szBuff , '\\' ) ;
     int iMin ;
-    if ( NULL != pStart )
+    if ( nullptr != pStart )
     {
         // Move up one character.
         pStart++ ;
@@ -82,7 +82,7 @@ static DWORD __stdcall
         //lint +e666
         lstrcpyn ( lpBaseName , szBuff , iMin ) ;
     }
-    // Always NULL terminate.
+    // Always null terminate.
     lpBaseName[ iMin ] = '\0' ;
     return ( (DWORD)(iMin - 1) ) ;
 }
@@ -120,7 +120,7 @@ DWORD  __stdcall
         // Find out how many modules there are.  This is a BSU function.
         if ( FALSE == GetLoadedModules ( dwPID    ,
                                          0        ,
-                                         NULL     ,
+                                         nullptr     ,
                                          &dwCount  ) )
         {
             ASSERT ( !"GetLoadedModules failed" ) ;
@@ -168,7 +168,7 @@ DWORD  __stdcall
             HANDLE hFile = CreateFile ( szModName       ,
                                         GENERIC_READ    ,
                                         FILE_SHARE_READ ,
-                                        NULL            ,
+                                        nullptr            ,
                                         OPEN_EXISTING   ,
                                         0               ,
                                         0                ) ;
@@ -178,7 +178,7 @@ DWORD  __stdcall
             if ( FALSE == SymLoadModule ( hProcess               ,
                                           hFile                  ,
                                           szModName              ,
-                                          NULL                   ,
+                                          nullptr                   ,
                                          (DWORD)paMods[ uiCurr ] ,
                                           0                       ) )
             {

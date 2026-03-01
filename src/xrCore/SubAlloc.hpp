@@ -20,7 +20,7 @@ struct BLK_NODE
 {
 	DWORD Stamp;
 	BLK_NODE* next;
-	BOOL avail() const { return (next != NULL); }
+	BOOL avail() const { return (next != nullptr); }
 
 	void link(BLK_NODE* p)
 	{
@@ -105,7 +105,7 @@ BOOL _STDCALL StartSubAllocator(UINT SASize)
 	DWORD t = SASize << 20U;
 	if (SubAllocatorSize == t) return TRUE;
 	StopSubAllocator();
-	if ((HeapStart = new BYTE[t]) == NULL) return FALSE;
+	if ((HeapStart = new BYTE[t]) == nullptr) return FALSE;
 	SubAllocatorSize = t;
 	return TRUE;
 }
@@ -124,7 +124,7 @@ static void GlueFreeBlocks()
 	UINT i, k, sz;
 	MEM_BLK s0, *p, *p0, *p1;
 	if (LoUnit != HiUnit) *LoUnit = 0;
-	for (i = 0, (p0 = &s0)->next = NULL; i < N_INDEXES; i++)
+	for (i = 0, (p0 = &s0)->next = nullptr; i < N_INDEXES; i++)
 		while (BList[i].avail())
 		{
 			p = (MEM_BLK*)BList[i].remove();
@@ -168,7 +168,7 @@ static void* _STDCALL AllocUnitsRare(UINT indx)
 		{
 			GlueCount--;
 			i = U2B(Indx2Units[indx]);
-			return (UnitsStart - pText > i) ? (UnitsStart -= i) : (NULL);
+			return (UnitsStart - pText > i) ? (UnitsStart -= i) : (nullptr);
 		}
 	}
 	while (!BList[i].avail());

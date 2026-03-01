@@ -19,8 +19,8 @@ AUG '98 - Added the Crash Handler functions to assist in crash
 
 OCT '98 - Fixed HookImportedFunctionsByName to no patch addresses
           about 2GB on Win95.  Also changed the function so that
-          the user can pass NULL for the returned orignal function
-          array and NULL for the number of functions hooked.
+          the user can pass nullptr for the returned orignal function
+          array and nullptr for the number of functions hooked.
         - Added the IsNT function to the export list.
 
 FEB '99 - Updated the CrashHandler code to work on Win9x.
@@ -133,8 +133,8 @@ PARAMETERS      :
     hHeap    - The heap to allocate from.
     pdwCount - The total elements in the returned array.
 RETURNS         :
-    NULL  - There was a problem.
-    !NULL - The block of memory holding the HMODULEs.
+    nullptr  - There was a problem.
+    !nullptr - The block of memory holding the HMODULEs.
 ----------------------------------------------------------------------*/
 HMODULE* /**/ __stdcall
 AllocAndFillProcessModuleList(HANDLE hHeap,
@@ -193,14 +193,14 @@ PARAMETERS      :
     paHookArray - The array of function descriptors that list which
                   functions to hook.  At this point, the array does not
                   have to be in szFunc name order.  Also, if a
-                  particular pProc is NULL, then that item will just be
+                  particular pProc is nullptr, then that item will just be
                   skipped.  This makes it much easier for debugging.
     paOrigFuncs - The array of original addresses that were hooked.  If
                   a function was not hooked, then that item will be
-                  NULL.  This parameter can be NULL if the returned
+                  nullptr.  This parameter can be nullptr if the returned
                   information is not needed.
     pdwHooked   - Returns the number of functions hooked out of
-                  paHookArray.  This parameter can be NULL if the
+                  paHookArray.  This parameter can be nullptr if the
                   returned information is not needed.
 RETURNS         :
     FALSE - There was a problem, check GetLastError.
@@ -232,7 +232,7 @@ PARAMETERS      :
                   imported.
     dwOrdinal   - The ordinal to hook.
     pHookFunc   - The function to patch in.
-    ppOrigAddr  - The original address.  This can be NULL if you
+    ppOrigAddr  - The original address.  This can be nullptr if you
                   do not care about getting the orginal address.
 RETURNS         :
     FALSE - There was a problem, check GetLastError.
@@ -254,7 +254,7 @@ portable between NT and Win95/98.
 PARAMETERS      :
     hProcess   - The handle to the process.  In Win95/98 this is
                  ignored.
-    hModule    - The module to look up.  If this is NULL, then the
+    hModule    - The module to look up.  If this is nullptr, then the
                  module returned is the executable.
     lpBaseName - The buffer that recieves the base name.
     nSize      - The size of the buffer.

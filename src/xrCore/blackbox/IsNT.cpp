@@ -24,7 +24,7 @@ BOOL __stdcall IsNT(void)
 
 	OSVERSIONINFO stOSVI;
 
-	FillMemory(&stOSVI, sizeof ( OSVERSIONINFO ), NULL);
+	FillMemory(&stOSVI, sizeof ( OSVERSIONINFO ), nullptr);
 	stOSVI.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 
 	BOOL bRet = GetVersionEx(&stOSVI);

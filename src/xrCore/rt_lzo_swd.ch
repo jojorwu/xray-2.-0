@@ -224,7 +224,7 @@ lzo_swd_t;
 static
 void swd_initdict(lzo_swd_p s, const lzo_bytep dict, lzo_uint dict_len)
 {
-    s->dict = s->dict_end = NULL;
+    s->dict = s->dict_end = nullptr;
     s->dict_len = 0;
 
     if (!dict || dict_len <= 0)
@@ -381,13 +381,13 @@ void swd_exit(lzo_swd_p s)
 #if defined(__LZO_CHECKER)
     /* free in reverse order of allocations */
 #ifdef HEAD2
-    free(s->head2); s->head2 = NULL;
+    free(s->head2); s->head2 = nullptr;
 #endif
-    free(s->llen3); s->llen3 = NULL;
-    free(s->best3); s->best3 = NULL;
-    free(s->succ3); s->succ3 = NULL;
-    free(s->head3); s->head3 = NULL;
-    free(s->b); s->b = NULL;
+    free(s->llen3); s->llen3 = nullptr;
+    free(s->best3); s->best3 = nullptr;
+    free(s->succ3); s->succ3 = nullptr;
+    free(s->head3); s->head3 = nullptr;
+    free(s->b); s->b = nullptr;
 #else
     LZO_UNUSED(s);
 #endif

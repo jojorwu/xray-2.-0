@@ -291,9 +291,9 @@ void CreateLog(BOOL nl)
 		FS.file_rename(logFName, backup_logFName.c_str(), true);
 		//-Alun
 		IWriter* f = FS.w_open(logFName);
-		if (f == NULL)
+		if (f == nullptr)
 		{
-			MessageBox(NULL, "Can't create log file.", "Error", MB_ICONERROR);
+			MessageBox(nullptr, "Can't create log file.", "Error", MB_ICONERROR);
 			abort();
 		}
 		FS.w_close(f);
