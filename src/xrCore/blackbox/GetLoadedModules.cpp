@@ -17,12 +17,12 @@ GetLoadedModules(DWORD dwPID,
                  LPDWORD pdwRealCount)
 {
 	// Do the debug checking.
-	ASSERT(NULL != pdwRealCount) ;
+	ASSERT(nullptr != pdwRealCount) ;
 	ASSERT(FALSE == IsBadWritePtr ( pdwRealCount , sizeof ( UINT ) ));
 #ifdef _DEBUG
     if ( 0 != uiCount )
     {
-        ASSERT ( NULL != paModArray ) ;
+        ASSERT ( nullptr != paModArray ) ;
         ASSERT ( FALSE == IsBadWritePtr ( paModArray                   ,
                                           uiCount *
                                                 sizeof ( HMODULE )   ));
@@ -45,7 +45,7 @@ GetLoadedModules(DWORD dwPID,
 	// Figure out which OS we are on.
 	OSVERSIONINFO stOSVI;
 
-	FillMemory(&stOSVI, sizeof ( OSVERSIONINFO ), NULL);
+	FillMemory(&stOSVI, sizeof ( OSVERSIONINFO ), nullptr);
 	stOSVI.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 
 	BOOL bRet = GetVersionEx(&stOSVI);

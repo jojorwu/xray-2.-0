@@ -49,7 +49,7 @@ struct CImageHlp_Module : public IMAGEHLP_MODULE
 {
     CImageHlp_Module ( )
     {
-        FillMemory ( this , sizeof ( IMAGEHLP_MODULE ), NULL ) ;
+        FillMemory ( this , sizeof ( IMAGEHLP_MODULE ), nullptr ) ;
         SizeOfStruct = sizeof ( IMAGEHLP_MODULE ) ;
     }
 } ;
@@ -59,7 +59,7 @@ struct CImageHlp_Line : public IMAGEHLP_LINE
 {
     CImageHlp_Line ( )
     {
-        FillMemory ( this , sizeof ( IMAGEHLP_LINE ) , NULL ) ;
+        FillMemory ( this , sizeof ( IMAGEHLP_LINE ) , nullptr ) ;
         SizeOfStruct = sizeof ( IMAGEHLP_LINE ) ;
     }
 } ;

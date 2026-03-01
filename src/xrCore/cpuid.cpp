@@ -14,7 +14,7 @@
 * 
 * Entry:
 *
-*   pinfo: pointer to _p_info, NULL is not allowed!
+*   pinfo: pointer to _p_info, nullptr is not allowed!
 *
 * Exit:
 *

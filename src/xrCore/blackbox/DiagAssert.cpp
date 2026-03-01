@@ -177,7 +177,7 @@ BOOL __stdcall RealAssert  ( DWORD  dwOverrideOpts  ,
     // The module name.
     char   szModName[ MAX_PATH + 1 ] ;
     // The decoded message from FormatMessage
-    LPSTR  szFmtMsg = NULL ;
+    LPSTR  szFmtMsg = nullptr ;
     // The options.
     DWORD  dwOpts = dwOverrideOpts ;
     // The last error value.  (Which is preserved across the call).
@@ -203,29 +203,29 @@ BOOL __stdcall RealAssert  ( DWORD  dwOverrideOpts  ,
                                    0                                  ,
                                    (LPSTR)&szFmtMsg                   ,
                                    0                                  ,
-                                   NULL                               ))
+                                   nullptr                               ))
         {
             break ;
         }
     }
 
     // If the message was not translated, just look in the system.
-    if ( NULL == szFmtMsg )
+    if ( nullptr == szFmtMsg )
     {
         FormatMessageA ( FORMAT_MESSAGE_ALLOCATE_BUFFER    |
                            FORMAT_MESSAGE_IGNORE_INSERTS   |
                            FORMAT_MESSAGE_FROM_SYSTEM        ,
-                         NULL                                ,
+                         nullptr                                ,
                          dwLastErr                           ,
                          0                                   ,
                          (LPSTR)&szFmtMsg                    ,
                          0                                   ,
-                         NULL                                 ) ;
+                         nullptr                                 ) ;
     }
 
     // Make sure the message got translated into something.
     LPSTR szRealLastErr ;
-    if ( NULL != szFmtMsg )
+    if ( nullptr != szFmtMsg )
     {
         szRealLastErr = szFmtMsg ;
     }
@@ -235,7 +235,7 @@ BOOL __stdcall RealAssert  ( DWORD  dwOverrideOpts  ,
     }
 
     // Get the module name.
-    if ( 0 == GetModuleFileNameA ( NULL , szModName , MAX_PATH ) )
+    if ( 0 == GetModuleFileNameA ( nullptr , szModName , MAX_PATH ) )
     {
         lstrcpy ( szModName , "<unknown application>" ) ;
     }
@@ -252,7 +252,7 @@ BOOL __stdcall RealAssert  ( DWORD  dwOverrideOpts  ,
                              szFmtMsg                        ) ) ;
 
     // Get rid of the allocated memory from FormatMessage.
-    if ( NULL != szFmtMsg )
+    if ( nullptr != szFmtMsg )
     {
         LocalFree ( (LPVOID)szFmtMsg ) ;
     }
@@ -280,7 +280,7 @@ BOOL __stdcall RealAssert  ( DWORD  dwOverrideOpts  ,
                     szBuff              ,
                     lstrlenA ( szBuff ) ,
                     &dwWritten          ,
-                    NULL                 ) ;
+                    nullptr                 ) ;
     }
 
     // Check out the kind of buttons I am supposed to do.
@@ -300,7 +300,7 @@ BOOL __stdcall RealAssert  ( DWORD  dwOverrideOpts  ,
     if ( DA_SHOWMSGBOX == ( DA_SHOWMSGBOX & dwOpts ) )
     {
         HWND hWndParent = GetActiveWindow ( ) ;
-        if ( NULL != hWndParent )
+        if ( nullptr != hWndParent )
         {
             hWndParent = GetLastActivePopup ( hWndParent ) ;
         }
@@ -362,7 +362,7 @@ void
                     szOutBuff              ,
                     lstrlenA ( szOutBuff ) ,
                     &dwWritten             ,
-                    NULL                    ) ;
+                    nullptr                    ) ;
     }
 
     va_end ( args ) ;
@@ -393,7 +393,7 @@ void
                     szOutBuff              ,
                     lstrlenW ( szOutBuff ) ,
                     &dwWritten             ,
-                    NULL                    ) ;
+                    nullptr                    ) ;
     }
 
     va_end ( args ) ;
@@ -446,7 +446,7 @@ static DWORD __stdcall GetModBase ( HANDLE hProcess , DWORD dwAddr )
                                             szFile                   ,
                                             MAX_PATH                  );
 
-            HANDLE hFile = NULL ;
+            HANDLE hFile = nullptr ;
 
             if ( 0 != dwNameLen )
             {
@@ -455,7 +455,7 @@ static DWORD __stdcall GetModBase ( HANDLE hProcess , DWORD dwAddr )
                 hFile = CreateFile ( szFile       ,
                                      GENERIC_READ    ,
                                      FILE_SHARE_READ ,
-                                     NULL            ,
+                                     nullptr            ,
                                      OPEN_EXISTING   ,
                                      0               ,
                                      0                ) ;
@@ -465,8 +465,8 @@ static DWORD __stdcall GetModBase ( HANDLE hProcess , DWORD dwAddr )
             DWORD dwRet =
 #endif
             g_cSym.SymLoadModule ( hFile                            ,
-                                   ( dwNameLen ? szFile : NULL )    ,
-                                   NULL                             ,
+                                   ( dwNameLen ? szFile : nullptr )    ,
+                                   nullptr                             ,
                                    (DWORD)stMBI.AllocationBase      ,
                                    0                                 ) ;
 #ifdef _DEBUG
@@ -509,7 +509,7 @@ static DWORD ConvertAddress ( DWORD dwAddr , LPTSTR szOutBuff )
     {
         // Strip off the path.
         LPTSTR szName = _tcsrchr ( stIHM.ImageName , _T ( '\\' ) ) ;
-        if ( NULL != szName )
+        if ( nullptr != szName )
         {
             szName++ ;
         }
@@ -598,7 +598,7 @@ void DoStackTrace ( LPTSTR szString  ,
                         SYMOPT_LOAD_LINES      ) ;
 
         if ( FALSE == g_cSym.SymInitialize ( hProcess ,
-                                             NULL     ,
+                                             nullptr     ,
                                              FALSE     ) )
         {
 #ifdef _DEBUG
@@ -666,7 +666,7 @@ void DoStackTrace ( LPTSTR szString  ,
 									  (PREAD_PROCESS_MEMORY_ROUTINE)CH_ReadProcessMemory ,
                                       SymFunctionTableAccess ,
                                       SymGetModuleBase       ,
-                                      NULL                    ) )
+                                      nullptr                    ) )
             {
                 break ;
             }

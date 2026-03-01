@@ -29,7 +29,7 @@ of the modules passed to AddCrashHandlerLimitModule.  If no modules have
 been added to narrow down the interested modules then the callback
 filter function will always be called.
 PARAMETERS      :
-    pFn - A valid code pointer.  If this is NULL, then the Crash Handler
+    pFn - A valid code pointer.  If this is nullptr, then the Crash Handler
           filter function is removed.
 RETURNS         :
     1 - The crash handler was properly set.
@@ -103,8 +103,8 @@ The returned buffer is constant and do not change it.
 PARAMETERS      :
     pExPtrs - The exeption pointers passed to the callback.
 RETURNS         :
-    !NULL - The constant string that describes the fault.
-    NULL  - There was a problem translating the string.
+    !nullptr - The constant string that describes the fault.
+    nullptr  - There was a problem translating the string.
 ----------------------------------------------------------------------*/
 LPCTSTR  __stdcall
                        GetFaultReason ( EXCEPTION_POINTERS * pExPtrs ) ;
@@ -148,8 +148,8 @@ PARAMETERS      :
     pExtPtrs - The exception pointers passed to the crash handler
                function.
 RETURNS         :
-    !NULL - The requested stack trace string.
-    NULL  - There was a problem.
+    !nullptr - The requested stack trace string.
+    nullptr  - There was a problem.
 ----------------------------------------------------------------------*/
 #define GSTSO_PARAMS    0x01
 #define GSTSO_MODULE    0x02
@@ -206,8 +206,8 @@ PARAMETERS      :
     pExtPtrs - The exception pointers passed to the crash handler
                function.
 RETURNS         :
-    !NULL - The requested register string.
-    NULL  - There was a problem.
+    !nullptr - The requested register string.
+    nullptr  - There was a problem.
 ----------------------------------------------------------------------*/
 LPCTSTR  __stdcall
               GetRegisterString ( EXCEPTION_POINTERS * pExPtrs ) ;
