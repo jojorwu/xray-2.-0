@@ -35,7 +35,7 @@ void FlushLog()
 	if (!no_log)
 	{
 		PROF_EVENT("Flushing");
-		logCS.Enter();
+		xrCriticalSectionGuard guard(logCS);
 		IWriter* f = FS.w_open(logFName);
 		if (f)
 		{
@@ -46,7 +46,6 @@ void FlushLog()
 			}
 			FS.w_close(f);
 		}
-		logCS.Leave();
 	}
 }
 
@@ -90,8 +89,7 @@ extern bool is_console_mark(Console_mark type);
 
 void AddOne(const char* split)
 {
-
-	logCS.Enter();
+	xrCriticalSectionGuard guard(logCS);
 
 #ifdef DEBUG
     OutputDebugString(split);
@@ -142,8 +140,6 @@ void AddOne(const char* split)
 
 	//exec CallBack
 	if (LogExecCB && LogCB)LogCB(split);
-
-	logCS.Leave();
 }
 
 void Log(const char* s)
