@@ -1494,7 +1494,8 @@ BOOL CLocatorAPI::dir_delete(LPCSTR path, LPCSTR nm, BOOL remove_files)
 				// const char* entry_begin = entry.name+base_len;
 				if (!remove_files) return FALSE;
 				unlink(entry.name);
-				xr_free(LPSTR(entry.name));
+				char* str = LPSTR(entry.name);
+				xr_free(str);
 				m_files.erase(cur_item);
 			}
 			else
@@ -1504,20 +1505,16 @@ BOOL CLocatorAPI::dir_delete(LPCSTR path, LPCSTR nm, BOOL remove_files)
 		}
 	}
 	// remove folders
-	files_set::reverse_iterator r_it = folders.rbegin();
-	for (; r_it != folders.rend(); r_it++)
+	for (files_set::reverse_iterator r_it = folders.rbegin(); r_it != folders.rend(); ++r_it)
 	{
-		const char* end_symbol = r_it->name + xr_strlen(r_it->name) - 1;
-		if ((*end_symbol) == '\\')
+		const file& entry = *r_it;
+		_rmdir(entry.name);
+		files_it it = m_files.find(entry);
+		if (it != m_files.end())
 		{
-			_rmdir(r_it->name);
-			const file& entry = *r_it;
-			files_it it = m_files.find(entry);
-			if (it != m_files.end())
-			{
-				xr_free(LPSTR(it->name));
-				m_files.erase(it);
-			}
+			char* str = LPSTR(it->name);
+			xr_free(str);
+			m_files.erase(it);
 		}
 	}
 	return TRUE;
