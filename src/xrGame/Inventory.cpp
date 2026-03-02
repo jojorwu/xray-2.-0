@@ -930,14 +930,14 @@ void CInventory::UpdateDropItem(PIItem pIItem)
 PIItem CInventory::Same(const PIItem pIItem, bool bSearchRuck) const
 {
 	const TIItemContainer& list = bSearchRuck ? m_ruck : m_belt;
+	shared_str s_name = pIItem->object().cNameSect();
 
 	for (TIItemContainer::const_iterator it = list.begin(); list.end() != it; ++it)
 	{
 		const PIItem l_pIItem = *it;
 
 		if ((l_pIItem != pIItem) &&
-			!xr_strcmp(l_pIItem->object().cNameSect(),
-			           pIItem->object().cNameSect()))
+			l_pIItem->object().cNameSect() == s_name)
 			return l_pIItem;
 	}
 	return nullptr;
@@ -964,11 +964,12 @@ PIItem CInventory::SameSlot(const u16 slot, PIItem pIItem, bool bSearchRuck) con
 PIItem CInventory::Get(LPCSTR name, bool bSearchRuck) const
 {
 	const TIItemContainer& list = bSearchRuck ? m_ruck : m_belt;
+	shared_str s_name(name);
 
 	for (TIItemContainer::const_iterator it = list.begin(); list.end() != it; ++it)
 	{
 		PIItem pIItem = *it;
-		if (!xr_strcmp(pIItem->object().cNameSect(), name) &&
+		if (pIItem->object().cNameSect() == s_name &&
 			pIItem->Useful())
 			return pIItem;
 	}
@@ -1047,10 +1048,11 @@ u32 CInventory::dwfGetSameItemCount(LPCSTR caSection, bool SearchAll)
 {
 	u32 l_dwCount = 0;
 	TIItemContainer& l_list = SearchAll ? m_all : m_ruck;
+	shared_str s_section(caSection);
 	for (TIItemContainer::iterator l_it = l_list.begin(); l_list.end() != l_it; ++l_it)
 	{
 		PIItem l_pIItem = *l_it;
-		if (!xr_strcmp(l_pIItem->object().cNameSect(), caSection))
+		if (l_pIItem->object().cNameSect() == s_section)
 			++l_dwCount;
 	}
 
@@ -1275,15 +1277,12 @@ CInventoryItem* CInventory::tpfGetObjectByIndex(int iIndex)
 CInventoryItem* CInventory::GetItemFromInventory(LPCSTR caItemName)
 {
 	TIItemContainer& l_list = m_all;
-
-	u32 crc = crc32(caItemName, xr_strlen(caItemName));
+	shared_str s_name(caItemName);
 
 	for (TIItemContainer::iterator l_it = l_list.begin(); l_list.end() != l_it; ++l_it)
-		if ((*l_it)->object().cNameSect()._get()->dwCRC == crc)
-		{
-			VERIFY(0 == xr_strcmp( (*l_it)->object().cNameSect().c_str(), caItemName));
+		if ((*l_it)->object().cNameSect() == s_name)
 			return (*l_it);
-		}
+
 	return (0);
 }
 

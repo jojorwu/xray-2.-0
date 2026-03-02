@@ -29,74 +29,65 @@ void ParseFile(LPCSTR path, CMemoryWriter& W, IReader* F, CXml* xml)
 	{
 		F->r_string(str, sizeof(str));
 
-		if (str[0] && (str[0] == '#') && strstr(str, "#include"))
+		if (str[0] == '#' && strncmp(str, "#include", 8) == 0)
 		{
 			string256 inc_name;
 			if (_GetItem(str, 1, inc_name, '"'))
 			{
-				IReader* I = nullptr;
-
-				if (strstr(inc_name, "*.xml"))
+				bool is_wildcard = strstr(inc_name, "*.xml") != nullptr;
+				if (is_wildcard)
 				{
 					FS_FileSet fset;
 					FS.file_list(fset, path, FS_ListFiles, inc_name);
 
-					for (FS_FileSet::iterator it = fset.begin(); it != fset.end(); it++)
+					for (const auto& it : fset)
 					{
-						LPCSTR file_name = it->name.c_str();
+						LPCSTR file_name = it.name.c_str();
+						IReader* I = nullptr;
 
-						if (file_name == strstr(file_name, "ui\\"))
+						if (strncmp(file_name, "ui\\", 3) == 0)
 						{
 							shared_str fn = xml->correct_file_name("ui", strchr(file_name, '\\') + 1);
 							string_path buff;
 							strconcat(sizeof(buff), buff, "ui\\", fn.c_str());
-
 							I = FS.r_open(path, buff);
-
-							if (!I)
-							{
-								string1024 str;
-								xr_sprintf(str, "XML file[%s] parsing failed. Can't find include file:[%s]", path, inc_name);
-								R_ASSERT2(false, str);
-							}
-
-							ParseFile(path, W, I, xml);
-							FS.r_close(I);
 						}
 						else
 						{
-							I = FS.r_open(path, it->name.c_str());
-
-							if (!I)
-							{
-								string1024 str;
-								xr_sprintf(str, "XML file[%s] parsing failed. Can't find include file:[%s]", path, inc_name);
-								R_ASSERT2(false, str);
-							}
-
-							ParseFile(path, W, I, xml);
-							FS.r_close(I);
+							I = FS.r_open(path, file_name);
 						}
+
+						if (!I)
+						{
+							string1024 err;
+							xr_sprintf(err, "XML file[%s] parsing failed. Can't find include file:[%s]", path, file_name);
+							R_ASSERT2(false, err);
+						}
+
+						ParseFile(path, W, I, xml);
+						FS.r_close(I);
 					}
 				}
-				else if (inc_name == strstr(inc_name, "ui\\"))
+				else
 				{
-					shared_str fn = xml->correct_file_name("ui", strchr(inc_name, '\\') + 1);
-					string_path buff;
-					strconcat(sizeof(buff), buff, "ui\\", fn.c_str());
-					I = FS.r_open(path, buff);
-				}
-
-				if (!strstr(inc_name, "*.xml"))
-				{
-					if (!I)
+					IReader* I = nullptr;
+					if (strncmp(inc_name, "ui\\", 3) == 0)
+					{
+						shared_str fn = xml->correct_file_name("ui", strchr(inc_name, '\\') + 1);
+						string_path buff;
+						strconcat(sizeof(buff), buff, "ui\\", fn.c_str());
+						I = FS.r_open(path, buff);
+					}
+					else
+					{
 						I = FS.r_open(path, inc_name);
+					}
 
 					if (!I)
 					{
-						string1024 str;
-						xr_sprintf(str, "XML file[%s] parsing failed. Can't find include file:[%s]", path, inc_name);
-						R_ASSERT2(false, str);
+						string1024 err;
+						xr_sprintf(err, "XML file[%s] parsing failed. Can't find include file:[%s]", path, inc_name);
+						R_ASSERT2(false, err);
 					}
 					ParseFile(path, W, I, xml);
 					FS.r_close(I);
@@ -160,41 +151,44 @@ void CXml::LoadFromString(LPCSTR xml_string)
 XML_NODE* CXml::NavigateToNode(XML_NODE* start_node, LPCSTR path, int node_index)
 {
 	R_ASSERT3(start_node && path, "NavigateToNode failed in XML file ", m_xml_file_name);
-	XML_NODE* node = nullptr;
-	XML_NODE* node_parent = nullptr;
-	string_path buf_str;
-	VERIFY(xr_strlen(path)<200);
-	buf_str[0] = 0;
-	xr_strcpy(buf_str, path);
-
-	char seps[] = ":";
-	char* token;
+	XML_NODE* node = start_node;
+	string_path token;
 	int tmp = 0;
 
-	//разбить путь на отдельные подпути
-	token = strtok(buf_str, seps);
+	const char* current = path;
+	const char* next = strchr(current, ':');
 
-	if (token != nullptr)
+	while (current && *current)
 	{
-		node = start_node->FirstChild(token);
+		size_t len = next ? (next - current) : strlen(current);
+		R_ASSERT(len < sizeof(token));
+		strncpy_s(token, current, len);
+		token[len] = 0;
 
-		while (tmp++ < node_index && node)
+		if (node == start_node)
 		{
-			node = start_node->IterateChildren(token, node);
-		}
-	}
-
-	while (token != nullptr)
-	{
-		// Get next token: 
-		token = strtok(nullptr, seps);
-
-		if (token != nullptr)
-			if (node != 0)
+			node = node->FirstChild(token);
+			while (tmp++ < node_index && node)
 			{
-				node_parent = node;
-				node = node_parent->FirstChild(token);
+				node = start_node->IterateChildren(token, node);
 			}
+		}
+		else
+		{
+			node = node->FirstChild(token);
+		}
+
+		if (!node) return nullptr;
+
+		if (next)
+		{
+			current = next + 1;
+			next = strchr(current, ':');
+		}
+		else
+		{
+			break;
+		}
 	}
 
 	return node;
@@ -479,20 +473,24 @@ XML_NODE* CXml::SearchForAttribute(XML_NODE* start_node, LPCSTR tag_name, LPCSTR
 		TiXmlElement* el = start_node->ToElement();
 		if (el)
 		{
-			LPCSTR attribStr = el->Attribute(attrib);
 			LPCSTR valueStr = el->Value();
-
-			if (attribStr && 0 == xr_strcmp(attribStr, attrib_value_pattern) &&
-				valueStr && 0 == xr_strcmp(valueStr, tag_name))
+			if (valueStr && xr_strcmp(valueStr, tag_name) == 0)
 			{
-				return el;
+				LPCSTR attribStr = el->Attribute(attrib);
+				if (attribStr && xr_strcmp(attribStr, attrib_value_pattern) == 0)
+				{
+					return el;
+				}
 			}
 		}
 
 		XML_NODE* newEl = start_node->FirstChild(tag_name);
-		newEl = SearchForAttribute(newEl, tag_name, attrib, attrib_value_pattern);
 		if (newEl)
-			return newEl;
+		{
+			newEl = SearchForAttribute(newEl, tag_name, attrib, attrib_value_pattern);
+			if (newEl)
+				return newEl;
+		}
 
 		start_node = start_node->NextSibling(tag_name);
 	}
