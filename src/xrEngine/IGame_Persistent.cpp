@@ -38,7 +38,7 @@ IGame_Persistent::IGame_Persistent()
 	RDEVICE.seqFrame.Add(this, REG_PRIORITY_HIGH + 1);
 	RDEVICE.seqAppActivate.Add(this);
 	RDEVICE.seqAppDeactivate.Add(this);
-	m_pGShaderConstants = new ShadersExternalData(); //--#SM+#--
+	m_pGShaderConstants = xr_new<ShadersExternalData>(); //--#SM+#--
 
 	m_pMainMenu = NULL;
 
