@@ -137,6 +137,7 @@ void xrCore::_initialize(LPCSTR _ApplicationName, LogCallback cb, BOOL init_fs, 
 				strcat(temp, line.c_str());
 				strcat(temp, " ");
 			}
+			xr_free(Params);
 			Params = xr_strdup(temp);
 		}
 		cmdlineTxt.close();

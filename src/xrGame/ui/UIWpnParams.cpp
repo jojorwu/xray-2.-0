@@ -86,6 +86,7 @@ CUIWpnParams::CUIWpnParams()
 
 CUIWpnParams::~CUIWpnParams()
 {
+	delete_data(m_vecStAmmoTypes);
 }
 
 void CUIWpnParams::InitFromXml(CUIXml& xml_doc)
@@ -136,7 +137,7 @@ void CUIWpnParams::InitFromXml(CUIXml& xml_doc)
 			bAmmoTypeExistInXML = xml_doc.NavigateToNode(str, 0) != nullptr;
 			if (bAmmoTypeExistInXML)
 			{
-				CUIStatic* pStAmmoType = new CUIStatic();
+				CUIStatic* pStAmmoType = xr_new<CUIStatic>();
 				AttachChild(pStAmmoType);
 				CUIXmlInit::InitStatic(xml_doc, str, 0, pStAmmoType);
 

@@ -154,7 +154,7 @@ void CRender::reset_end()
 	// let's reload details while changed details options on vid_restart
 	if (b_loaded && (dm_current_size != dm_size || ps_r__Detail_density != ps_current_detail_density))
 	{
-		Details = new CDetailManager();
+		Details = xr_new<CDetailManager>();
 		Details->Load();
 	}
 

@@ -42,6 +42,10 @@ struct TH_LoadTHM
 	LPCSTR initial;
 	map_TD& s_texture_details;
 	map_CS& s_detail_scalers;
+
+	TH_LoadTHM(LPCSTR initial, map_TD& s_texture_details, map_CS& s_detail_scalers)
+		: initial(initial), s_texture_details(s_texture_details), s_detail_scalers(s_detail_scalers)
+	{}
 };
 
 void CTextureDescrMngr::LoadTHMThread(void* args)
@@ -50,6 +54,7 @@ void CTextureDescrMngr::LoadTHMThread(void* args)
 
 	TH_LoadTHM* p = (TH_LoadTHM*)args;
 	LoadTHM(p->initial, p->s_texture_details, p->s_detail_scalers);
+	xr_delete(p);
 }
 
 void CTextureDescrMngr::LoadTHM(LPCSTR initial, map_TD& s_texture_details, map_CS& s_detail_scalers)
@@ -123,8 +128,8 @@ void CTextureDescrMngr::LoadTHM(LPCSTR initial, map_TD& s_texture_details, map_C
 
 void CTextureDescrMngr::Load()
 {
-	TH_LoadTHM* gtex = new TH_LoadTHM({"$game_textures$", m_texture_details, m_detail_scalers});
-	TH_LoadTHM* lvl = new TH_LoadTHM({"$level$", m_texture_details, m_detail_scalers});
+	TH_LoadTHM* gtex = xr_new<TH_LoadTHM>("$game_textures$", m_texture_details, m_detail_scalers);
+	TH_LoadTHM* lvl = xr_new<TH_LoadTHM>("$level$", m_texture_details, m_detail_scalers);
 	thread_spawn(LoadTHMThread, "X-Ray THM Loader 1", 0, gtex);
 	thread_spawn(LoadTHMThread, "X-Ray THM Loader 2", 0, lvl);
 	Sleep(5);
