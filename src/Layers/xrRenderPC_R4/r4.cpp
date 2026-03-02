@@ -208,7 +208,7 @@ void CRender::create()
 	o.mrt = (HW.Caps.raster.dwMRT_count >= 3);
 	o.mrtmixdepth = (HW.Caps.raster.b_MRT_mixdepth);
 
-	// Check for NULL render target support
+	// Check for nullptr render target support
 	//	DX10 disabled
 	//D3DFORMAT	nullrt	= (D3DFORMAT)MAKEFOURCC('N','U','L','L');
 	//o.nullrt			= HW.support	(nullrt,			D3DRTYPE_SURFACE, D3DUSAGE_RENDERTARGET);
@@ -723,7 +723,7 @@ void CRender::model_Delete(IRender_DetailModel* & F)
 		CDetail* D = (CDetail*)F;
 		D->Unload();
 		xr_delete(D);
-		F = NULL;
+		F = nullptr;
 	}
 }
 
@@ -2050,13 +2050,13 @@ HRESULT CRender::shader_compile(
 	if (FAILED(_result))
 	{
 		includer Includer;
-		LPD3DBLOB pShaderBuf = NULL;
-		LPD3DBLOB pErrorBuf = NULL;
+		LPD3DBLOB pShaderBuf = nullptr;
+		LPD3DBLOB pErrorBuf = nullptr;
 		_result =
 			D3DCompile(
 				pSrcData,
 				SrcDataLen,
-				"", //NULL, //LPCSTR pFileName,	//	NVPerfHUD bug workaround.
+				"", //nullptr, //LPCSTR pFileName,	//	NVPerfHUD bug workaround.
 				defines, &Includer, pFunctionName,
 				pTarget,
 				Flags, 0,
