@@ -311,7 +311,7 @@ void CWeapon::UpdateZoomParams() {
 	// Load scopes.xml if it's not loaded
 	if (pWpnScopeXml == nullptr)
 	{
-		pWpnScopeXml = new CUIXml();
+		pWpnScopeXml = xr_new<CUIXml>();
 		pWpnScopeXml->Load(CONFIG_PATH, UI_PATH, "scopes.xml");
 	}
 
