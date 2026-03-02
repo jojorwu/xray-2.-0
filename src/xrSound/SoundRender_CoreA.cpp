@@ -343,7 +343,7 @@ void CSoundRender_CoreA::_initialize(int stage)
 	deviceSpecifier = alcGetString(pDevice, ALC_DEVICE_SPECIFIER);
 
 	// Create context
-	pContext = alcCreateContext(pDevice, NULL);
+	pContext = alcCreateContext(pDevice, nullptr);
 	if (pContext == nullptr) {
 		CHECK_OR_EXIT(0, "SOUND: OpenAL: Failed to create context.");
 		bPresent = FALSE;
@@ -465,8 +465,8 @@ void CSoundRender_CoreA::_clear()
 		T->_destroy();
 		xr_delete(T);
 	}
-	// Reset the current context to NULL.
-	alcMakeContextCurrent(NULL);
+	// Reset the current context to nullptr.
+	alcMakeContextCurrent(nullptr);
 	// Release the context and the device.
 	alcDestroyContext(pContext);
 	pContext = nullptr;

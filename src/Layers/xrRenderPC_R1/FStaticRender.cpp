@@ -206,7 +206,7 @@ void CRender::model_Delete(IRender_DetailModel* & F)
 		CDetail* D = (CDetail*)F;
 		D->Unload();
 		xr_delete(D);
-		F = NULL;
+		F = nullptr;
 	}
 }
 
@@ -372,7 +372,7 @@ void CRender::add_Occluder(Fbox2& bb_screenspace)
 void CRender::set_Object(IRenderable* O)
 {
 	VERIFY(g_bRendering);
-	val_pObject = O; // NULL is OK, trust me :)
+	val_pObject = O; // nullptr is OK, trust me :)
 	if (val_pObject)
 	{
 		VERIFY(fast_dynamic_cast<CObject*>(O) || fast_dynamic_cast<CPS_Instance*>(O));
@@ -888,8 +888,8 @@ static HRESULT create_shader(
 			return E_FAIL;
 		}
 
-		LPCVOID data = NULL;
-		_result = D3DXFindShaderComment(buffer,MAKEFOURCC('C', 'T', 'A', 'B'), &data,NULL);
+		LPCVOID data = nullptr;
+		_result = D3DXFindShaderComment(buffer,MAKEFOURCC('C', 'T', 'A', 'B'), &data,nullptr);
 		if (SUCCEEDED(_result) && data)
 		{
 			LPD3DXSHADER_CONSTANTTABLE pConstants = LPD3DXSHADER_CONSTANTTABLE(data);
@@ -912,8 +912,8 @@ static HRESULT create_shader(
 			return E_FAIL;
 		}
 
-		LPCVOID data = NULL;
-		_result = D3DXFindShaderComment(buffer,MAKEFOURCC('C', 'T', 'A', 'B'), &data,NULL);
+		LPCVOID data = nullptr;
+		_result = D3DXFindShaderComment(buffer,MAKEFOURCC('C', 'T', 'A', 'B'), &data,nullptr);
 		if (SUCCEEDED(_result) && data)
 		{
 			LPD3DXSHADER_CONSTANTTABLE pConstants = LPD3DXSHADER_CONSTANTTABLE(data);
@@ -1088,9 +1088,9 @@ HRESULT CRender::shader_compile(
 	if (FAILED(_result))
 	{
 		includer Includer;
-		LPD3DXBUFFER pShaderBuf = NULL;
-		LPD3DXBUFFER pErrorBuf = NULL;
-		LPD3DXCONSTANTTABLE pConstants = NULL;
+		LPD3DXBUFFER pShaderBuf = nullptr;
+		LPD3DXBUFFER pErrorBuf = nullptr;
+		LPD3DXCONSTANTTABLE pConstants = nullptr;
 		LPD3DXINCLUDE pInclude = (LPD3DXINCLUDE)&Includer;
 
 		_result = D3DXCompileShader((LPCSTR)pSrcData, SrcDataLen, defines, pInclude, pFunctionName, pTarget,

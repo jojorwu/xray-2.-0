@@ -238,7 +238,7 @@ void CBulletManager::PlayExplodePS(const Fmatrix& xf)
 void CBulletManager::PlayWhineSound(SBullet* bullet, CObject* object, const Fvector& pos)
 {
 	if (m_WhineSounds.empty()) return;
-	if (bullet->m_whine_snd._feedback() != NULL) return;
+	if (bullet->m_whine_snd._feedback() != nullptr) return;
 	if (bullet->hit_type != ALife::eHitTypeFireWound) return;
 
 	bullet->m_whine_snd = m_WhineSounds[Random.randI(0, m_WhineSounds.size())];
@@ -296,7 +296,7 @@ void CBulletManager::AddBullet(const Fvector& position,
 			bullet.weapon_id,
 			bullet.parent_id,
 			65535,
-			NULL,
+			nullptr,
 			bullet.life_time,
 			-1
 		);
@@ -887,7 +887,7 @@ bool CBulletManager::trajectory_check_error(
 
 	collide::ray_defs RD(start, start_to_target, distance, CDB::OPT_FULL_TEST, collide::rqtBoth);
 	BOOL const result = Level().ObjectSpace.RayQuery(storage, RD, CBulletManager::firetrace_callback, &data,
-	                                                 CBulletManager::test_callback, NULL);
+	                                                 CBulletManager::test_callback, nullptr);
 	if (!result || (data.collide_time == 0.f))
 	{
 		add_bullet_point(bullet.start_position, previous_position, bullet.start_velocity, gravity, air_resistance,
@@ -964,7 +964,7 @@ static bool try_update_bullet(SBullet& bullet, Fvector const& gravity, float con
 			bullet.weapon_id,
 			bullet.parent_id,
 			65535,
-			NULL,
+			nullptr,
 			bullet.life_time,
 			-1
 		);
@@ -1254,7 +1254,7 @@ void CBulletManager::CommitEvents() // @ the start of frame
 						bullet->weapon_id,
 						bullet->parent_id,
 						E.dynamic && E.R.O ? E.R.O->ID() : 65535,
-						mt ? mt->m_Name.c_str() : NULL,
+						mt ? mt->m_Name.c_str() : nullptr,
 						bullet->life_time,
 						E.R.element
 					);
@@ -1283,7 +1283,7 @@ void CBulletManager::CommitEvents() // @ the start of frame
 						bullet->weapon_id,
 						bullet->parent_id,
 						65535,
-						NULL,
+						nullptr,
 						bullet->life_time,
 						-1
 					);
