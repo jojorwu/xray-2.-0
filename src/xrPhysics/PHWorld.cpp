@@ -189,14 +189,6 @@ void CPHWorld::Create(bool mt, CObjectSpace* os, CObjectList* lo, CRenderDeviceB
 	m_object_space = os;
 	m_level_objects = lo;
 	m_device = dv;
-	//if (psDeviceFlags.test(mtPhysics))	Device.seqFrameMT.Add	(this,REG_PRIORITY_HIGH);
-	//else								Device.seqFrame.Add		(this,REG_PRIORITY_LOW);
-
-	//if ( mt )	
-	//	Device().seqFrameMT.Add	(this,REG_PRIORITY_HIGH);
-	//else								
-	//	Device().seqFrame.Add		(this,REG_PRIORITY_LOW);
-
 	Device().AddSeqFrame(this, mt);
 
 	//m_commander							=xr_new<CPHCommander>();

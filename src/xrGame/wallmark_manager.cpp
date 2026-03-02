@@ -89,9 +89,14 @@ void CWalmarkManager::PlaceWallmarks(const Fvector& start_pos)
 	//.	LPCSTR				sect				= pSettings->r_string(m_owner->cNameSect(), "wallmark_section");
 	Load("explosion_marks");
 
-	//.	Device.seqParallel.push_back	(fastdelegate::FastDelegate0<>(this,&CWalmarkManager::StartWorkflow));
-
-	StartWorkflow();
+	if (g_mt_config.test(mtMap))
+	{
+		Device.seqParallel.push_back(fastdelegate::FastDelegate0<>(this, &CWalmarkManager::StartWorkflow));
+	}
+	else
+	{
+		StartWorkflow();
+	}
 }
 
 float Distance(const Fvector& rkPoint, const Fvector rkTri[3], float& pfSParam, float& pfTParam, Fvector& closest,
