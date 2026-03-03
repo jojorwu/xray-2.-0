@@ -331,11 +331,14 @@ namespace interface6 {
         //! Random access iterator for traversing the thread local copies.
         template< typename Container, typename Value >
         class enumerable_thread_specific_iterator
-#if defined(_WIN64) && defined(_MSC_VER)
-            // Ensure that Microsoft's internal template function _Val_type works correctly.
-            : public std::iterator<std::random_access_iterator_tag,Value>
-#endif /* defined(_WIN64) && defined(_MSC_VER) */
         {
+        public:
+            typedef ptrdiff_t difference_type;
+            typedef Value value_type;
+            typedef Value* pointer;
+            typedef Value& reference;
+            typedef std::random_access_iterator_tag iterator_category;
+
             //! current position in the concurrent_vector
 
             Container *my_container;
@@ -435,13 +438,6 @@ namespace interface6 {
                 my_value = NULL;
                 return result;
             }
-
-            // STL support
-            typedef ptrdiff_t difference_type;
-            typedef Value value_type;
-            typedef Value* pointer;
-            typedef Value& reference;
-            typedef std::random_access_iterator_tag iterator_category;
         };
 
         template<typename Container, typename T>
@@ -494,10 +490,14 @@ namespace interface6 {
 
     template<typename SegmentedContainer, typename Value >
         class segmented_iterator
-#if defined(_WIN64) && defined(_MSC_VER)
-        : public std::iterator<std::input_iterator_tag, Value>
-#endif
         {
+        public:
+            typedef ptrdiff_t difference_type;
+            typedef Value value_type;
+            typedef Value* pointer;
+            typedef Value& reference;
+            typedef std::input_iterator_tag iterator_category;
+
             template<typename C, typename T, typename U>
             friend bool operator==(const segmented_iterator<C,T>& i, const segmented_iterator<C,U>& j);
 
@@ -520,14 +520,7 @@ namespace interface6 {
                 typedef typename SegmentedContainer::iterator outer_iterator;
                 typedef typename SegmentedContainer::value_type InnerContainer;
                 typedef typename InnerContainer::iterator inner_iterator;
-
-                // STL support
-                typedef ptrdiff_t difference_type;
-                typedef Value value_type;
                 typedef typename SegmentedContainer::size_type size_type;
-                typedef Value* pointer;
-                typedef Value& reference;
-                typedef std::input_iterator_tag iterator_category;
 
                 // Copy Constructor
                 template<typename U>

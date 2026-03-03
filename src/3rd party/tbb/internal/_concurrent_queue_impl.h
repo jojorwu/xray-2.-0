@@ -745,8 +745,13 @@ template<typename T> struct tbb_remove_cv<const volatile T> {typedef T type;};
 /** Value is either the T or const T type of the container.
     @ingroup containers */
 template<typename Container, typename Value>
-class concurrent_queue_iterator: public concurrent_queue_iterator_base_v3<typename tbb_remove_cv<Value>::type>,
-        public std::iterator<std::forward_iterator_tag,Value> {
+class concurrent_queue_iterator: public concurrent_queue_iterator_base_v3<typename tbb_remove_cv<Value>::type> {
+public:
+    typedef std::forward_iterator_tag iterator_category;
+    typedef Value value_type;
+    typedef ptrdiff_t difference_type;
+    typedef Value* pointer;
+    typedef Value& reference;
 #if !__TBB_TEMPLATE_FRIENDS_BROKEN
     template<typename T, class A>
     friend class ::tbb::strict_ppl::concurrent_queue;
@@ -1009,8 +1014,13 @@ typedef concurrent_queue_iterator_base_v3 concurrent_queue_iterator_base;
 /** Value is either the T or const T type of the container.
     @ingroup containers */
 template<typename Container, typename Value>
-class concurrent_queue_iterator: public concurrent_queue_iterator_base,
-        public std::iterator<std::forward_iterator_tag,Value> {
+class concurrent_queue_iterator: public concurrent_queue_iterator_base {
+public:
+    typedef std::forward_iterator_tag iterator_category;
+    typedef Value value_type;
+    typedef ptrdiff_t difference_type;
+    typedef Value* pointer;
+    typedef Value& reference;
 
 #if !__TBB_TEMPLATE_FRIENDS_BROKEN
     template<typename T, class A>

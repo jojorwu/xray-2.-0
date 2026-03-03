@@ -45,21 +45,6 @@ private:
 
 	typedef std::pair<ETeam, MyTeam> TeamPair;
 
-	// For balancing team players count
-	struct MinPlayersFunctor
-	{
-		bool operator()(const TeamPair& left, const TeamPair& right) const;
-	};
-
-	struct SearchArtefactIdFunctor
-	{
-		bool operator()(const TeamPair& tr, u16 artefactId) const;
-	};
-
-	struct SearchOwnerIdFunctor
-	{
-		bool operator()(const TeamPair& tr, u16 actorId) const;
-	};
 
 	typedef xr_map<ETeam, MyTeam> TeamsMap;
 	TeamsMap teams;
