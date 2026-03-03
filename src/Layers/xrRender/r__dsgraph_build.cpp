@@ -838,17 +838,13 @@ void CRender::add_leafs_Dynamic(dxRender_Visual* pVisual)
 		{
 			// Add all children, doesn't perform any tests
 			PS::CParticleGroup* pG = (PS::CParticleGroup*)pVisual;
-			for (PS::CParticleGroup::SItemVecIt i_it = pG->items.begin(); i_it != pG->items.end(); ++i_it)
+			for (PS::CParticleGroup::SItem& item : pG->items)
 			{
-				PS::CParticleGroup::SItem& I = *i_it;
-				if (I._effect) add_leafs_Dynamic(I._effect);
-				for (xr_vector<dxRender_Visual*>::iterator pit = I._children_related.begin(); pit != I
-				                                                                                     ._children_related.
-				                                                                                     end(); ++pit)
-					add_leafs_Dynamic(*pit);
-				for (xr_vector<dxRender_Visual*>::iterator pit = I._children_free.begin(); pit != I._children_free.end()
-				     ; ++pit)
-					add_leafs_Dynamic(*pit);
+				if (item._effect) add_leafs_Dynamic(item._effect);
+				for (dxRender_Visual* child : item._children_related)
+					add_leafs_Dynamic(child);
+				for (dxRender_Visual* child : item._children_free)
+					add_leafs_Dynamic(child);
 			}
 		}
 		return;
@@ -856,9 +852,8 @@ void CRender::add_leafs_Dynamic(dxRender_Visual* pVisual)
 		{
 			// Add all children, doesn't perform any tests
 			FHierrarhyVisual* pV = (FHierrarhyVisual*)pVisual;
-			I = pV->children.begin();
-			E = pV->children.end();
-			for (; I != E; ++I) add_leafs_Dynamic((dxRender_Visual*)*I);
+			for (IRenderVisual* child : pV->children)
+				add_leafs_Dynamic((dxRender_Visual*)child);
 		}
 		return;
 	case MT_SKELETON_ANIM:
@@ -883,9 +878,8 @@ void CRender::add_leafs_Dynamic(dxRender_Visual* pVisual)
 			{
 				pV->CalculateBones(TRUE);
 				pV->CalculateWallmarks(); //. bug?
-				I = pV->children.begin();
-				E = pV->children.end();
-				for (; I != E; ++I) add_leafs_Dynamic((dxRender_Visual*)*I);
+				for (IRenderVisual* child : pV->children)
+					add_leafs_Dynamic((dxRender_Visual*)child);
 			}
 		}
 		return;
@@ -923,17 +917,13 @@ void CRender::add_leafs_Static(dxRender_Visual* pVisual)
 		{
 			// Add all children, doesn't perform any tests
 			PS::CParticleGroup* pG = (PS::CParticleGroup*)pVisual;
-			for (PS::CParticleGroup::SItemVecIt i_it = pG->items.begin(); i_it != pG->items.end(); ++i_it)
+			for (PS::CParticleGroup::SItem& item : pG->items)
 			{
-				PS::CParticleGroup::SItem& I = *i_it;
-				if (I._effect) add_leafs_Dynamic(I._effect);
-				for (xr_vector<dxRender_Visual*>::iterator pit = I._children_related.begin(); pit != I
-				                                                                                     ._children_related.
-				                                                                                     end(); ++pit)
-					add_leafs_Dynamic(*pit);
-				for (xr_vector<dxRender_Visual*>::iterator pit = I._children_free.begin(); pit != I._children_free.end()
-				     ; ++pit)
-					add_leafs_Dynamic(*pit);
+				if (item._effect) add_leafs_Dynamic(item._effect);
+				for (dxRender_Visual* child : item._children_related)
+					add_leafs_Dynamic(child);
+				for (dxRender_Visual* child : item._children_free)
+					add_leafs_Dynamic(child);
 			}
 		}
 		return;
@@ -941,9 +931,8 @@ void CRender::add_leafs_Static(dxRender_Visual* pVisual)
 		{
 			// Add all children, doesn't perform any tests
 			FHierrarhyVisual* pV = (FHierrarhyVisual*)pVisual;
-			I = pV->children.begin();
-			E = pV->children.end();
-			for (; I != E; ++I) add_leafs_Static((dxRender_Visual*)*I);
+			for (IRenderVisual* child : pV->children)
+				add_leafs_Static((dxRender_Visual*)child);
 		}
 		return;
 	case MT_SKELETON_ANIM:
@@ -952,9 +941,8 @@ void CRender::add_leafs_Static(dxRender_Visual* pVisual)
 			// Add all children, doesn't perform any tests
 			CKinematics* pV = (CKinematics*)pVisual;
 			pV->CalculateBones(TRUE);
-			I = pV->children.begin();
-			E = pV->children.end();
-			for (; I != E; ++I) add_leafs_Static((dxRender_Visual*)*I);
+			for (IRenderVisual* child : pV->children)
+				add_leafs_Static((dxRender_Visual*)child);
 		}
 		return;
 	case MT_LOD:
@@ -977,9 +965,8 @@ void CRender::add_leafs_Static(dxRender_Visual* pVisual)
 #endif
 			{
 				// Add all children, doesn't perform any tests
-				I = pV->children.begin();
-				E = pV->children.end();
-				for (; I != E; ++I) add_leafs_Static((dxRender_Visual*)*I);
+				for (IRenderVisual* child : pV->children)
+					add_leafs_Static((dxRender_Visual*)child);
 			}
 		}
 		return;
@@ -1029,34 +1016,23 @@ BOOL CRender::add_Dynamic(dxRender_Visual* pVisual, u32 planes)
 		{
 			// Add all children, doesn't perform any tests
 			PS::CParticleGroup* pG = (PS::CParticleGroup*)pVisual;
-			for (PS::CParticleGroup::SItemVecIt i_it = pG->items.begin(); i_it != pG->items.end(); i_it++)
+			for (PS::CParticleGroup::SItem& item : pG->items)
 			{
-				PS::CParticleGroup::SItem& I = *i_it;
 				if (fcvPartial == VIS)
 				{
-					if (I._effect) add_Dynamic(I._effect, planes);
-					for (xr_vector<dxRender_Visual*>::iterator pit = I._children_related.begin(); pit != I
-					                                                                                     .
-					                                                                                     _children_related
-					                                                                                     .end(); ++pit)
-						add_Dynamic(*pit, planes);
-					for (xr_vector<dxRender_Visual*>::iterator pit = I._children_free.begin(); pit != I
-					                                                                                  ._children_free.
-					                                                                                  end(); ++pit)
-						add_Dynamic(*pit, planes);
+					if (item._effect) add_Dynamic(item._effect, planes);
+					for (dxRender_Visual* child : item._children_related)
+						add_Dynamic(child, planes);
+					for (dxRender_Visual* child : item._children_free)
+						add_Dynamic(child, planes);
 				}
 				else
 				{
-					if (I._effect) add_leafs_Dynamic(I._effect);
-					for (xr_vector<dxRender_Visual*>::iterator pit = I._children_related.begin(); pit != I
-					                                                                                     .
-					                                                                                     _children_related
-					                                                                                     .end(); ++pit)
-						add_leafs_Dynamic(*pit);
-					for (xr_vector<dxRender_Visual*>::iterator pit = I._children_free.begin(); pit != I
-					                                                                                  ._children_free.
-					                                                                                  end(); ++pit)
-						add_leafs_Dynamic(*pit);
+					if (item._effect) add_leafs_Dynamic(item._effect);
+					for (dxRender_Visual* child : item._children_related)
+						add_leafs_Dynamic(child);
+					for (dxRender_Visual* child : item._children_free)
+						add_leafs_Dynamic(child);
 				}
 			}
 		}
@@ -1065,15 +1041,15 @@ BOOL CRender::add_Dynamic(dxRender_Visual* pVisual, u32 planes)
 		{
 			// Add all children
 			FHierrarhyVisual* pV = (FHierrarhyVisual*)pVisual;
-			I = pV->children.begin();
-			E = pV->children.end();
 			if (fcvPartial == VIS)
 			{
-				for (; I != E; ++I) add_Dynamic((dxRender_Visual*)*I, planes);
+				for (IRenderVisual* child : pV->children)
+					add_Dynamic((dxRender_Visual*)child, planes);
 			}
 			else
 			{
-				for (; I != E; ++I) add_leafs_Dynamic((dxRender_Visual*)*I);
+				for (IRenderVisual* child : pV->children)
+					add_leafs_Dynamic((dxRender_Visual*)child);
 			}
 		}
 		break;
@@ -1099,9 +1075,8 @@ BOOL CRender::add_Dynamic(dxRender_Visual* pVisual, u32 planes)
 			{
 				pV->CalculateBones(TRUE);
 				pV->CalculateWallmarks(); //. bug?
-				I = pV->children.begin();
-				E = pV->children.end();
-				for (; I != E; ++I) add_leafs_Dynamic((dxRender_Visual*)*I);
+				for (IRenderVisual* child : pV->children)
+					add_leafs_Dynamic((dxRender_Visual*)child);
 			}
 			/*
 			I = pV->children.begin		();

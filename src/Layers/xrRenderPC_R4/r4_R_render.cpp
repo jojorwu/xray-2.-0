@@ -19,6 +19,17 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 		//!!! BECAUSE OF PARALLEL HOM RENDERING TRY TO DELAY ACCESS TO HOM AS MUCH AS POSSIBLE
 		//!!!
 		{
+			// Traverse sector/portal structure
+			PortalTraverser.traverse
+			(
+				pLastSector,
+				ViewBase,
+				Device.vCameraPosition,
+				m_ViewProjection,
+				CPortalTraverser::VQ_HOM + CPortalTraverser::VQ_SSA + CPortalTraverser::VQ_FADE
+				//. disabled scissoring (HW.Caps.bScissor?CPortalTraverser::VQ_SCISSOR:0)	// generate scissoring info
+			);
+
 			// Traverse object database
 			g_SpatialSpace->q_frustum
 			(
@@ -43,12 +54,18 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 				preSorted.reserve(lstRenderables.size());
 				for (ISpatial* spatial : lstRenderables)
 				{
+					spatial->spatial_updatesector();
+					CSector* sector = (CSector*)spatial->spatial.sector;
+					if (nullptr == sector) continue; // disassociated from S/P structure
+					if (PortalTraverser.i_marker != sector->r_marker) continue; // inactive (untouched) sector
+
 					float dist = spatial->spatial.sphere.P.distance_to_sqr(Device.vCameraPosition);
 					preSorted.push_back({ spatial, dist });
 				}
 				std::sort(preSorted.begin(), preSorted.end());
-				for (u32 it = 0; it < lstRenderables.size(); it++)
-					lstRenderables[it] = preSorted[it].spatial;
+				lstRenderables.clear_not_free();
+				for (const SPreSortedSpatial& item : preSorted)
+					lstRenderables.push_back(item.spatial);
 			}
 
 			// Determine visibility for dynamic part of scene
@@ -56,7 +73,7 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 			u32 uID_LTRACK = 0xffffffff;
 			if (phase == PHASE_NORMAL)
 			{
-				uLastLTRACK ++;
+				uLastLTRACK++;
 				if (lstRenderables.size()) uID_LTRACK = uLastLTRACK % lstRenderables.size();
 
 				// update light-vis for current entity / actor
@@ -81,17 +98,6 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 			}
 		}
 
-		// Traverse sector/portal structure
-		PortalTraverser.traverse
-		(
-			pLastSector,
-			ViewBase,
-			Device.vCameraPosition,
-			m_ViewProjection,
-			CPortalTraverser::VQ_HOM + CPortalTraverser::VQ_SSA + CPortalTraverser::VQ_FADE
-			//. disabled scissoring (HW.Caps.bScissor?CPortalTraverser::VQ_SCISSOR:0)	// generate scissoring info
-		);
-
 		// Determine visibility for static geometry hierrarhy
 		for (IRender_Sector* it : PortalTraverser.r_sectors)
 		{
@@ -107,9 +113,9 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 		// Traverse frustums
 		for (ISpatial* spatial : lstRenderables)
 		{
-			spatial->spatial_updatesector();
+			// spatial->spatial_updatesector();
 			CSector* sector = (CSector*)spatial->spatial.sector;
-			if (nullptr == sector) continue; // disassociated from S/P structure
+			// if (nullptr == sector) continue; // disassociated from S/P structure
 
 			if (spatial->spatial.type & STYPE_LIGHTSOURCE)
 			{
@@ -125,7 +131,7 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 				continue ;
 			}
 
-			if (PortalTraverser.i_marker != sector->r_marker) continue; // inactive (untouched) sector
+			// if (PortalTraverser.i_marker != sector->r_marker) continue; // inactive (untouched) sector
 			for (CFrustum& view : sector->r_frustums)
 			{
 				if (!view.testSphere_dirty(spatial->spatial.sphere.P, spatial->spatial.sphere.R)) continue;

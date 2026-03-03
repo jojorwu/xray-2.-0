@@ -260,9 +260,8 @@ namespace Feel
 				r_spatial.clear_not_free();
 				g_SpatialSpace->q_ray(r_spatial, 0, STYPE_VISIBLEFORAI, P, D, f);
 
-				RD.flags = CDB::OPT_ONLYFIRST;
+				RD.flags = 0; // CDB::OPT_ONLYFIRST;
 
-				bool collision_found = false;
 				for (ISpatial* i : r_spatial)
 				{
 					if (i == m_owner)
@@ -282,15 +281,21 @@ namespace Feel
 #endif
 
 					RQR.r_clear();
-					if (object && object->collidable.model && !object->collidable.model->_RayQuery(RD, RQR))
-						continue;
+					if (object && object->collidable.model && object->collidable.model->_RayQuery(RD, RQR))
+					{
+						for (u32 it = 0; it < RQR.r_count(); it++)
+						{
+							collide::rq_result& result = RQR.r_begin()[it];
+							feel_params.vis *= feel_vision_mtl_transp(result.O, result.element);
+						}
+					}
 
-					collision_found = true;
-					break;
+					if (feel_params.vis <= feel_params.vis_threshold)
+					{
+						feel_params.vis = 0.f;
+						break;
+					}
 				}
-
-				if (collision_found)
-					feel_params.vis = 0.f;
 
 				if (feel_params.vis < feel_params.vis_threshold)
 				{

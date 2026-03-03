@@ -32,10 +32,8 @@ void __fastcall mapNormal_Render(mapNormalItems& N)
 	if (N.size() > 1)
 		std::sort(N.begin(), N.end(), cmp_normal_items);
 
-	_NormalItem *I = &*N.begin(), *E = &*N.end();
-	for (; I != E; I++)
+	for (_NormalItem& Ni : N)
 	{
-		_NormalItem& Ni = *I;
 		float LOD = calcLOD(Ni.ssa, Ni.pVisual->vis.sphere.R);
 #ifdef USE_DX11
 		RCache.LOD.set_LOD(LOD);
@@ -56,10 +54,8 @@ void __fastcall mapMatrix_Render(mapMatrixItems& N)
 	if (N.size() > 1)
 		std::sort(N.begin(), N.end(), cmp_matrix_items);
 
-	_MatrixItem *I = &*N.begin(), *E = &*N.end();
-	for (; I != E; I++)
+	for (_MatrixItem& Ni : N)
 	{
-		_MatrixItem& Ni = *I;
 		RCache.set_xform_world(Ni.Matrix);
 		RImplementation.apply_object(Ni.pObject);
 		RImplementation.apply_lmaterial();
@@ -402,9 +398,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 			if (nrmVS.size() > 1)
 				std::sort(nrmVS.begin(), nrmVS.end(), cmp_vs_nrm);
 
-			for (u32 vs_id = 0; vs_id < nrmVS.size(); vs_id++)
+			for (mapNormalVS::TNode* Nvs : nrmVS)
 			{
-				mapNormalVS::TNode* Nvs = nrmVS[vs_id];
 				RCache.set_VS(Nvs->key);
 
 #if defined(USE_DX10) || defined(USE_DX11)
@@ -416,9 +411,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 				if (nrmGS.size() > 1)
 					std::sort(nrmGS.begin(), nrmGS.end(), cmp_gs_nrm);
 
-				for (u32 gs_id = 0; gs_id < nrmGS.size(); gs_id++)
+				for (mapNormalGS::TNode* Ngs : nrmGS)
 				{
-					mapNormalGS::TNode* Ngs = nrmGS[gs_id];
 					RCache.set_GS(Ngs->key);
 
 					mapNormalPS& ps = Ngs->val;
@@ -432,9 +426,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 				if (nrmPS.size() > 1)
 					std::sort(nrmPS.begin(), nrmPS.end(), cmp_ps_nrm);
 
-				for (u32 ps_id = 0; ps_id < nrmPS.size(); ps_id++)
+				for (mapNormalPS::TNode* Nps : nrmPS)
 				{
-					mapNormalPS::TNode* Nps = nrmPS[ps_id];
 					RCache.set_PS(Nps->key);
 #ifdef USE_DX11
 						mapNormalCS& cs = Nps->val.mapCS;
@@ -449,9 +442,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 					if (nrmCS.size() > 1)
 						std::sort(nrmCS.begin(), nrmCS.end(), cmp_cs_nrm);
 
-					for (u32 cs_id = 0; cs_id < nrmCS.size(); cs_id++)
+					for (mapNormalCS::TNode* Ncs : nrmCS)
 					{
-						mapNormalCS::TNode* Ncs = nrmCS[cs_id];
 						RCache.set_Constants(Ncs->key);
 
 						mapNormalStates& states = Ncs->val;
@@ -460,17 +452,15 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 						if (nrmStates.size() > 1)
 							std::sort(nrmStates.begin(), nrmStates.end(), cmp_states_nrm);
 
-						for (u32 state_id = 0; state_id < nrmStates.size(); state_id++)
+						for (mapNormalStates::TNode* Nstate : nrmStates)
 						{
-							mapNormalStates::TNode* Nstate = nrmStates[state_id];
 							RCache.set_States(Nstate->key);
 
 							mapNormalTextures& tex = Nstate->val;
 							tex.ssa = 0;
 							sort_tlist_nrm(nrmTextures, nrmTexturesTemp, tex, true);
-							for (u32 tex_id = 0; tex_id < nrmTextures.size(); tex_id++)
+							for (mapNormalTextures::TNode* Ntex : nrmTextures)
 							{
-								mapNormalTextures::TNode* Ntex = nrmTextures[tex_id];
 								RCache.set_Textures(Ntex->key);
 								RImplementation.apply_lmaterial();
 
@@ -514,9 +504,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 		if (matVS.size() > 1)
 			std::sort(matVS.begin(), matVS.end(), cmp_vs_mat);
 
-		for (u32 vs_id = 0; vs_id < matVS.size(); vs_id++)
+		for (mapMatrixVS::TNode* Nvs : matVS)
 		{
-			mapMatrixVS::TNode* Nvs = matVS[vs_id];
 			RCache.set_VS(Nvs->key);
 
 #if defined(USE_DX10) || defined(USE_DX11)
@@ -527,9 +516,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 			if (matGS.size() > 1)
 				std::sort(matGS.begin(), matGS.end(), cmp_gs_mat);
 
-			for (u32 gs_id = 0; gs_id < matGS.size(); gs_id++)
+			for (mapMatrixGS::TNode* Ngs : matGS)
 			{
-				mapMatrixGS::TNode* Ngs = matGS[gs_id];
 				RCache.set_GS(Ngs->key);
 
 				mapMatrixPS& ps = Ngs->val;
@@ -543,9 +531,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 			if (matPS.size() > 1)
 				std::sort(matPS.begin(), matPS.end(), cmp_ps_mat);
 
-			for (u32 ps_id = 0; ps_id < matPS.size(); ps_id++)
+			for (mapMatrixPS::TNode* Nps : matPS)
 			{
-				mapMatrixPS::TNode* Nps = matPS[ps_id];
 				RCache.set_PS(Nps->key);
 
 #ifdef USE_DX11
@@ -561,9 +548,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 				if (matCS.size() > 1)
 					std::sort(matCS.begin(), matCS.end(), cmp_cs_mat);
 
-				for (u32 cs_id = 0; cs_id < matCS.size(); cs_id++)
+				for (mapMatrixCS::TNode* Ncs : matCS)
 				{
-					mapMatrixCS::TNode* Ncs = matCS[cs_id];
 					RCache.set_Constants(Ncs->key);
 
 					mapMatrixStates& states = Ncs->val;
@@ -572,17 +558,15 @@ void R_dsgraph_structure::r_dsgraph_render_graph(u32 _priority, bool _clear)
 					if (matStates.size() > 1)
 						std::sort(matStates.begin(), matStates.end(), cmp_states_mat);
 
-					for (u32 state_id = 0; state_id < matStates.size(); state_id++)
+					for (mapMatrixStates::TNode* Nstate : matStates)
 					{
-						mapMatrixStates::TNode* Nstate = matStates[state_id];
 						RCache.set_States(Nstate->key);
 
 						mapMatrixTextures& tex = Nstate->val;
 						tex.ssa = 0;
 						sort_tlist_mat(matTextures, matTexturesTemp, tex, true);
-						for (u32 tex_id = 0; tex_id < matTextures.size(); tex_id++)
+						for (mapMatrixTextures::TNode* Ntex : matTextures)
 						{
-							mapMatrixTextures::TNode* Ntex = matTextures[tex_id];
 							RCache.set_Textures(Ntex->key);
 							RImplementation.apply_lmaterial();
 
