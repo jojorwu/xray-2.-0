@@ -320,10 +320,10 @@ void slowdownthread(void*)
 	{
 		if (Device.Statistic->fFPS < 30) Sleep(1);
 		if (Device.mt_bMustExit) return;
-		if (0 == pSettings) return;
-		if (0 == Console) return;
-		if (0 == pInput) return;
-		if (0 == pApp) return;
+		if (nullptr == pSettings) return;
+		if (nullptr == Console) return;
+		if (nullptr == pInput) return;
+		if (nullptr == pApp) return;
 	}
 }
 
@@ -1373,10 +1373,10 @@ void CApplication::OnEvent(EVENT E, u64 P1, u64 P2)
 
 		PostQuitMessage(0);
 
-		for (u32 i = 0; i < Levels.size(); i++)
+		for (auto& level : Levels)
 		{
-			xr_free(Levels[i].folder);
-			xr_free(Levels[i].name);
+			xr_free(level.folder);
+			xr_free(level.name);
 		}
 	}
 	else if (E == eStart)
@@ -1384,8 +1384,8 @@ void CApplication::OnEvent(EVENT E, u64 P1, u64 P2)
 		LPSTR op_server = LPSTR(P1);
 		LPSTR op_client = LPSTR(P2);
 		Level_Current = u32(-1);
-		R_ASSERT(0 == g_pGameLevel);
-		R_ASSERT(0 != g_pGamePersistent);
+		R_ASSERT(nullptr == g_pGameLevel);
+		R_ASSERT(nullptr != g_pGamePersistent);
 
 #ifdef NO_SINGLE
         Console->Execute("main_menu on");
@@ -1615,10 +1615,10 @@ void CApplication::Level_Scan()
 
 	//SECUROM_MARKER_PERFORMANCE_ON(8)
 
-	for (u32 i = 0; i < Levels.size(); i++)
+	for (auto& level : Levels)
 	{
-		xr_free(Levels[i].folder);
-		xr_free(Levels[i].name);
+		xr_free(level.folder);
+		xr_free(level.name);
 	}
 	Levels.clear();
 
@@ -1787,7 +1787,7 @@ void InitLauncher()
 	if (hLauncher)
 		return;
 	hLauncher = LoadLibrary("xrLauncher.dll");
-	if (0 == hLauncher)
+	if (nullptr == hLauncher)
 		R_CHK(GetLastError());
 	R_ASSERT2(hLauncher, "xrLauncher DLL raised exception during loading or there is no xrLauncher.dll at all");
 
