@@ -39,7 +39,7 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 			std::sort(lstRenderables.begin(), lstRenderables.end(), pred_sp_sort);
 
 			// Determine visibility for dynamic part of scene
-			set_Object(0);
+			set_Object(nullptr);
 			u32 uID_LTRACK = 0xffffffff;
 			if (phase == PHASE_NORMAL)
 			{
@@ -80,24 +80,23 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 		);
 
 		// Determine visibility for static geometry hierrarhy
-		for (u32 s_it = 0; s_it < PortalTraverser.r_sectors.size(); s_it++)
+		for (IRender_Sector* it : PortalTraverser.r_sectors)
 		{
-			CSector* sector = (CSector*)PortalTraverser.r_sectors[s_it];
+			CSector* sector = (CSector*)it;
 			dxRender_Visual* root = sector->root();
-			for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
+			for (CFrustum& view : sector->r_frustums)
 			{
-				set_Frustum(&(sector->r_frustums[v_it]));
+				set_Frustum(&view);
 				add_Geometry(root);
 			}
 		}
 
 		// Traverse frustums
-		for (u32 o_it = 0; o_it < lstRenderables.size(); o_it++)
+		for (ISpatial* spatial : lstRenderables)
 		{
-			ISpatial* spatial = lstRenderables[o_it];
 			spatial->spatial_updatesector();
 			CSector* sector = (CSector*)spatial->spatial.sector;
-			if (0 == sector) continue; // disassociated from S/P structure
+			if (nullptr == sector) continue; // disassociated from S/P structure
 
 			if (spatial->spatial.type & STYPE_LIGHTSOURCE)
 			{
@@ -114,9 +113,8 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 			}
 
 			if (PortalTraverser.i_marker != sector->r_marker) continue; // inactive (untouched) sector
-			for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
+			for (CFrustum& view : sector->r_frustums)
 			{
-				CFrustum& view = sector->r_frustums[v_it];
 				if (!view.testSphere_dirty(spatial->spatial.sphere.P, spatial->spatial.sphere.R)) continue;
 
 				if (spatial->spatial.type & STYPE_RENDERABLE)
@@ -156,7 +154,7 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 	}
 	else
 	{
-		set_Object(0);
+		set_Object(nullptr);
 		if (g_pGameLevel && (phase == PHASE_NORMAL))
 		{
 			g_hud->Render_Last(); // HUD
@@ -235,13 +233,13 @@ void CRender::Render()
 		return;
 	};
 
-	IMainMenu* pMainMenu = g_pGamePersistent ? g_pGamePersistent->m_pMainMenu : 0;
+	IMainMenu* pMainMenu = g_pGamePersistent ? g_pGamePersistent->m_pMainMenu : nullptr;
 	bool bMenu = pMainMenu ? pMainMenu->CanSkipSceneRendering() : false;
 
 	if (!(g_pGameLevel && g_hud)
 		|| bMenu)
 	{
-		Target->u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT,nullptr,nullptr, HW.pBaseZB);
+		Target->u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT, nullptr, nullptr, HW.pBaseZB);
 		return;
 	}
 
@@ -262,7 +260,7 @@ void CRender::Render()
 
 	// HOM
 	ViewBase.CreateFromMatrix(Device.mFullTransform, FRUSTUM_P_LRTB + FRUSTUM_P_FAR);
-	View = 0;
+	View = nullptr;
 	if (!ps_r2_ls_flags.test(R2FLAG_EXP_MT_CALC))
 	{
 		HOM.Enable();
@@ -351,7 +349,7 @@ void CRender::Render()
 
 	if (RImplementation.o.ssfx_motionvectors)
 	{
-		Target->u_setrt(Device.dwWidth, Device.dwHeight, 0, 0, Target->rt_ssfx_motion_vectors->pRT, 0);
+		Target->u_setrt(Device.dwWidth, Device.dwHeight, nullptr, nullptr, Target->rt_ssfx_motion_vectors->pRT, nullptr);
 
 		FLOAT ColorRGBA[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		HW.pContext->ClearRenderTargetView(Target->rt_ssfx_motion_vectors->pRT, ColorRGBA);
@@ -500,17 +498,22 @@ void CRender::Render()
 	{
 		PIX_EVENT(DEFER_FLUSH_OCCLUSION);
 		u32 it = 0;
-		for (it = 0; it < Lights_LastFrame.size(); it++)
+		for (light* L : Lights_LastFrame)
 		{
-			if (0 == Lights_LastFrame[it]) continue ;
+			if (nullptr == L)
+			{
+				it++;
+				continue;
+			}
 			try
 			{
-				Lights_LastFrame[it]->svis.flushoccq();
+				L->svis.flushoccq();
 			}
 			catch (...)
 			{
-				Msg("! Failed to flush-OCCq on light [%d] %X", it, *(u32*)(&Lights_LastFrame[it]));
+				Msg("! Failed to flush-OCCq on light [%d] %X", it, *(u32*)(&L));
 			}
+			it++;
 		}
 		Lights_LastFrame.clear();
 	}
@@ -618,7 +621,7 @@ void CRender::Render()
 	if (RImplementation.o.ssfx_bloom)
 	{
 		// Render Emissive on `rt_ssfx_bloom_emissive`
-		FLOAT ColorRGBA[4] = { 0,0,0,0 };
+		FLOAT ColorRGBA[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		HW.pContext->ClearRenderTargetView(Target->rt_ssfx_bloom_emissive->pRT, ColorRGBA);
 		Target->u_setrt(Target->rt_ssfx_bloom_emissive, nullptr, nullptr, !RImplementation.o.dx10_msaa ? HW.pBaseZB : Target->rt_MSAADepth->pZRT);
 		RImplementation.r_dsgraph_render_emissive(true, true);

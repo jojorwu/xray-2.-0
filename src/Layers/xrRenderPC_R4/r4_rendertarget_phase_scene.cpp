@@ -78,9 +78,9 @@ void CRenderTarget::phase_scene_end()
 
 	// transfer from "rt_Accumulator" into "rt_Color"
 	if (!RImplementation.o.dx10_msaa)
-		u_setrt(rt_Color, 0, 0, HW.pBaseZB);
+		u_setrt(rt_Color, nullptr, nullptr, HW.pBaseZB);
 	else
-		u_setrt(rt_Color, 0, 0, rt_MSAADepth->pZRT);
+		u_setrt(rt_Color, nullptr, nullptr, rt_MSAADepth->pZRT);
 	RCache.set_CullMode(CULL_NONE);
 	RCache.set_Stencil(TRUE, D3DCMP_LESSEQUAL, 0x01, 0xff, 0x00); // stencil should be >= 1
 	if (RImplementation.o.nvstencil) u_stencil_optimize(CRenderTarget::SO_Combine);
