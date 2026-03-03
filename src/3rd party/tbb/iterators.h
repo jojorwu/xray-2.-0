@@ -240,11 +240,7 @@ class transform_iterator {
 public:
     typedef typename std::iterator_traits<Iter>::value_type value_type;
     typedef typename std::iterator_traits<Iter>::difference_type difference_type;
-#if __TBB_CPP17_INVOKE_RESULT_PRESENT || __cplusplus >= 201703L || _MSVC_LANG >= 201703L
     typedef typename std::invoke_result<UnaryFunc, typename std::iterator_traits<Iter>::reference>::type reference;
-#else
-    typedef typename std::invoke_result<UnaryFunc(typename std::iterator_traits<Iter>::reference)>::type reference;
-#endif
     typedef typename std::iterator_traits<Iter>::pointer pointer;
     typedef typename std::random_access_iterator_tag iterator_category;
 

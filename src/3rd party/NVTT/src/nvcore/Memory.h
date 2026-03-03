@@ -131,7 +131,7 @@ namespace {
    requirements.
 
    Your operators may be called by the system, even early in start-up before constructors have been executed.  */
-void* operator new(std::size_t sz) throw (std::bad_alloc)
+void* operator new(std::size_t sz)
 {
 	void *result = std::malloc (sz == 0 ? 1 : sz);
 	if (result == NULL)

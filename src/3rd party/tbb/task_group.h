@@ -137,7 +137,7 @@ public:
 #if __TBB_CPP17_UNCAUGHT_EXCEPTIONS_PRESENT || __cplusplus >= 201703L || _MSVC_LANG >= 201703L
             bool stack_unwinding_in_progress = std::uncaught_exceptions() > 0;
 #else
-            bool stack_unwinding_in_progress = std::uncaught_exception();
+            bool stack_unwinding_in_progress = std::uncaught_exceptions() > 0;
 #endif
             // Always attempt to do proper cleanup to avoid inevitable memory corruption
             // in case of missing wait (for the sake of better testability & debuggability)
