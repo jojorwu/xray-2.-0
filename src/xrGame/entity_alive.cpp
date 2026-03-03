@@ -412,7 +412,7 @@ void CEntityAlive::PlaceBloodWallmark(const Fvector& dir, const Fvector& start_p
                                       IWallMarkArray* pwallmarks_vector)
 {
 	collide::rq_result result;
-	BOOL reach_wall =
+	bool const reach_wall =
 		Level().ObjectSpace.RayPick(
 			start_pos,
 			dir,

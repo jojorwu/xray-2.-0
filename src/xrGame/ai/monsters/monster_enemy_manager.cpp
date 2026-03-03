@@ -14,12 +14,12 @@ CMonsterEnemyManager::CMonsterEnemyManager()
 	time_last_seen = 0;
 	expediency = false;
 	enemy_see_me = false;
-	m_script_enemy = NULL;
-	monster = 0;
-	enemy = 0;
+	m_script_enemy = nullptr;
+	monster = nullptr;
+	enemy = nullptr;
 	flags.zero();
 	forced = false;
-	prev_enemy = 0;
+	prev_enemy = nullptr;
 	danger_type = eNone;
 	my_vertex_enemy_last_seen = u32(-1);
 	enemy_vertex_enemy_last_seen = u32(-1);
@@ -48,7 +48,7 @@ void CMonsterEnemyManager::update()
 		// проверить валидность force-объекта
 		if (!enemy || enemy->getDestroy() || !enemy->g_Alive())
 		{
-			enemy = 0;
+			enemy = nullptr;
 			return;
 		}
 	}
@@ -197,11 +197,11 @@ u32 CMonsterEnemyManager::get_enemies_count()
 
 void CMonsterEnemyManager::reinit()
 {
-	enemy = 0;
+	enemy = nullptr;
 	time_last_seen = 0;
 	flags.zero();
 	forced = false;
-	prev_enemy = 0;
+	prev_enemy = nullptr;
 	danger_type = eNone;
 
 	my_vertex_enemy_last_seen = monster->ai_location().level_vertex_id();
@@ -318,7 +318,7 @@ u32 CMonsterEnemyManager::see_enemy_duration()
 
 void CMonsterEnemyManager::script_enemy()
 {
-	m_script_enemy = 0;
+	m_script_enemy = nullptr;
 }
 
 void CMonsterEnemyManager::script_enemy(const CEntityAlive& enemy)
@@ -330,14 +330,14 @@ void CMonsterEnemyManager::remove_links(CObject* O)
 {
 	if (enemy == O)
 	{
-		enemy = NULL;
+		enemy = nullptr;
 	}
 	if (prev_enemy == O)
 	{
-		prev_enemy = NULL;
+		prev_enemy = nullptr;
 	}
 	if (m_script_enemy == O)
 	{
-		m_script_enemy = NULL;
+		m_script_enemy = nullptr;
 	}
 }

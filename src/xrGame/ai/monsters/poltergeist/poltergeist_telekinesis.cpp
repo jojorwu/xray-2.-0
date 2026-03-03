@@ -193,13 +193,13 @@ extern BOOL g_telekinetic_objects_include_corpses;
 void CPolterTele::tele_find_objects(xr_vector<CObject*>& objects, const Fvector& pos)
 {
 	m_nearest.clear_not_free();
-	Level().ObjectSpace.GetNearest(m_nearest, pos, m_pmt_radius, NULL);
+	Level().ObjectSpace.GetNearest(m_nearest, pos, m_pmt_radius, nullptr);
 
-	for (u32 i = 0; i < m_nearest.size(); i++)
+	for (auto& item : m_nearest)
 	{
-		CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder *>(m_nearest[i]);
-		CCustomMonster* custom_monster = smart_cast<CCustomMonster *>(m_nearest[i]);
-		CInventoryItem* itm = smart_cast<CInventoryItem*>(m_nearest[i]);
+		CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder *>(item);
+		CCustomMonster* custom_monster = smart_cast<CCustomMonster *>(item);
+		CInventoryItem* itm = smart_cast<CInventoryItem*>(item);
 		if (!obj ||
 			!obj->PPhysicsShell() ||
 			!obj->PPhysicsShell()->isActive() ||
@@ -301,13 +301,13 @@ struct SCollisionHitCallback :
 		VERIFY(object);
 	}
 
-	void call(IPhysicsShellHolder* obj, float min_cs, float max_cs, float& cs, float& hl, ICollisionDamageInfo* di)
+	void call(IPhysicsShellHolder* obj, float min_cs, float max_cs, float& cs, float& hl, ICollisionDamageInfo* di) override
 	{
 		if (cs > min_cs * 0.5f)
 			hl = m_pmt_object_collision_damage;
 		VERIFY(m_object);
 		di->SetInitiated();
-		m_object->set_collision_hit_callback(0); //delete this!!
+		m_object->set_collision_hit_callback(nullptr); //delete this!!
 	}
 };
 

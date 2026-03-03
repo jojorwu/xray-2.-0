@@ -396,26 +396,26 @@ CWound* CEntityCondition::AddWound(float hit_power, ALife::EHitType hit_type, u1
 	VERIFY(element < 64 || BI_NONE == element);
 
 	//запомнить кость по которой ударили и силу удара
-	WOUND_VECTOR_IT it = m_WoundVector.begin();
-	for (; it != m_WoundVector.end(); it++)
+	CWound* pWound = nullptr;
+	for (auto& wound : m_WoundVector)
 	{
-		if ((*it)->GetBoneNum() == element)
+		if (wound->GetBoneNum() == element)
+		{
+			pWound = wound;
 			break;
+		}
 	}
 
-	CWound* pWound = nullptr;
-
 	//новая рана
-	if (it == m_WoundVector.end())
+	if (!pWound)
 	{
 		pWound = xr_new<CWound>(element);
 		pWound->AddHit(hit_power * ::Random.randF(0.5f, 1.5f), hit_type);
 		m_WoundVector.push_back(pWound);
 	}
-		//старая 
+	//старая
 	else
 	{
-		pWound = *it;
 		pWound->AddHit(hit_power * ::Random.randF(0.5f, 1.5f), hit_type);
 	}
 
@@ -713,13 +713,11 @@ void CEntityCondition::load(IReader& input_packet)
 
 		ClearWounds();
 		m_WoundVector.resize(input_packet.r_u8());
-		if (!m_WoundVector.empty())
-			for (u32 i = 0; i < m_WoundVector.size(); i++)
-			{
-				CWound* pWound = xr_new<CWound>(BI_NONE);
-				pWound->load(input_packet);
-				m_WoundVector[i] = pWound;
-			}
+		for (auto& wound : m_WoundVector)
+		{
+			wound = xr_new<CWound>(BI_NONE);
+			wound->load(input_packet);
+		}
 	}
 }
 

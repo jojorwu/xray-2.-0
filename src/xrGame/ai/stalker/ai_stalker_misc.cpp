@@ -177,17 +177,14 @@ void CAI_Stalker::process_enemies()
 		return;
 
 	typedef MemorySpace::squad_mask_type squad_mask_type;
-	typedef CVisualMemoryManager::VISIBLES VISIBLES;
 
 	squad_mask_type mask = memory().visual().mask();
-	VISIBLES::const_iterator I = memory().visual().objects().begin();
-	VISIBLES::const_iterator E = memory().visual().objects().end();
-	for (; I != E; ++I)
+	for (const auto& visible_object : memory().visual().objects())
 	{
-		if (!(*I).visible(mask))
+		if (!visible_object.visible(mask))
 			continue;
 
-		const CAI_Stalker* member = smart_cast<const CAI_Stalker*>((*I).m_object);
+		const CAI_Stalker* member = smart_cast<const CAI_Stalker*>(visible_object.m_object);
 		if (!member)
 			continue;
 

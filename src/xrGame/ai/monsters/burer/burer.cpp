@@ -325,7 +325,7 @@ void CBurer::UpdateGraviObject()
 	float trace_dist = float(m_gravi.step);
 
 	collide::rq_result l_rq;
-	if (Level().ObjectSpace.RayPick(new_pos, dir, trace_dist, collide::rqtBoth, l_rq, NULL))
+	if (Level().ObjectSpace.RayPick(new_pos, dir, trace_dist, collide::rqtBoth, l_rq, nullptr))
 	{
 		const CObject* enemy = smart_cast<const CObject *>(m_gravi_object.enemy);
 		if ((l_rq.O == enemy) && (l_rq.range < trace_dist))
@@ -336,9 +336,9 @@ void CBurer::UpdateGraviObject()
 			feel_vision_get(visible_objects);
 
 			// find object
-			for (u32 i = 0; i < visible_objects.size(); i++)
+			for (CObject* obj : visible_objects)
 			{
-				if (visible_objects[i] == enemy)
+				if (obj == enemy)
 				{
 					b_enemy_visible = true;
 					break;
@@ -380,12 +380,12 @@ void CBurer::UpdateGraviObject()
 
 	// hit objects
 	m_nearest.clear_not_free();
-	Level().ObjectSpace.GetNearest(m_nearest, m_gravi_object.cur_pos, m_gravi.radius, NULL);
+	Level().ObjectSpace.GetNearest(m_nearest, m_gravi_object.cur_pos, m_gravi.radius, nullptr);
 	//xr_vector<CObject*> &m_nearest = Level().ObjectSpace.q_nearest;
 
-	for (u32 i = 0; i < m_nearest.size(); i++)
+	for (CObject* nearest_obj : m_nearest)
 	{
-		CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder *>(m_nearest[i]);
+		CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder*>(nearest_obj);
 		if (!obj || !obj->m_pPhysicsShell) continue;
 
 		CInventoryItem* itm = smart_cast<CInventoryItem*>(obj);

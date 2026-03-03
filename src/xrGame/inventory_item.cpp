@@ -42,11 +42,11 @@ net_updateInvData* CInventoryItem::NetSync()
 
 CInventoryItem::CInventoryItem()
 {
-	m_net_updateData = NULL;
+	m_net_updateData = nullptr;
 	m_flags.set(Fbelt,FALSE);
 	m_flags.set(Fruck,TRUE);
 	m_flags.set(FRuckDefault,TRUE);
-	m_pInventory = NULL;
+	m_pInventory = nullptr;
 
 	SetDropManual(FALSE);
 
@@ -56,7 +56,7 @@ CInventoryItem::CInventoryItem()
 	m_flags.set(FUsingCondition,FALSE);
 	m_fCondition = 1.0f;
 
-	m_name = m_nameShort = NULL;
+	m_name = m_nameShort = nullptr;
 
 	m_ItemCurrPlace.value = 0;
 	m_ItemCurrPlace.type = eItemPlaceUndefined;
@@ -106,7 +106,7 @@ void CInventoryItem::Load(LPCSTR section)
 		m_kind._set(pSettings->r_string(section, "kind"));
 	else
 	{
-		m_kind = NULL;
+		m_kind = nullptr;
 		if (FS.m_Flags.test(FS.flPrintLTX))
 			Log("'kind' for section %s doesn't exist!", section);
 	}
@@ -137,7 +137,7 @@ void CInventoryItem::Load(LPCSTR section)
 		m_flags.set(FAllowSprint, pSettings->r_bool(section, "sprint_allowed"));
 		m_fControlInertionFactor = pSettings->r_float(section, "control_inertion_factor");
 	}
-	m_icon_name = READ_IF_EXISTS(pSettings, r_string, section, "icon_name", NULL);
+	m_icon_name = READ_IF_EXISTS(pSettings, r_string, section, "icon_name", nullptr);
 
 	m_fLowestBatteryCharge = READ_IF_EXISTS(pSettings, r_float, section, "power_critical", .03f);
 }
@@ -1225,28 +1225,28 @@ void CInventoryItem::reload(LPCSTR section)
 
 void CInventoryItem::reinit()
 {
-	m_pInventory = NULL;
+	m_pInventory = nullptr;
 	m_ItemCurrPlace.type = eItemPlaceUndefined;
 }
 
 bool CInventoryItem::can_kill() const
 {
-	return (false);
+	return false;
 }
 
 CInventoryItem* CInventoryItem::can_kill(CInventory* inventory) const
 {
-	return (0);
+	return nullptr;
 }
 
 const CInventoryItem* CInventoryItem::can_kill(const xr_vector<const CGameObject*>& items) const
 {
-	return (0);
+	return nullptr;
 }
 
 CInventoryItem* CInventoryItem::can_make_killing(const CInventory* inventory) const
 {
-	return (0);
+	return nullptr;
 }
 
 bool CInventoryItem::ready_to_kill() const

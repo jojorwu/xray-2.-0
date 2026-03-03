@@ -36,7 +36,7 @@ TSoundDangerValue tagSoundElement::ConvertSoundType(ESoundTypes stype)
 CMonsterSoundMemory::CMonsterSoundMemory()
 {
 	time_memory = 0;
-	monster = NULL;
+	monster = nullptr;
 	Sounds.reserve(20);
 	m_time_help_sound = 0;
 	m_help_node = u32(-1);
@@ -59,16 +59,14 @@ void CMonsterSoundMemory::HearSound(const SoundElem& s)
 	if ((s.type == MONSTER_WALKING) && !s.who) return;
 
 	// поиск в массиве звука
-	xr_vector<SoundElem>::iterator it;
-
 	bool b_sound_replaced = false;
-	for (it = Sounds.begin(); Sounds.end() != it; ++it)
+	for (auto& sound : Sounds)
 	{
-		if ((s.who == it->who) && (it->type == s.type))
+		if ((s.who == sound.who) && (sound.type == s.type))
 		{
-			if (s.time >= it->time)
+			if (s.time >= sound.time)
 			{
-				*it = s;
+				sound = s;
 				b_sound_replaced = true;
 			}
 		}
@@ -165,18 +163,18 @@ void CMonsterSoundMemory::UpdateHearing()
 
 bool CMonsterSoundMemory::is_loud_sound(float val)
 {
-	for (u32 i = 0; i < Sounds.size(); i++)
-		if (Sounds[i].power > val) return true;
+	for (const auto& sound : Sounds)
+		if (sound.power > val) return true;
 
 	return false;
 }
 
 bool CMonsterSoundMemory::get_sound_from_object(const CObject* obj, SoundElem& value)
 {
-	for (u32 i = 0; i < Sounds.size(); i++)
-		if (Sounds[i].who == obj)
+	for (const auto& sound : Sounds)
+		if (sound.who == obj)
 		{
-			value = Sounds[i];
+			value = sound;
 			return true;
 		}
 

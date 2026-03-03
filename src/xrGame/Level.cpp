@@ -305,17 +305,17 @@ CLevel::~CLevel()
 		xr_delete(m_ph_commander_physics_worldstep);
 	}
 	// destroy PSs
-	for (POIt p_it = m_StaticParticles.begin(); m_StaticParticles.end() != p_it; ++p_it)
-		CParticlesObject::Destroy(*p_it);
+	for (auto& particle : m_StaticParticles)
+		CParticlesObject::Destroy(particle);
 	m_StaticParticles.clear();
 	// Unload sounds
 	// unload prefetched sounds
 	sound_registry.clear();
 	// unload static sounds
-	for (u32 i = 0; i < static_Sounds.size(); ++i)
+	for (auto& sound : static_Sounds)
 	{
-		static_Sounds[i]->destroy();
-		xr_delete(static_Sounds[i]);
+		sound->destroy();
+		xr_delete(sound);
 	}
 	static_Sounds.clear();
 	xr_delete(m_level_sound_manager);
@@ -851,14 +851,14 @@ void CLevel::ProcessGameEvents()
 				{
 					PROF_EVENT("ProcessGameEvents M_MOVE_PLAYERS");
 					u8 Count = P.r_u8();
-					for (u8 i = 0; i < Count; i++)
+					for (u32 i = 0; i < Count; ++i)
 					{
 						u16 ID = P.r_u16();
 						Fvector NewPos, NewDir;
 						P.r_vec3(NewPos);
 						P.r_vec3(NewDir);
 						CActor* OActor = smart_cast<CActor*>(Objects.net_Find(ID));
-						if (0 == OActor)
+						if (!OActor)
 							break;
 						OActor->MoveActor(NewPos, NewDir);
 					}

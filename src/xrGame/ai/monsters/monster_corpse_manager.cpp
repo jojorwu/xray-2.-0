@@ -7,8 +7,8 @@ CMonsterCorpseManager::CMonsterCorpseManager()
 {
 	vertex = 0;
 	time_last_seen = 0;
-	monster = 0;
-	corpse = 0;
+	monster = nullptr;
+	corpse = nullptr;
 	forced = false;
 }
 
@@ -27,7 +27,7 @@ void CMonsterCorpseManager::update()
 	{
 		if (corpse->m_fFood < 1)
 		{
-			corpse = 0;
+			corpse = nullptr;
 			return;
 		}
 	}
@@ -72,7 +72,7 @@ void CMonsterCorpseManager::unforce_corpse()
 
 void CMonsterCorpseManager::reinit()
 {
-	corpse = 0;
+	corpse = nullptr;
 	forced = false;
 	time_last_seen = 0;
 }
@@ -81,6 +81,6 @@ void CMonsterCorpseManager::remove_links(CObject* O)
 {
 	if (corpse == O)
 	{
-		corpse = NULL;
+		corpse = nullptr;
 	}
 }

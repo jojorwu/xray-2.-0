@@ -872,13 +872,10 @@ void CActor::Die(CObject* who)
 
 	if (OnServer())
 	{
-		u16 I = inventory().FirstSlot();
-		u16 E = inventory().LastSlot();
-
-		for (; I <= E; ++I)
+		for (u16 i = inventory().FirstSlot(); i <= inventory().LastSlot(); ++i)
 		{
-			PIItem item_in_slot = inventory().ItemFromSlot(I);
-			if (I == inventory().GetActiveSlot())
+			PIItem item_in_slot = inventory().ItemFromSlot(i);
+			if (i == inventory().GetActiveSlot())
 			{
 				if (item_in_slot)
 				{
@@ -890,26 +887,18 @@ void CActor::Die(CObject* who)
 						else
 							item_in_slot->SetDropManual(true);
 					}
-					else
-					{
-						//This logic we do on a server site
-						/*
-						if ((*I).m_pIItem->object().CLS_ID != CLSID_OBJECT_W_KNIFE)
-						{
-						(*I).m_pIItem->SetDropManual(TRUE);
-						}*/
-					}
-				};
+				}
 				continue;
 			}
 			else
 			{
-				CCustomOutfit* pOutfit = smart_cast<CCustomOutfit *>(item_in_slot);
+				CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(item_in_slot);
 				if (pOutfit) continue;
-			};
+			}
+
 			if (item_in_slot)
 				inventory().Ruck(item_in_slot);
-		};
+		}
 
 
 		///!!! ÷èñòêà ïîÿñà
@@ -921,24 +910,24 @@ void CActor::Die(CObject* who)
 		{
 			//if we are on server and actor has PDA - destroy PDA
 			TIItemContainer& l_rlist = inventory().m_ruck;
-			for (TIItemContainer::iterator l_it = l_rlist.begin(); l_rlist.end() != l_it; ++l_it)
+	for (auto& item : l_rlist)
 			{
 				if (GameID() == eGameIDArtefactHunt)
 				{
-					CArtefact* pArtefact = smart_cast<CArtefact*>(*l_it);
+			CArtefact* pArtefact = smart_cast<CArtefact*>(item);
 					if (pArtefact)
 					{
-						(*l_it)->SetDropManual(true);
+				item->SetDropManual(true);
 						continue;
-					};
-				};
+			}
+		}
 
-				if ((*l_it)->object().CLS_ID == CLSID_OBJECT_PLAYERS_BAG)
+		if (item->object().CLS_ID == CLSID_OBJECT_PLAYERS_BAG)
 				{
-					(*l_it)->SetDropManual(true);
+			item->SetDropManual(true);
 					continue;
-				};
-			};
+		}
+	}
 		};
 	};
 
