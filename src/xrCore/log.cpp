@@ -148,6 +148,8 @@ void AddOne(const char* split)
 
 void Log(const char* s)
 {
+	if (!s) return;
+
 	int i, j;
 
 	u32 length = xr_strlen(s);

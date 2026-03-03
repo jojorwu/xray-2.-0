@@ -40,11 +40,11 @@ CObjectList::~CObjectList()
 
 CObject* CObjectList::FindObjectByName(shared_str name)
 {
-	for (Objects::iterator I = objects_active.begin(); I != objects_active.end(); I++)
-		if ((*I)->cName().equal(name)) return (*I);
-	for (Objects::iterator I = objects_sleeping.begin(); I != objects_sleeping.end(); I++)
-		if ((*I)->cName().equal(name)) return (*I);
-	return NULL;
+	for (CObject* O : objects_active)
+		if (O->cName().equal(name)) return O;
+	for (CObject* O : objects_sleeping)
+		if (O->cName().equal(name)) return O;
+	return nullptr;
 }
 
 CObject* CObjectList::FindObjectByName(LPCSTR name)
@@ -55,15 +55,15 @@ CObject* CObjectList::FindObjectByName(LPCSTR name)
 CObject* CObjectList::FindObjectByCLS_ID(CLASS_ID cls)
 {
 	{
-		Objects::iterator O = std::find_if(objects_active.begin(), objects_active.end(), fClassEQ(cls));
+		auto O = std::find_if(objects_active.begin(), objects_active.end(), fClassEQ(cls));
 		if (O != objects_active.end()) return *O;
 	}
 	{
-		Objects::iterator O = std::find_if(objects_sleeping.begin(), objects_sleeping.end(), fClassEQ(cls));
+		auto O = std::find_if(objects_sleeping.begin(), objects_sleeping.end(), fClassEQ(cls));
 		if (O != objects_sleeping.end()) return *O;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -235,7 +235,7 @@ void CObjectList::Update(bool bForce)
 #endif
 
 			Device.Statistic->UpdateClient_crows = crows.size();
-			Objects* workload = 0;
+			Objects* workload = nullptr;
 			if (!psDeviceFlags.test(rsDisableObjectsAsCrows))
 				workload = &crows;
 			else
@@ -273,32 +273,30 @@ void CObjectList::Update(bool bForce)
 	if (!destroy_queue.empty())
 	{
 		// Info
-		for (Objects::iterator oit = objects_active.begin(); oit != objects_active.end(); oit++)
-			for (int it = destroy_queue.size() - 1; it >= 0; it--)
+		for (CObject* oit : objects_active)
+			for (int it = (int)destroy_queue.size() - 1; it >= 0; it--)
 			{
-				(*oit)->net_Relcase(destroy_queue[it]);
+				oit->net_Relcase(destroy_queue[it]);
 			}
-		for (Objects::iterator oit = objects_sleeping.begin(); oit != objects_sleeping.end(); oit++)
-			for (int it = destroy_queue.size() - 1; it >= 0; it--) (*oit)->net_Relcase(destroy_queue[it]);
+		for (CObject* oit : objects_sleeping)
+			for (int it = (int)destroy_queue.size() - 1; it >= 0; it--)
+				oit->net_Relcase(destroy_queue[it]);
 
-		for (int it = destroy_queue.size() - 1; it >= 0; it--) Sound->object_relcase(destroy_queue[it]);
+		for (int it = (int)destroy_queue.size() - 1; it >= 0; it--)
+			Sound->object_relcase(destroy_queue[it]);
 
-		RELCASE_CALLBACK_VEC::iterator It = m_relcase_callbacks.begin();
-		RELCASE_CALLBACK_VEC::iterator Ite = m_relcase_callbacks.end();
-		for (; It != Ite; ++It)
+		for (auto It = m_relcase_callbacks.begin(); It != m_relcase_callbacks.end(); ++It)
 		{
-			VERIFY(*(*It).m_ID == (It - m_relcase_callbacks.begin()));
-			Objects::iterator dIt = destroy_queue.begin();
-			Objects::iterator dIte = destroy_queue.end();
-			for (; dIt != dIte; ++dIt)
+			VERIFY(*(*It).m_ID == (int)(It - m_relcase_callbacks.begin()));
+			for (CObject* dIt : destroy_queue)
 			{
-				(*It).m_Callback(*dIt);
-				g_hud->net_Relcase(*dIt);
+				(*It).m_Callback(dIt);
+				g_hud->net_Relcase(dIt);
 			}
 		}
 
 		// Destroy
-		for (int it = destroy_queue.size() - 1; it >= 0; it--)
+		for (int it = (int)destroy_queue.size() - 1; it >= 0; it--)
 		{
 			CObject* O = destroy_queue[it];
 			// Msg ("Object [%x]", O);
@@ -329,7 +327,7 @@ void CObjectList::net_Unregister(CObject* O)
 {
 	//R_ASSERT (O->ID() < 0xffff);
 	if (O->ID() < 0xffff) //demo_spectator can have 0xffff
-		map_NETID[O->ID()] = NULL;
+		map_NETID[O->ID()] = nullptr;
 	/*
 	 xr_map<u32,CObject*>::iterator it = map_NETID.find(O->ID());
 	 if ((it!=map_NETID.end()) && (it->second == O)) {
@@ -429,7 +427,7 @@ void CObjectList::Unload()
 		Msg("! objects-leaked: %d", objects_sleeping.size() + objects_active.size());
 
 	// Destroy objects
-	while (objects_sleeping.size())
+	while (!objects_sleeping.empty())
 	{
 		CObject* O = objects_sleeping.back();
 		Msg("! [%x] s[%4d]-[%s]-[%s]", O, O->ID(), *O->cNameSect(), *O->cName());
@@ -442,7 +440,7 @@ void CObjectList::Unload()
 		O->net_Destroy();
 		Destroy(O);
 	}
-	while (objects_active.size())
+	while (!objects_active.empty())
 	{
 		CObject* O = objects_active.back();
 		Msg("! [%x] a[%4d]-[%s]-[%s]", O, O->ID(), *O->cNameSect(), *O->cName());
@@ -467,7 +465,7 @@ CObject* CObjectList::Create(LPCSTR name)
 
 void CObjectList::Destroy(CObject* O)
 {
-	if (0 == O) return;
+	if (nullptr == O) return;
 	net_Unregister(O);
 
 	if (!Device.Paused())
@@ -585,11 +583,8 @@ void CObjectList::register_object_to_destroy(CObject* object_to_destroy)
 #endif
 	destroy_queue.push_back(object_to_destroy);
 
-	Objects::iterator it = objects_active.begin();
-	Objects::iterator it_e = objects_active.end();
-	for (; it != it_e; ++it)
+	for (CObject* O : objects_active)
 	{
-		CObject* O = *it;
 		if (!O->getDestroy() && O->H_Parent() == object_to_destroy)
 		{
 			Msg("setDestroy called, but not-destroyed child found parent[%d] child[%d]", object_to_destroy->ID(),
@@ -598,11 +593,8 @@ void CObjectList::register_object_to_destroy(CObject* object_to_destroy)
 		}
 	}
 
-	it = objects_sleeping.begin();
-	it_e = objects_sleeping.end();
-	for (; it != it_e; ++it)
+	for (CObject* O : objects_sleeping)
 	{
-		CObject* O = *it;
 		if (!O->getDestroy() && O->H_Parent() == object_to_destroy)
 		{
 			Msg("setDestroy called, but not-destroyed child found parent[%d] child[%d]", object_to_destroy->ID(),
