@@ -20,7 +20,7 @@ struct SPickParam
 
 	SPickParam(int cull) :
 		defs(collide::ray_defs(Fvector(), Fvector(), 0.f, cull, collide::rqtBoth)),
-		result(collide::rq_result().set(NULL, 0.f, 0)),
+		result(collide::rq_result().set(nullptr, 0.f, 0)),
 		barrel_dist(0.f),
 		barrel_blocked(false),
 		barrel_matrix(Fmatrix().identity()),
@@ -64,14 +64,14 @@ private:
 	collide::rq_results RQR;
 public:
 	CHUDManager();
-	virtual ~CHUDManager();
-	virtual void OnFrame();
-	virtual void OnEvent(EVENT E, u64 P1, u64 P2);
+	virtual ~CHUDManager() override;
+	virtual void OnFrame() override;
+	virtual void OnEvent(EVENT E, u64 P1, u64 P2) override;
 
-	virtual void Render_First();
-	virtual void Render_Last();
+	virtual void Render_First() override;
+	virtual void Render_Last() override;
 
-	virtual void RenderUI();
+	virtual void RenderUI() override;
 
 	//.				CUI*		GetUI				(){return pUI;}
 	CUIGameCustom* GetGameUI()
@@ -82,7 +82,7 @@ public:
 	void HitMarked(int idx, float power, const Fvector& dir);
 	bool AddGrenade_ForMark(CGrenade* grn);
 	void Update_GrenadeView(Fvector& pos_actor);
-	void net_Relcase(CObject* obj);
+	void net_Relcase(CObject* obj) override;
 
 
 	bool FireposActive();
@@ -101,15 +101,15 @@ public:
 	void SetHitmarkType(LPCSTR tex_name);
 	void SetGrenadeMarkType(LPCSTR tex_name);
 
-	virtual void OnScreenResolutionChanged();
-	virtual void Load();
-	virtual void OnDisconnected();
-	virtual void OnConnected();
+	virtual void OnScreenResolutionChanged() override;
+	virtual void Load() override;
+	virtual void OnDisconnected() override;
+	virtual void OnConnected() override;
 
-	virtual void RenderActiveItemUI();
-	virtual void RenderCamAttachedUI();
-	virtual bool RenderActiveItemUIQuery();
-	virtual bool RenderCamAttachedUIQuery();
+	virtual void RenderActiveItemUI() override;
+	virtual void RenderCamAttachedUI() override;
+	virtual bool RenderActiveItemUIQuery() override;
+	virtual bool RenderCamAttachedUIQuery() override;
 
 	//Lain: added
 	void SetRenderable(bool renderable)
@@ -117,7 +117,7 @@ public:
 		psHUD_Flags.set(HUD_DRAW_RT2, renderable);
 	}
 
-	void Render_R1_Attachment_UI();
+	virtual void Render_R1_Attachment_UI() override;
 };
 
 IC CHUDManager& HUD()
