@@ -84,7 +84,7 @@ CEntityCondition::CEntityCondition(CEntityAlive* object)
 	m_fDeltaPsyHealth = 0;
 
 	m_fHealthLost = 0.f;
-	m_pWho = NULL;
+	m_pWho = nullptr;
 	m_iWhoID = 0;
 
 	m_WoundVector.clear();
@@ -108,8 +108,8 @@ CEntityCondition::~CEntityCondition(void)
 
 void CEntityCondition::ClearWounds()
 {
-	for (WOUND_VECTOR_IT it = m_WoundVector.begin(); m_WoundVector.end() != it; ++it)
-		xr_delete(*it);
+	for (auto& item : m_WoundVector)
+		xr_delete(item);
 	m_WoundVector.clear();
 
 	m_bIsBleeding = false;
@@ -125,7 +125,7 @@ void CEntityCondition::LoadCondition(LPCSTR entity_section)
 	m_fHealthHitPart = pSettings->r_float(section, "health_hit_part");
 	m_fPowerHitPart = pSettings->r_float(section, "power_hit_part");
 
-	m_use_limping_state = !!(READ_IF_EXISTS(pSettings, r_bool, section, "use_limping_state", FALSE));
+	m_use_limping_state = !!(READ_IF_EXISTS(pSettings, r_bool, section, "use_limping_state", false));
 	m_limping_threshold = READ_IF_EXISTS(pSettings, r_float, section, "limping_threshold", .5f);
 
 	m_fKillHitTreshold = READ_IF_EXISTS(pSettings, r_float, section, "killing_hit_treshold", 0.0f);
@@ -167,8 +167,8 @@ void CEntityCondition::reinit()
 	m_fDeltaPsyHealth = 0;
 
 	m_fHealthLost = 0.f;
-	m_pWho = NULL;
-	m_iWhoID = NULL;
+	m_pWho = nullptr;
+	m_iWhoID = 0;
 
 	ClearWounds();
 }
@@ -213,11 +213,11 @@ void CEntityCondition::ChangeEntityMorale(const float value)
 void CEntityCondition::ChangeBleeding(const float percent)
 {
 	//затянуть раны
-	for (WOUND_VECTOR_IT it = m_WoundVector.begin(); m_WoundVector.end() != it; ++it)
+	for (auto& item : m_WoundVector)
 	{
-		(*it)->Incarnation(percent, m_fMinWoundSize);
-		if (fis_zero((*it)->TotalSize()))
-			(*it)->SetDestroy(true);
+		item->Incarnation(percent, m_fMinWoundSize);
+		if (fis_zero(item->TotalSize()))
+			item->SetDestroy(true);
 	}
 }
 
@@ -403,7 +403,7 @@ CWound* CEntityCondition::AddWound(float hit_power, ALife::EHitType hit_type, u1
 			break;
 	}
 
-	CWound* pWound = NULL;
+	CWound* pWound = nullptr;
 
 	//новая рана
 	if (it == m_WoundVector.end())
@@ -445,7 +445,7 @@ CWound* CEntityCondition::ConditionHit(SHit* pHDS)
 {
 	//кто нанес последний хит
 	m_pWho = pHDS->who;
-	m_iWhoID = (NULL != pHDS->who) ? pHDS->who->ID() : 0;
+	m_iWhoID = (nullptr != pHDS->who) ? pHDS->who->ID() : 0;
 
 	bool const is_special_hit_2_self = (pHDS->who == m_object) && (pHDS->boneID == BI_NONE);
 
@@ -541,7 +541,7 @@ CWound* CEntityCondition::ConditionHit(SHit* pHDS)
 
 		m_fDeltaRadiation += hit_power;
 		bAddWound = false;
-		return NULL;
+		return nullptr;
 		break;
 	case ALife::eHitTypeExplosion:
 		hit_power *= GetHitImmunity(pHDS->hit_type) - m_fBoostExplImmunity;
@@ -617,7 +617,7 @@ CWound* CEntityCondition::ConditionHit(SHit* pHDS)
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -626,8 +626,8 @@ float CEntityCondition::BleedingSpeed()
 {
 	float bleeding_speed = 0.f;
 
-	for (WOUND_VECTOR_IT it = m_WoundVector.begin(); m_WoundVector.end() != it; ++it)
-		bleeding_speed += (*it)->TotalSize();
+	for (auto& item : m_WoundVector)
+		bleeding_speed += item->TotalSize();
 	bleeding_speed *= m_fBleedSpeedK;
 	clamp(bleeding_speed, 0.0f, 10.f);
 	return bleeding_speed;
@@ -637,7 +637,7 @@ float CEntityCondition::BleedingSpeed()
 void CEntityCondition::UpdateHealth()
 {
 	float bleeding_speed = BleedingSpeed() * m_fDeltaTime * change_v().m_fV_Bleeding;
-	m_bIsBleeding = fis_zero(bleeding_speed) ? false : true;
+	m_bIsBleeding = !fis_zero(bleeding_speed);
 	m_fDeltaHealth -= CanBeHarmed() ? bleeding_speed : 0;
 	m_fDeltaHealth += m_fDeltaTime * change_v().m_fV_HealthRestore;
 
@@ -677,7 +677,7 @@ void CEntityCondition::UpdateEntityMorale()
 bool CEntityCondition::IsLimping() const
 {
 	if (!m_use_limping_state)
-		return (false);
+		return false;
 	return (m_fPower * GetHealth() <= m_limping_threshold);
 }
 
@@ -694,8 +694,8 @@ void CEntityCondition::save(NET_Packet& output_packet)
 		save_data(m_fPsyHealth, output_packet);
 
 		output_packet.w_u8((u8)m_WoundVector.size());
-		for (WOUND_VECTOR_IT it = m_WoundVector.begin(); m_WoundVector.end() != it; it++)
-			(*it)->save(output_packet);
+		for (auto& item : m_WoundVector)
+			item->save(output_packet);
 	}
 }
 

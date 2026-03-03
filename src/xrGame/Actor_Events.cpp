@@ -127,7 +127,7 @@ void CActor::OnEvent(NET_Packet& P, u16 type)
 			{
 				CActor* real_parent = smart_cast<CActor*>(GO->H_Parent());
 				Msg("! ERROR: Actor [%d][%s] tries to drop not own item [%d][%s], his parent is [%d][%s]",
-				    ID(), Name(), GO->ID(), GO->cNameSect().c_str(), real_parent->ID(), real_parent->Name());
+				    ID(), Name(), GO->ID(), GO->cNameSect().c_str(), real_parent ? real_parent->ID() : 0, real_parent ? real_parent->Name() : "unknown");
 				break;
 			}
 
@@ -322,9 +322,9 @@ void CActor::OnEvent(NET_Packet& P, u16 type)
 				Msg("! Error: No object to attach holder [%d]", id);
 				break;
 			}
-			VERIFY(m_holder==NULL);
+			VERIFY(m_holder==nullptr);
 			CHolderCustom* holder = smart_cast<CHolderCustom*>(O);
-			if (!holder->Engaged()) use_Holder(holder);
+			if (holder && !holder->Engaged()) use_Holder(holder);
 		}
 		break;
 	case GEG_PLAYER_DETACH_HOLDER:
@@ -332,8 +332,8 @@ void CActor::OnEvent(NET_Packet& P, u16 type)
 			if (!m_holder) break;
 			u16 id = P.r_u16();
 			CGameObject* GO = smart_cast<CGameObject*>(m_holder);
-			VERIFY(id==GO->ID());
-			use_Holder(NULL);
+			VERIFY(GO && id==GO->ID());
+			use_Holder(nullptr);
 		}
 		break;
 	case GEG_PLAYER_PLAY_HEADSHOT_PARTICLE:

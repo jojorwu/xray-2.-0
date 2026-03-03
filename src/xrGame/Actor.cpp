@@ -102,7 +102,7 @@ static float IReceived = 0;
 static float ICoincidenced = 0;
 extern float cammera_into_collision_shift;
 
-string32 ACTOR_DEFS::g_quick_use_slots[4] = {0, 0, 0, 0};
+string32 ACTOR_DEFS::g_quick_use_slots[4] = {"", "", "", ""};
 //skeleton
 
 
@@ -153,7 +153,7 @@ CActor::CActor() : CEntityAlive(), current_ik_cam_shift(0)
 	fFPCamYawMagnitude = 0.0f; //--#SM+#--
 	fFPCamPitchMagnitude = 0.0f; //--#SM+#--
 	// ýôôåêòîðû
-	pCamBobbing = 0;
+	pCamBobbing = nullptr;
 
 	cam_freelook = eflDisabled;
 	freelook_cam_control = 0.f;
@@ -166,7 +166,7 @@ CActor::CActor() : CEntityAlive(), current_ik_cam_shift(0)
 	r_model_yaw_delta = 0;
 	r_model_yaw_dest = 0;
 
-	b_DropActivated = 0;
+	b_DropActivated = false;
 	f_DropPower = 0.f;
 
 	m_fRunFactor = 2.f;
@@ -224,7 +224,7 @@ CActor::CActor() : CEntityAlive(), current_ik_cam_shift(0)
 	m_iLastHittingWeaponID = u16(-1);
 	m_statistic_manager = nullptr;
 	//-----------------------------------------------------------------------------------
-	m_memory = g_dedicated_server ? 0 : xr_new<CActorMemory>(this);
+	m_memory = g_dedicated_server ? nullptr : xr_new<CActorMemory>(this);
 	m_bOutBorder = false;
 	m_hit_probability = 1.f;
 	m_feel_touch_characters = 0;
@@ -302,7 +302,7 @@ void CActor::reinit()
 	if (!g_dedicated_server)
 		memory().reinit();
 
-	set_input_external_handler(0);
+	set_input_external_handler(nullptr);
 	m_time_lock_accel = 0;
 }
 
@@ -505,11 +505,11 @@ void CActor::Load(LPCSTR section)
 	m_fDispCrouchFactor = pSettings->r_float(section, "disp_crouch_factor");
 	m_fDispCrouchNoAccelFactor = pSettings->r_float(section, "disp_crouch_no_acc_factor");
 
-	LPCSTR default_outfit = READ_IF_EXISTS(pSettings, r_string, section, "default_outfit", 0);
+	LPCSTR default_outfit = READ_IF_EXISTS(pSettings, r_string, section, "default_outfit", nullptr);
 	SetDefaultVisualOutfit(default_outfit);
 
-	invincibility_fire_shield_1st = READ_IF_EXISTS(pSettings, r_string, section, "Invincibility_Shield_1st", 0);
-	invincibility_fire_shield_3rd = READ_IF_EXISTS(pSettings, r_string, section, "Invincibility_Shield_3rd", 0);
+	invincibility_fire_shield_1st = READ_IF_EXISTS(pSettings, r_string, section, "Invincibility_Shield_1st", nullptr);
+	invincibility_fire_shield_3rd = READ_IF_EXISTS(pSettings, r_string, section, "Invincibility_Shield_3rd", nullptr);
 	//-----------------------------------------
 	m_AutoPickUp_AABB = READ_IF_EXISTS(pSettings, r_fvector3, section, "AutoPickUp_AABB",
 	                                   Fvector().set(0.02f, 0.02f, 0.02f));
@@ -525,7 +525,7 @@ void CActor::Load(LPCSTR section)
 	m_sInventoryItemUseAction = "inventory_item_use";
 	m_sInventoryBoxUseAction = "inventory_box_use";
 	//---------------------------------------------------------------------
-	m_sHeadShotParticle = READ_IF_EXISTS(pSettings, r_string, section, "HeadShotParticle", 0);
+	m_sHeadShotParticle = READ_IF_EXISTS(pSettings, r_string, section, "HeadShotParticle", nullptr);
 }
 
 void CActor::set_actor_box_y_offset(u32 box_num, float offset)
@@ -589,9 +589,9 @@ void CActor::Hit(SHit* pHDS)
 				CParticlesObject* ps = nullptr;
 
 				if (eacFirstEye == cam_active && this == Level().CurrentEntity())
-					ps = CParticlesObject::Create(invincibility_fire_shield_1st, TRUE);
+					ps = CParticlesObject::Create(invincibility_fire_shield_1st, true);
 				else
-					ps = CParticlesObject::Create(invincibility_fire_shield_3rd, TRUE);
+					ps = CParticlesObject::Create(invincibility_fire_shield_3rd, true);
 
 				ps->UpdateParent(pos, Fvector().set(0.f, 0.f, 0.f));
 				GamePersistent().ps_needtoplay.push_back(ps);
@@ -770,7 +770,7 @@ void CActor::HitMark(float P,
 	if ( /*(hit_type==ALife::eHitTypeFireWound||hit_type==ALife::eHitTypeWound_2) && */
 		g_Alive() && Local() && (Level().CurrentEntity() == this))
 	{
-		HUD().HitMarked(0, P, dir);
+		HUD().HitMarked(nullptr, P, dir);
 
 		CEffectorCam* ce = Cameras().GetCamEffector((ECamEffectorType)effFireHit);
 		if (ce) return;
@@ -888,7 +888,7 @@ void CActor::Die(CObject* who)
 						if (grenade)
 							grenade->DropGrenade();
 						else
-							item_in_slot->SetDropManual(TRUE);
+							item_in_slot->SetDropManual(true);
 					}
 					else
 					{
@@ -928,14 +928,14 @@ void CActor::Die(CObject* who)
 					CArtefact* pArtefact = smart_cast<CArtefact*>(*l_it);
 					if (pArtefact)
 					{
-						(*l_it)->SetDropManual(TRUE);
+						(*l_it)->SetDropManual(true);
 						continue;
 					};
 				};
 
 				if ((*l_it)->object().CLS_ID == CLSID_OBJECT_PLAYERS_BAG)
 				{
-					(*l_it)->SetDropManual(TRUE);
+					(*l_it)->SetDropManual(true);
 					continue;
 				};
 			};
@@ -1145,9 +1145,9 @@ void CActor::UpdateCL()
 
 	if (m_feel_touch_characters > 0)
 	{
-		for (xr_vector<CObject*>::iterator it = feel_touch.begin(); it != feel_touch.end(); it++)
+		for (auto& object : feel_touch)
 		{
-			CPhysicsShellHolder* sh = smart_cast<CPhysicsShellHolder*>(*it);
+			CPhysicsShellHolder* sh = smart_cast<CPhysicsShellHolder*>(object);
 			if (sh && sh->character_physics_support())
 			{
 				sh->character_physics_support()->movement()->UpdateObjectBox(
@@ -1921,7 +1921,7 @@ void CActor::shedule_Update(u32 DT)
 
 	inherited::shedule_Update(DT);
 
-	//ýôôåêòîð âêëþ÷àåìûé ïðè õîäüáå
+	//ýôôåêòîð âêëþ÷àåìþé ïðè õîäüáå
 	if (!pCamBobbing)
 	{
 		pCamBobbing = xr_new<CEffectorBobbing>();
@@ -1999,7 +1999,7 @@ void CActor::shedule_Update(u32 DT)
 
 	//åñëè â ðåæèìå HUD, òî ñàìà ìîäåëü àêòåðà íå ðèñóåòñÿ
 	if (!character_physics_support()->IsRemoved())
-		setVisible(TRUE);
+		setVisible(true);
 
 	//÷òî àêòåð âèäèò ïåðåä ñîáîé
 	collide::rq_result& RQ = HUD().GetRQ();
@@ -2049,7 +2049,7 @@ void CActor::shedule_Update(u32 DT)
 				}
 				else if (m_pVehicleWeLookingAt)
 				{
-					m_sDefaultObjAction = m_pVehicleWeLookingAt->m_sUseAction == 0
+					m_sDefaultObjAction = m_pVehicleWeLookingAt->m_sUseAction == nullptr
 						                      ? m_sCarCharacterUseAction
 						                      : m_pVehicleWeLookingAt->m_sUseAction;
 				}
@@ -2090,8 +2090,8 @@ void CActor::RenderCamAttached()
 	{
 		if (GetAttachments()->size())
 		{
-			::Render->set_HUD(TRUE);
-			::Render->set_CamAttached(TRUE);
+			::Render->set_HUD(true);
+			::Render->set_CamAttached(true);
 			::Render->set_Object(this);
 
 			Fmatrix cam = Fidentity;
@@ -2105,8 +2105,8 @@ void CActor::RenderCamAttached()
 					att->Render(nullptr, &cam);
 			}
 
-			::Render->set_CamAttached(FALSE);
-			::Render->set_HUD(FALSE);
+			::Render->set_CamAttached(false);
+			::Render->set_HUD(false);
 		}
 	}
 }
@@ -2165,17 +2165,17 @@ BOOL CActor::renderable_ShadowGenerate()
 
 void CActor::g_PerformDrop()
 {
-	b_DropActivated = FALSE;
+	b_DropActivated = false;
 
 	PIItem pItem = inventory().ActiveItem();
-	if (0 == pItem) return;
+	if (nullptr == pItem) return;
 
 	if (pItem->IsQuestItem()) return;
 
 	u16 s = inventory().GetActiveSlot();
 	if (inventory().SlotIsPersistent(s)) return;
 
-	pItem->SetDropManual(TRUE);
+	pItem->SetDropManual(true);
 }
 
 bool CActor::use_default_throw_force()
@@ -2446,12 +2446,9 @@ void CActor::OnItemDropUpdate()
 {
 	CInventoryOwner::OnItemDropUpdate();
 
-	TIItemContainer::iterator I = inventory().m_all.begin();
-	TIItemContainer::iterator E = inventory().m_all.end();
-
-	for (; I != E; ++I)
-		if (!(*I)->IsInvalid() && !attached(*I))
-			attach(*I);
+	for (auto& item : inventory().m_all)
+		if (!item->IsInvalid() && !attached(item))
+			attach(item);
 }
 
 
@@ -2484,10 +2481,9 @@ void CActor::UpdateArtefactsOnBeltAndOutfit()
 		update_time = 0.0f;
 	}
 
-	for (TIItemContainer::iterator it = inventory().m_belt.begin();
-	     inventory().m_belt.end() != it; ++it)
+	for (auto& item : inventory().m_belt)
 	{
-		CArtefact* artefact = smart_cast<CArtefact*>(*it);
+		CArtefact* artefact = smart_cast<CArtefact*>(item);
 		if (artefact)
 		{
 			float art_cond = artefact->GetCondition();
@@ -2556,11 +2552,9 @@ float CActor::HitArtefactsOnBelt(float hit_power, ALife::EHitType hit_type)
 		}
 	}
 
-	TIItemContainer::iterator it = inventory().m_belt.begin();
-	TIItemContainer::iterator ite = inventory().m_belt.end();
-	for (; it != ite; ++it)
+	for (auto& item : inventory().m_belt)
 	{
-		CArtefact* artefact = smart_cast<CArtefact*>(*it);
+		CArtefact* artefact = smart_cast<CArtefact*>(item);
 		if (artefact)
 		{
 			hit_power -= artefact->m_ArtefactHitImmunities.AffectHit(1.0f, hit_type);
@@ -2574,11 +2568,9 @@ float CActor::HitArtefactsOnBelt(float hit_power, ALife::EHitType hit_type)
 float CActor::GetProtection_ArtefactsOnBelt(ALife::EHitType hit_type)
 {
 	float sum = 0.0f;
-	TIItemContainer::iterator it = inventory().m_belt.begin();
-	TIItemContainer::iterator ite = inventory().m_belt.end();
-	for (; it != ite; ++it)
+	for (auto& item : inventory().m_belt)
 	{
-		CArtefact* artefact = smart_cast<CArtefact*>(*it);
+		CArtefact* artefact = smart_cast<CArtefact*>(item);
 		if (artefact)
 		{
 			sum += (artefact->m_ArtefactHitImmunities.AffectHit(1.0f, hit_type) * artefact->GetCondition());
@@ -2619,7 +2611,7 @@ void CActor::spawn_supplies()
 void CActor::AnimTorsoPlayCallBack(CBlend* B)
 {
 	CActor* actor = (CActor*)B->CallbackParam;
-	actor->m_bAnimTorsoPlayed = FALSE;
+	actor->m_bAnimTorsoPlayed = false;
 }
 
 
@@ -2752,11 +2744,9 @@ float CActor::GetRestoreSpeed(ALife::EConditionRestoreType const& type)
 			res = conditions().change_v().m_fV_HealthRestore;
 			res += conditions().V_SatietyHealth() * ((conditions().GetSatiety() > 0.0f) ? 1.0f : -1.0f);
 
-			TIItemContainer::iterator itb = inventory().m_belt.begin();
-			TIItemContainer::iterator ite = inventory().m_belt.end();
-			for (; itb != ite; ++itb)
+			for (auto& item : inventory().m_belt)
 			{
-				CArtefact* artefact = smart_cast<CArtefact*>(*itb);
+				CArtefact* artefact = smart_cast<CArtefact*>(item);
 				if (artefact)
 				{
 					res += (artefact->m_fHealthRestoreSpeed * artefact->GetCondition());
@@ -2771,11 +2761,9 @@ float CActor::GetRestoreSpeed(ALife::EConditionRestoreType const& type)
 		}
 	case ALife::eRadiationRestoreSpeed:
 		{
-			TIItemContainer::iterator itb = inventory().m_belt.begin();
-			TIItemContainer::iterator ite = inventory().m_belt.end();
-			for (; itb != ite; ++itb)
+			for (auto& item : inventory().m_belt)
 			{
-				CArtefact* artefact = smart_cast<CArtefact*>(*itb);
+				CArtefact* artefact = smart_cast<CArtefact*>(item);
 				if (artefact)
 				{
 					res += (artefact->m_fRadiationRestoreSpeed * artefact->GetCondition());
@@ -2792,11 +2780,9 @@ float CActor::GetRestoreSpeed(ALife::EConditionRestoreType const& type)
 		{
 			res = conditions().V_Satiety();
 
-			TIItemContainer::iterator itb = inventory().m_belt.begin();
-			TIItemContainer::iterator ite = inventory().m_belt.end();
-			for (; itb != ite; ++itb)
+			for (auto& item : inventory().m_belt)
 			{
-				CArtefact* artefact = smart_cast<CArtefact*>(*itb);
+				CArtefact* artefact = smart_cast<CArtefact*>(item);
 				if (artefact)
 				{
 					res += (artefact->m_fSatietyRestoreSpeed * artefact->GetCondition());
@@ -2813,11 +2799,9 @@ float CActor::GetRestoreSpeed(ALife::EConditionRestoreType const& type)
 		{
 			res = conditions().GetSatietyPower();
 
-			TIItemContainer::iterator itb = inventory().m_belt.begin();
-			TIItemContainer::iterator ite = inventory().m_belt.end();
-			for (; itb != ite; ++itb)
+			for (auto& item : inventory().m_belt)
 			{
-				CArtefact* artefact = smart_cast<CArtefact*>(*itb);
+				CArtefact* artefact = smart_cast<CArtefact*>(item);
 				if (artefact)
 				{
 					res += (artefact->m_fPowerRestoreSpeed * artefact->GetCondition());
@@ -2838,11 +2822,9 @@ float CActor::GetRestoreSpeed(ALife::EConditionRestoreType const& type)
 		{
 			res = conditions().change_v().m_fV_WoundIncarnation;
 
-			TIItemContainer::iterator itb = inventory().m_belt.begin();
-			TIItemContainer::iterator ite = inventory().m_belt.end();
-			for (; itb != ite; ++itb)
+			for (auto& item : inventory().m_belt)
 			{
-				CArtefact* artefact = smart_cast<CArtefact*>(*itb);
+				CArtefact* artefact = smart_cast<CArtefact*>(item);
 				if (artefact)
 				{
 					res += (artefact->m_fBleedingRestoreSpeed * artefact->GetCondition());

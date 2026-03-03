@@ -70,33 +70,33 @@ public:
 	virtual ~CGameObject();
 public:
 	//functions used for avoiding most of the smart_cast
-	virtual CAttachmentOwner* cast_attachment_owner() { return NULL; }
-	virtual CInventoryOwner* cast_inventory_owner() { return NULL; }
-	virtual CInventoryItem* cast_inventory_item() { return NULL; }
-	virtual CEntity* cast_entity() { return NULL; }
-	virtual CEntityAlive* cast_entity_alive() { return NULL; }
-	virtual CActor* cast_actor() { return NULL; }
-	virtual CGameObject* cast_game_object() { return this; }
-	virtual CCustomZone* cast_custom_zone() { return NULL; }
-	virtual CPhysicsShellHolder* cast_physics_shell_holder() { return NULL; }
-	virtual IInputReceiver* cast_input_receiver() { return NULL; }
-	virtual CParticlesPlayer* cast_particles_player() { return NULL; }
-	virtual CArtefact* cast_artefact() { return NULL; }
-	virtual CCustomMonster* cast_custom_monster() { return NULL; }
-	virtual CAI_Stalker* cast_stalker() { return NULL; }
-	virtual CScriptEntity* cast_script_entity() { return NULL; }
-	virtual CWeapon* cast_weapon() { return NULL; }
-	virtual CMissile* cast_missile() { return NULL; }
-	virtual CFlashlight* cast_flashlight() { return NULL; }
-	virtual CExplosive* cast_explosive() { return NULL; }
-	virtual CSpaceRestrictor* cast_restrictor() { return NULL; }
-	virtual CAttachableItem* cast_attachable_item() { return NULL; }
-	virtual CHolderCustom* cast_holder_custom() { return NULL; }
-	virtual CBaseMonster* cast_base_monster() { return NULL; }
+	virtual CAttachmentOwner* cast_attachment_owner() { return nullptr; }
+	virtual CInventoryOwner* cast_inventory_owner() { return nullptr; }
+	virtual CInventoryItem* cast_inventory_item() { return nullptr; }
+	virtual CEntity* cast_entity() { return nullptr; }
+	virtual CEntityAlive* cast_entity_alive() { return nullptr; }
+	virtual CActor* cast_actor() { return nullptr; }
+	virtual CGameObject* cast_game_object() override { return this; }
+	virtual CCustomZone* cast_custom_zone() { return nullptr; }
+	virtual CPhysicsShellHolder* cast_physics_shell_holder() { return nullptr; }
+	virtual IInputReceiver* cast_input_receiver() { return nullptr; }
+	virtual CParticlesPlayer* cast_particles_player() { return nullptr; }
+	virtual CArtefact* cast_artefact() { return nullptr; }
+	virtual CCustomMonster* cast_custom_monster() { return nullptr; }
+	virtual CAI_Stalker* cast_stalker() { return nullptr; }
+	virtual CScriptEntity* cast_script_entity() { return nullptr; }
+	virtual CWeapon* cast_weapon() { return nullptr; }
+	virtual CMissile* cast_missile() { return nullptr; }
+	virtual CFlashlight* cast_flashlight() { return nullptr; }
+	virtual CExplosive* cast_explosive() { return nullptr; }
+	virtual CSpaceRestrictor* cast_restrictor() { return nullptr; }
+	virtual CAttachableItem* cast_attachable_item() { return nullptr; }
+	virtual CHolderCustom* cast_holder_custom() { return nullptr; }
+	virtual CBaseMonster* cast_base_monster() { return nullptr; }
 
 public:
-	virtual bool feel_touch_on_contact(CObject*) { return TRUE; }
-	virtual bool use(CGameObject* who_use) { return CUsableScriptObject::use(who_use); };
+	virtual bool feel_touch_on_contact(CObject*) override { return true; }
+	virtual bool use(CGameObject* who_use) override { return CUsableScriptObject::use(who_use); };
 
 public:
 	CInifile* m_ini_file;
@@ -106,70 +106,70 @@ public:
 	static void u_EventSend(NET_Packet& P, u32 dwFlags = DPNSEND_GUARANTEED);
 
 	// Methods
-	virtual void Load(LPCSTR section);
-	virtual BOOL net_Spawn(CSE_Abstract* DC);
-	virtual void net_Destroy();
-	virtual void net_Relcase(CObject* O);
-	virtual void UpdateCL();
-	virtual void OnChangeVisual();
+	virtual void Load(LPCSTR section) override;
+	virtual BOOL net_Spawn(CSE_Abstract* DC) override;
+	virtual void net_Destroy() override;
+	virtual void net_Relcase(CObject* O) override;
+	virtual void UpdateCL() override;
+	virtual void OnChangeVisual() override;
 	//object serialization
-	virtual void net_Save(NET_Packet& net_packet);
-	virtual void net_Load(IReader& ireader);
-	virtual BOOL net_SaveRelevant();
-	virtual void save(NET_Packet& output_packet);
-	virtual void load(IReader& input_packet);
+	virtual void net_Save(NET_Packet& net_packet) override;
+	virtual void net_Load(IReader& ireader) override;
+	virtual BOOL net_SaveRelevant() override;
+	virtual void save(NET_Packet& output_packet) override;
+	virtual void load(IReader& input_packet) override;
 
-	virtual BOOL net_Relevant() { return getLocal(); } // send messages only if active and local
-	virtual void spatial_move();
-	virtual BOOL Ready() { return getReady(); } // update only if active and fully initialized by/for network
+	virtual BOOL net_Relevant() override { return getLocal(); } // send messages only if active and local
+	virtual void spatial_move() override;
+	virtual BOOL Ready() override { return getReady(); } // update only if active and fully initialized by/for network
 	//	virtual float			renderable_Ambient	();
 
-	virtual void shedule_Update(u32 dt);
-	virtual bool shedule_Needed();
+	virtual void shedule_Update(u32 dt) override;
+	virtual bool shedule_Needed() override;
 
-	virtual void renderable_Render();
+	virtual void renderable_Render() override;
 	virtual void RenderAttachments();
-	virtual void OnEvent(NET_Packet& P, u16 type);
+	virtual void OnEvent(NET_Packet& P, u16 type) override;
 
-	virtual void Hit(SHit* pHDS)
+	virtual void Hit(SHit* pHDS) override
 	{
 	};
 
-	virtual void SetHitInfo(CObject* who, CObject* weapon, s16 element, Fvector Pos, Fvector Dir)
+	virtual void SetHitInfo(CObject* who, CObject* weapon, s16 element, Fvector Pos, Fvector Dir) override
 	{
 	};
 	virtual BOOL BonePassBullet(int boneID) { return FALSE; }
 
 
 	//игровое имя объекта
-	virtual LPCSTR Name() const;
+	virtual LPCSTR Name() const override;
 
 	//virtual void			OnH_A_Independent	();
-	virtual void OnH_B_Chield();
-	virtual void OnH_B_Independent(bool just_before_destroy);
+	virtual void OnH_B_Chield() override;
+	virtual void OnH_B_Independent(bool just_before_destroy) override;
 
 	virtual bool IsVisibleForZones() { return true; }
 	///////////////////////////////////////////////////////////////////////
-	virtual bool NeedToDestroyObject() const;
-	virtual void DestroyObject();
+	virtual bool NeedToDestroyObject() const override;
+	virtual void DestroyObject() override;
 	///////////////////////////////////////////////////////////////////////
 
 	// Position stack
-	virtual SavedPosition ps_Element(u32 ID) const;
+	virtual SavedPosition ps_Element(u32 ID) const override;
 
 	void setup_parent_ai_locations(bool assign_position = true);
 	void validate_ai_locations(bool decrement_reference = true);
 
 	//animation_movement_controller
-	virtual void create_anim_mov_ctrl(CBlend* b, Fmatrix* start_pose, bool local_animation);
-	virtual void destroy_anim_mov_ctrl();
+	virtual void create_anim_mov_ctrl(CBlend* b, Fmatrix* start_pose, bool local_animation) override;
+	virtual void destroy_anim_mov_ctrl() override;
 	void update_animation_movement_controller();
 	bool animation_movement_controlled() const;
 	const animation_movement_controller* animation_movement() const { return m_anim_mov_ctrl; }
 	animation_movement_controller* animation_movement() { return m_anim_mov_ctrl; }
 	// Game-specific events
 
-	virtual BOOL UsedAI_Locations();
+	virtual BOOL UsedAI_Locations() override;
 	BOOL TestServerFlag(u32 Flag) const;
 	virtual bool can_validate_position_on_spawn() { return true; }
 #ifdef DEBUG
@@ -177,8 +177,8 @@ public:
 #endif
 
 	void init();
-	virtual void reinit();
-	virtual void reload(LPCSTR section);
+	virtual void reinit() override;
+	virtual void reload(LPCSTR section) override;
 	///////////////////// network /////////////////////////////////////////
 	bool object_removed() const { return m_bObjectRemoved; };
 
@@ -194,20 +194,20 @@ private:
 	u32 m_dwCrPr_ActivationStep;
 
 public:
-	virtual void make_Interpolation()
+	virtual void make_Interpolation() override
 	{
 	}; // interpolation from last visible to corrected position/rotation
-	virtual void PH_B_CrPr()
+	virtual void PH_B_CrPr() override
 	{
 	}; // actions & operations before physic correction-prediction steps
-	virtual void PH_I_CrPr()
+	virtual void PH_I_CrPr() override
 	{
 	}; // actions & operations after correction before prediction steps
 #ifdef DEBUG
-	virtual void			PH_Ch_CrPr			() {}; // 
+	virtual void			PH_Ch_CrPr			() override {}; //
 	virtual	void			dbg_DrawSkeleton	();
 #endif
-	virtual void PH_A_CrPr()
+	virtual void PH_A_CrPr() override
 	{
 	}; // actions & operations after phisic correction-prediction steps
 	virtual void CrPr_SetActivationStep(u32 Step) { m_dwCrPr_ActivationStep = Step; };
@@ -215,7 +215,7 @@ public:
 	virtual void CrPr_SetActivated(bool Activate) { m_bCrPr_Activated = Activate; };
 	virtual bool CrPr_IsActivated() { return m_bCrPr_Activated; };
 	///////////////////////////////////////////////////////////////////////
-	virtual const SRotation Orientation() const
+	virtual const SRotation Orientation() const override
 	{
 		SRotation rotation;
 		float h, p, b;
@@ -225,9 +225,9 @@ public:
 		return (rotation);
 	};
 
-	virtual bool use_parent_ai_locations() const
+	virtual bool use_parent_ai_locations() const override
 	{
-		return (true);
+		return true;
 	}
 
 public:
@@ -269,7 +269,7 @@ public:
 	}
 
 protected:
-	virtual void spawn_supplies();
+	virtual void spawn_supplies() override;
 
 public:
 	IC CAI_ObjectLocation& ai_location() const
@@ -294,12 +294,12 @@ public:
 	}
 
 public:
-	virtual u32 ef_creature_type() const;
-	virtual u32 ef_equipment_type() const;
-	virtual u32 ef_main_weapon_type() const;
-	virtual u32 ef_anomaly_type() const;
-	virtual u32 ef_weapon_type() const;
-	virtual u32 ef_detector_type() const;
+	virtual u32 ef_creature_type() const override;
+	virtual u32 ef_equipment_type() const override;
+	virtual u32 ef_main_weapon_type() const override;
+	virtual u32 ef_anomaly_type() const override;
+	virtual u32 ef_weapon_type() const override;
+	virtual u32 ef_detector_type() const override;
 	virtual bool natural_weapon() const { return true; }
 	virtual bool natural_detector() const { return true; }
 	virtual bool use_center_to_aim() const { return false; }
@@ -319,9 +319,9 @@ private:
 
 public:
 	CScriptCallbackExVoid& callback(GameObject::ECallbackType type) const;
-	virtual LPCSTR visual_name(CSE_Abstract* server_entity);
+	virtual LPCSTR visual_name(CSE_Abstract* server_entity) override;
 
-	virtual void On_B_NotCurrentEntity()
+	virtual void On_B_NotCurrentEntity() override
 	{
 	};
 
@@ -335,7 +335,7 @@ private:
 	Fmatrix m_previous_matrix;
 
 public:
-	virtual bool is_ai_obstacle() const;
+	virtual bool is_ai_obstacle() const override;
 
 public:
 	IC ai_obstacle& obstacle() const
@@ -344,7 +344,7 @@ public:
 		return (*m_ai_obstacle);
 	}
 
-	virtual void on_matrix_change(const Fmatrix& previous);
+	virtual void on_matrix_change(const Fmatrix& previous) override;
 
 	void FootStepCallback(float power, bool b_play, bool b_on_ground, bool b_hud_view);
 	xr_map<shared_str, script_attachment*>* GetAttachments() { return &m_script_attachments; }

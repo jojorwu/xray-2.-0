@@ -51,7 +51,7 @@ const IPhysicsShell* CPhysicsShellHolder::physics_shell() const
 		return m_pPhysicsShell;
 	const CCharacterPhysicsSupport* char_support = character_physics_support();
 	if (!char_support || !char_support->animation_collision())
-		return 0;
+		return nullptr;
 	return char_support->animation_collision()->shell();
 }
 
@@ -64,7 +64,7 @@ const IPhysicsElement* CPhysicsShellHolder::physics_character() const
 {
 	const CCharacterPhysicsSupport* char_support = character_physics_support();
 	if (!char_support)
-		return 0;
+		return nullptr;
 	const CPHMovementControl* mov = character_physics_support()->movement();
 	VERIFY(mov);
 	return mov->IElement();
@@ -174,7 +174,7 @@ void CPhysicsShellHolder::create_physic_shell()
 
 void CPhysicsShellHolder::init()
 {
-	m_pPhysicsShell = NULL;
+	m_pPhysicsShell = nullptr;
 	b_sheduled = false;
 
 #if 1
@@ -354,7 +354,7 @@ u16 CPhysicsShellHolder::PHGetSyncItemsNumber()
 CPHSynchronize* CPhysicsShellHolder::PHGetSyncItem(u16 item)
 {
 	if (m_pPhysicsShell) return m_pPhysicsShell->get_ElementSync(item);
-	else return 0;
+	else return nullptr;
 }
 
 void CPhysicsShellHolder::PHUnFreeze()
@@ -372,7 +372,7 @@ void CPhysicsShellHolder::OnChangeVisual()
 {
 	inherited::OnChangeVisual();
 
-	if (0 == renderable.visual)
+	if (nullptr == renderable.visual)
 	{
 		CCharacterPhysicsSupport* char_support = character_physics_support();
 		if (char_support)
@@ -382,7 +382,7 @@ void CPhysicsShellHolder::OnChangeVisual()
 		if (m_pPhysicsShell)m_pPhysicsShell->Deactivate();
 
 		xr_delete(m_pPhysicsShell);
-		VERIFY(0==m_pPhysicsShell);
+		VERIFY(nullptr==m_pPhysicsShell);
 	}
 }
 
@@ -607,10 +607,10 @@ IPHCapture* CPhysicsShellHolder::PHCapture()
 {
 	CCharacterPhysicsSupport* ph_sup = character_physics_support();
 	if (!ph_sup)
-		return 0;
+		return nullptr;
 	CPHMovementControl* mov = ph_sup->movement();
 	if (!mov)
-		return 0;
+		return nullptr;
 	return mov->PHCapture();
 }
 
@@ -682,21 +682,21 @@ void CPhysicsShellHolder::IgnoreCollisionCallback(bool &do_colide, bool bo1, dCo
 
 	dxGeomUserData *gd1 = bo1 ? PHRetrieveGeomUserData(c.geom.g1) : PHRetrieveGeomUserData(c.geom.g2);
 	dxGeomUserData *gd2 = bo1 ? PHRetrieveGeomUserData(c.geom.g2) : PHRetrieveGeomUserData(c.geom.g1);
-	CGameObject *obj = (gd1) ? smart_cast<CGameObject *>(gd1->ph_ref_object) : NULL;
-	CGameObject *who = (gd2) ? smart_cast<CGameObject *>(gd2->ph_ref_object) : NULL;
+	CGameObject *obj = (gd1) ? smart_cast<CGameObject *>(gd1->ph_ref_object) : nullptr;
+	CGameObject *who = (gd2) ? smart_cast<CGameObject *>(gd2->ph_ref_object) : nullptr;
 
-	if (obj == NULL)
+	if (obj == nullptr)
 	{
 		return;
 	}
 
-	CPhysicsShellHolder *a = (obj) ? smart_cast<CPhysicsShellHolder *>(obj) : NULL;
-	if (a == NULL)
+	CPhysicsShellHolder *a = (obj) ? smart_cast<CPhysicsShellHolder *>(obj) : nullptr;
+	if (a == nullptr)
 	{
 		return;
 	}
 
-	if (who == NULL)
+	if (who == nullptr)
 	{
 		if (a->m_ignore_collision_flag & CPhysicsShellHolder::ICmap)
 		{

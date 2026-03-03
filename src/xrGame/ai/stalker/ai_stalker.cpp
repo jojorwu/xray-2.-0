@@ -85,14 +85,14 @@ CAI_Stalker::CAI_Stalker() :
 	m_brain = nullptr;
 	m_sight_manager = nullptr;
 	m_weapon_shot_effector = nullptr;
-	m_sound_user_data_visitor = 0;
-	m_movement_manager = 0;
+	m_sound_user_data_visitor = nullptr;
+	m_movement_manager = nullptr;
 	m_group_behaviour = true;
 	m_boneHitProtection = nullptr;
 	m_power_fx_factor = flt_max;
 	m_wounded = false;
 #ifdef DEBUG
-	m_debug_planner					= 0;
+	m_debug_planner					= nullptr;
 	m_dbg_hud_draw					= false;
 #endif // DEBUG
 	m_registered_in_combat_on_migration = false;
@@ -143,11 +143,11 @@ void CAI_Stalker::reinit()
 
 	m_pPhysics_support->in_Init();
 
-	m_best_item_to_kill = 0;
+	m_best_item_to_kill = nullptr;
 	m_best_item_value = 0.f;
-	m_best_ammo = 0;
-	m_best_found_item_to_kill = 0;
-	m_best_found_ammo = 0;
+	m_best_ammo = nullptr;
+	m_best_found_item_to_kill = nullptr;
+	m_best_found_ammo = nullptr;
 	m_item_actuality = false;
 	m_sell_info_actuality = false;
 
@@ -172,7 +172,7 @@ void CAI_Stalker::reinit()
 
 	m_weapon_shot_random_seed = s32(Level().timeServer_Async());
 
-	m_best_cover = 0;
+	m_best_cover = nullptr;
 	m_best_cover_actual = false;
 	m_best_cover_value = flt_max;
 
@@ -181,7 +181,7 @@ void CAI_Stalker::reinit()
 	m_computed_object_direction = Fvector().set(flt_max,flt_max,flt_max);
 
 	m_throw_target_position = Fvector().set(flt_max,flt_max,flt_max);
-	m_throw_ignore_object = 0;
+	m_throw_ignore_object = nullptr;
 
 	m_throw_position = Fvector().set(flt_max,flt_max,flt_max);
 	m_throw_velocity = Fvector().set(flt_max,flt_max,flt_max);
@@ -214,7 +214,7 @@ void CAI_Stalker::LoadSounds(LPCSTR section)
 	sound().add(pSettings->r_string(section, "sound_death"), 100, SOUND_TYPE_MONSTER_DYING, 0,
 	            u32(eStalkerSoundMaskDie), eStalkerSoundDie, head_bone_name, xr_new<CStalkerSoundData>(this));
 	sound().add(pSettings->r_string(section, "sound_anomaly_death"), 100, SOUND_TYPE_MONSTER_DYING, 0,
-	            u32(eStalkerSoundMaskDieInAnomaly), eStalkerSoundDieInAnomaly, head_bone_name, 0);
+	            u32(eStalkerSoundMaskDieInAnomaly), eStalkerSoundDieInAnomaly, head_bone_name, nullptr);
 	sound().add(pSettings->r_string(section, "sound_hit"), 100, SOUND_TYPE_MONSTER_INJURING, 1,
 	            u32(eStalkerSoundMaskInjuring), eStalkerSoundInjuring, head_bone_name, xr_new<CStalkerSoundData>(this));
 	sound().add(pSettings->r_string(section, "sound_friendly_fire"), 100, SOUND_TYPE_MONSTER_INJURING, 1,
@@ -264,7 +264,7 @@ void CAI_Stalker::LoadSounds(LPCSTR section)
 	            u32(eStalkerSoundMaskEnemyLostWithAllies), eStalkerSoundEnemyLostWithAllies, head_bone_name,
 	            xr_new<CStalkerSoundData>(this));
 	sound().add(pSettings->r_string(section, "sound_humming"), 100, SOUND_TYPE_MONSTER_TALKING, 6,
-	            u32(eStalkerSoundMaskHumming), eStalkerSoundHumming, head_bone_name, 0);
+	            u32(eStalkerSoundMaskHumming), eStalkerSoundHumming, head_bone_name, nullptr);
 	sound().add(pSettings->r_string(section, "sound_need_backup"), 100, SOUND_TYPE_MONSTER_TALKING, 4,
 	            u32(eStalkerSoundMaskNeedBackup), eStalkerSoundNeedBackup, head_bone_name,
 	            xr_new<CStalkerSoundData>(this));
@@ -628,18 +628,16 @@ void CAI_Stalker::Die(CObject* who)
 		return;
 
 	{
-		TIItemContainer::iterator I = inventory().m_all.begin();
-		TIItemContainer::iterator E = inventory().m_all.end();
-		for (; I != E; ++I)
+		for (auto& item : inventory().m_all)
 		{
-			if (std::find(weapon->m_ammoTypes.begin(), weapon->m_ammoTypes.end(), (*I)->object().cNameSect()) == weapon
+			if (std::find(weapon->m_ammoTypes.begin(), weapon->m_ammoTypes.end(), item->object().cNameSect()) == weapon
 			                                                                                                     ->
 			                                                                                                     m_ammoTypes
 			                                                                                                     .end())
 				continue;
 
 			NET_Packet packet;
-			u_EventGen(packet, GE_DESTROY, (*I)->object().ID());
+			u_EventGen(packet, GE_DESTROY, item->object().ID());
 			u_EventSend(packet);
 		}
 	}
@@ -1479,12 +1477,10 @@ void CAI_Stalker::fill_bones_body_parts(LPCSTR bone_id, const ECriticalWoundType
 	VERIFY(kinematics);
 
 	CInifile::Sect& body_part_section = pSettings->r_section(body_part_section_id);
-	CInifile::SectCIt I = body_part_section.Data.begin();
-	CInifile::SectCIt E = body_part_section.Data.end();
-	for (; I != E; ++I)
+	for (auto& item : body_part_section.Data)
 		m_bones_body_parts.insert(
 			std::make_pair(
-				kinematics->LL_BoneID((*I).first),
+				kinematics->LL_BoneID(item.first),
 				u32(wound_type)
 			)
 		);
@@ -1553,7 +1549,7 @@ BOOL CAI_Stalker::AlwaysTheCrow()
 smart_cover::cover const* CAI_Stalker::get_current_smart_cover()
 {
 	if (movement().current_params().cover_id() != movement().target_params().cover_id())
-		return 0;
+		return nullptr;
 
 	return movement().current_params().cover();
 }
@@ -1561,10 +1557,10 @@ smart_cover::cover const* CAI_Stalker::get_current_smart_cover()
 smart_cover::loophole const* CAI_Stalker::get_current_loophole()
 {
 	if (movement().current_params().cover_id() != movement().target_params().cover_id())
-		return 0;
+		return nullptr;
 
 	if (movement().current_params().cover_loophole_id() != movement().target_params().cover_loophole_id())
-		return 0;
+		return nullptr;
 
 	return movement().current_params().cover_loophole();
 }

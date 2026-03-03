@@ -50,18 +50,18 @@ extern ENGINE_API bool g_dedicated_server;
 
 CGameObject::CGameObject()
 {
-	m_ai_obstacle = 0;
+	m_ai_obstacle = nullptr;
 
 	init();
 	//-----------------------------------------
 	m_bCrPr_Activated = false;
 	m_dwCrPr_ActivationStep = 0;
 	m_spawn_time = 0;
-	m_ai_location = !g_dedicated_server ? xr_new<CAI_ObjectLocation>() : 0;
+	m_ai_location = !g_dedicated_server ? xr_new<CAI_ObjectLocation>() : nullptr;
 	m_server_flags.one();
 
 	m_callbacks = xr_new<CALLBACK_MAP>();
-	m_anim_mov_ctrl = 0;
+	m_anim_mov_ctrl = nullptr;
 }
 
 CGameObject::~CGameObject()
@@ -78,9 +78,9 @@ CGameObject::~CGameObject()
 
 void CGameObject::init()
 {
-	m_lua_game_object = 0;
+	m_lua_game_object = nullptr;
 	m_script_clsid = -1;
-	m_ini_file = 0;
+	m_ini_file = nullptr;
 	m_spawned = false;
 }
 
@@ -133,10 +133,10 @@ void CGameObject::net_Destroy()
 
 	m_script_clsid = -1;
 	if (Visual() && smart_cast<IKinematics*>(Visual()))
-		smart_cast<IKinematics*>(Visual())->Callback(0, 0);
+		smart_cast<IKinematics*>(Visual())->Callback(nullptr, nullptr);
 
 	inherited::net_Destroy();
-	setReady(FALSE);
+	setReady(false);
 
 	if (Level().IsDemoPlayStarted() && ID() == u16(-1))
 	{
@@ -151,9 +151,9 @@ void CGameObject::net_Destroy()
 	{
 		if (!Level().IsDemoPlayStarted())
 		{
-			Level().SetControlEntity(0);
+			Level().SetControlEntity(nullptr);
 		}
-		Level().SetEntity(0); // do not switch !!!
+		Level().SetEntity(nullptr); // do not switch !!!
 	}
 
 	Level().RemoveObject_From_4CrPr(this);
@@ -255,7 +255,7 @@ void CGameObject::OnEvent(NET_Packet& P, u16 type)
 			Msg("--- Object: GE_DESTROY of [%d][%s]", ID(), cNameSect().c_str());
 #endif // MP_LOGGING
 
-			setDestroy(TRUE);
+			setDestroy(true);
 			//			MakeMeCrow		();
 		}
 		break;
@@ -366,11 +366,11 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
 	{
 		if (!demo_spectator)
 		{
-			setLocal(FALSE);
+			setLocal(false);
 		}
 	};
 
-	setReady(TRUE);
+	setReady(true);
 	if (!demo_spectator)
 		g_pGameLevel->Objects.net_Register(this);
 
@@ -611,8 +611,8 @@ void CGameObject::spawn_supplies()
 					}
 
 					NET_Packet P;
-					A->Spawn_Write(P, TRUE);
-					Level().Send(P, net_flags(TRUE));
+					A->Spawn_Write(P, true);
+					Level().Send(P, net_flags(true));
 					F_entity_Destroy(A);
 				}
 			}
@@ -1020,7 +1020,7 @@ void CGameObject::SetKinematicsCallback(bool set)
 	if (set)
 		smart_cast<IKinematics*>(Visual())->Callback(VisualCallback, this);
 	else
-		smart_cast<IKinematics*>(Visual())->Callback(0, 0);
+		smart_cast<IKinematics*>(Visual())->Callback(nullptr, nullptr);
 }
 
 void VisualCallback(IKinematics* tpKinematics)
