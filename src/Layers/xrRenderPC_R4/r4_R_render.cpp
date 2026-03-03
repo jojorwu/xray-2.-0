@@ -6,13 +6,6 @@
 
 #include "../xrRender/QueryHelper.h"
 
-IC bool pred_sp_sort(ISpatial* _1, ISpatial* _2)
-{
-	float d1 = _1->spatial.sphere.P.distance_to_sqr(Device.vCameraPosition);
-	float d2 = _2->spatial.sphere.P.distance_to_sqr(Device.vCameraPosition);
-	return d1 < d2;
-}
-
 void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 {
 	PIX_EVENT(render_main);
@@ -36,7 +29,27 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
 			);
 
 			// (almost) Exact sorting order (front-to-back)
-			std::sort(lstRenderables.begin(), lstRenderables.end(), pred_sp_sort);
+			if (lstRenderables.size() > 1)
+			{
+				struct SPreSortedSpatial
+				{
+					ISpatial* spatial;
+					float dist;
+					IC bool operator<(const SPreSortedSpatial& other) const { return dist < other.dist; }
+				};
+
+				static xr_vector<SPreSortedSpatial> preSorted;
+				preSorted.clear_not_free();
+				preSorted.reserve(lstRenderables.size());
+				for (ISpatial* spatial : lstRenderables)
+				{
+					float dist = spatial->spatial.sphere.P.distance_to_sqr(Device.vCameraPosition);
+					preSorted.push_back({ spatial, dist });
+				}
+				std::sort(preSorted.begin(), preSorted.end());
+				for (u32 it = 0; it < lstRenderables.size(); it++)
+					lstRenderables[it] = preSorted[it].spatial;
+			}
 
 			// Determine visibility for dynamic part of scene
 			set_Object(nullptr);
