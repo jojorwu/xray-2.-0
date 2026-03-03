@@ -123,7 +123,7 @@
       <DisableSpecificWarnings>4065;4127;4268;4324;5030;5051</DisableSpecificWarnings>
       <ExceptionHandling>false</ExceptionHandling>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
       <Optimization>MaxSpeed</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -167,7 +167,7 @@
       <DisableSpecificWarnings>4065;4127;4268;4324;5030;5051</DisableSpecificWarnings>
       <ExceptionHandling>false</ExceptionHandling>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
       <Optimization>MaxSpeed</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -212,7 +212,7 @@
       <DisableSpecificWarnings>4065;4127;4268;4324;5030;5051</DisableSpecificWarnings>
       <ExceptionHandling>false</ExceptionHandling>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
       <Optimization>Disabled</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -257,7 +257,7 @@
       <DisableSpecificWarnings>4065;4127;4268;4324;5030;5051</DisableSpecificWarnings>
       <ExceptionHandling>false</ExceptionHandling>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
       <Optimization>Disabled</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -302,7 +302,7 @@
       <DisableSpecificWarnings>4065;4127;4268;4324;5030;5051</DisableSpecificWarnings>
       <ExceptionHandling>false</ExceptionHandling>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
       <Optimization>MaxSpeed</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

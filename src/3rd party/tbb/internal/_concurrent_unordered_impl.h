@@ -64,7 +64,7 @@ class concurrent_unordered_base;
 
 // Forward list iterators (without skipping dummy elements)
 template<class Solist, typename Value>
-class flist_iterator : public std::iterator<std::forward_iterator_tag, Value>
+class flist_iterator
 {
     template <typename T, typename Allocator>
     friend class split_ordered_list;
@@ -75,6 +75,7 @@ class flist_iterator : public std::iterator<std::forward_iterator_tag, Value>
 
     typedef typename Solist::nodeptr_t nodeptr_t;
 public:
+    typedef std::forward_iterator_tag iterator_category;
     typedef typename Solist::value_type value_type;
     typedef typename Solist::difference_type difference_type;
     typedef typename Solist::pointer pointer;

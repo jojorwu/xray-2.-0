@@ -344,8 +344,14 @@ namespace interface5 {
         @ingroup containers */
     template<typename Container, typename Value>
     class hash_map_iterator
-        : public std::iterator<std::forward_iterator_tag,Value>
     {
+    public:
+        typedef std::forward_iterator_tag iterator_category;
+        typedef Value value_type;
+        typedef ptrdiff_t difference_type;
+        typedef Value* pointer;
+        typedef Value& reference;
+
         typedef Container map_type;
         typedef typename Container::node node;
         typedef hash_map_base::node_base node_base;
