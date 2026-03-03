@@ -88,12 +88,11 @@ void CPHObject::Collide()
 	if (m_flags.test(fl_ray_motions))
 	{
 		CPHMoveStorage* tracers = MoveStorage();
-		CPHMoveStorage::iterator I = tracers->begin(), E = tracers->end();
-		for (; E != I; I++)
+		for (auto& tracer : *tracers)
 		{
-			const Fvector *from = 0, *to = 0;
+			const Fvector *from = nullptr, *to = nullptr;
 			Fvector dir;
-			I.Positions(from, to);
+			tracer.Positions(from, to);
 			if (from->x == -dInfinity) continue;
 			dir.sub(*to, *from);
 			float magnitude = dir.magnitude();
@@ -111,13 +110,12 @@ void CPHObject::Collide()
 
 #endif
 			qResultVec& result = ph_world->r_spatial;
-			qResultIt i = result.begin(), e = result.end();
-			for (; i != e; ++i)
+			for (ISpatial* spatial_obj : result)
 			{
-				CPHObject* obj2 = static_cast<CPHObject*>(*i);
+				CPHObject* obj2 = static_cast<CPHObject*>(spatial_obj);
 				if (!obj2 || obj2 == this || !obj2->m_flags.test(st_dirty)) continue;
 				dGeomID motion_ray = ph_world->GetMotionRayGeom();
-				dGeomRayMotionSetGeom(motion_ray, I.dGeom());
+				dGeomRayMotionSetGeom(motion_ray, tracer.dGeom());
 				dGeomRayMotionsSet(motion_ray, (const dReal*)from, (const dReal*)&dir, magnitude);
 				NearCallback(this, obj2, motion_ray, obj2->dSpacedGeom());
 			}
@@ -136,10 +134,9 @@ void CPHObject::CollideDynamics()
 {
 	g_SpatialSpacePhysic->q_box(ph_world->r_spatial, 0, STYPE_PHYSIC, spatial.sphere.P, AABB);
 	qResultVec& result = ph_world->r_spatial;
-	qResultIt i = result.begin(), e = result.end();
-	for (; i != e; ++i)
+	for (ISpatial* spatial_obj : result)
 	{
-		CPHObject* obj2 = static_cast<CPHObject*>(*i);
+		CPHObject* obj2 = static_cast<CPHObject*>(spatial_obj);
 
 		if (!obj2 || obj2 == this || !obj2->m_flags.test(st_dirty)) continue;
 
@@ -168,10 +165,9 @@ void CPHObject::reinit_single()
 {
 	IslandReinit();
 	qResultVec& result = ph_world->r_spatial;
-	qResultIt i = result.begin(), e = result.end();
-	for (; i != e; ++i)
+	for (ISpatial* spatial_obj : result)
 	{
-		CPHObject* obj = static_cast<CPHObject*>(*i);
+		CPHObject* obj = static_cast<CPHObject*>(spatial_obj);
 		obj->IslandReinit();
 	}
 	result.clear_not_free();

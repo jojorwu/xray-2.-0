@@ -51,18 +51,18 @@ CPHElement::CPHElement() //aux
 
 	//temp_for_push_out=NULL;
 
-	m_body = NULL;
+	m_body = nullptr;
 	//bActive=false;
 	//bActivating=false;
 	m_flags.set(flActive,FALSE);
 	m_flags.set(flActivating,FALSE);
-	m_parent_element = NULL;
-	m_shell = NULL;
+	m_parent_element = nullptr;
+	m_shell = nullptr;
 
 
 	k_w = default_k_w;
 	k_l = default_k_l; //1.8f;
-	m_fratures_holder = NULL;
+	m_fratures_holder = nullptr;
 	//b_enabled_onstep=false;
 	//m_flags.set(flEnabledOnStep,FALSE);
 	m_flags.assign(0);
@@ -143,7 +143,7 @@ void CPHElement::destroy()
 	{
 		if (m_body->world)m_shell->Island().RemoveBody(m_body);
 		dBodyDestroy(m_body);
-		m_body = NULL;
+		m_body = nullptr;
 	}
 	DestroyGroupSpace();
 }
@@ -1378,8 +1378,10 @@ void CPHElement::set_BoxMass(const Fobb& box, float mass)
 void CPHElement::calculate_it_data_use_density(const Fvector& mc, float density)
 {
 	dMassSetZero(&m_mass);
-	GEOM_I i_geom = m_geoms.begin(), e = m_geoms.end();
-	for (; i_geom != e; ++i_geom)(*i_geom)->add_self_mass(m_mass, mc, density);
+	for (auto& geom : m_geoms)
+	{
+		geom->add_self_mass(m_mass, mc, density);
+	}
 	VERIFY2(dMass_valide(&m_mass), "non valide mass obtained!");
 }
 
@@ -1492,10 +1494,9 @@ void CPHElement::CreateSimulBase()
 
 void CPHElement::ReAdjustMassPositions(const Fmatrix& shift_pivot, float density)
 {
-	GEOM_I i = m_geoms.begin(), e = m_geoms.end();
-	for (; i != e; ++i)
+	for (auto& geom : m_geoms)
 	{
-		(*i)->move_local_basis(shift_pivot);
+		geom->move_local_basis(shift_pivot);
 	}
 	if (m_shell->PKinematics())
 	{
@@ -1540,11 +1541,10 @@ void CPHElement::ReInitDynamics(const Fmatrix& shift_pivot, float density)
 {
 	VERIFY(_valid(shift_pivot)&&_valid(density));
 	ReAdjustMassPositions(shift_pivot, density);
-	GEOM_I i = m_geoms.begin(), e = m_geoms.end();
-	for (; i != e; ++i)
+	for (auto& geom : m_geoms)
 	{
-		(*i)->set_build_position(m_mass_center);
-		(*i)->set_body(m_body);
+		geom->set_build_position(m_mass_center);
+		geom->set_body(m_body);
 		//if(object_contact_callback)geom.set_obj_contact_cb(object_contact_callback);
 		//if(m_phys_ref_object) geom.set_ref_object(m_phys_ref_object);
 		/*
@@ -1553,7 +1553,7 @@ void CPHElement::ReInitDynamics(const Fmatrix& shift_pivot, float density)
 					(*i)->add_to_space((dSpaceID)m_group);
 				}
 		*/
-		group_add(*(*i));
+		group_add(*geom);
 	}
 }
 

@@ -98,7 +98,7 @@ void fix_bones(LPCSTR fixed_bones, CPhysicsShell* shell)
 CPhysicsShell* P_build_Shell(IPhysicsShellHolder* obj, bool not_active_state, BONE_P_MAP* p_bone_map,
                              LPCSTR fixed_bones)
 {
-	CPhysicsShell* pPhysicsShell = 0;
+	CPhysicsShell* pPhysicsShell = nullptr;
 	//IKinematics* pKinematics=smart_cast<IKinematics*>(obj->ObjectVisual());
 	IKinematics* pKinematics = obj->ObjectKinematics();
 	if (fixed_bones)
@@ -121,11 +121,12 @@ CPhysicsShell* P_build_Shell(IPhysicsShellHolder* obj, bool not_active_state, BO
 		pPhysicsShell = P_build_Shell(obj, not_active_state);
 
 
-	BONE_P_PAIR_IT i = p_bone_map->begin(), e = p_bone_map->end();
-	if (i != e) pPhysicsShell->SetPrefereExactIntegration();
-	for (; i != e; i++)
+	if (!p_bone_map->empty())
+		pPhysicsShell->SetPrefereExactIntegration();
+
+	for (auto& pair : *p_bone_map)
 	{
-		CPhysicsElement* fixed_element = i->second.element;
+		CPhysicsElement* fixed_element = pair.second.element;
 		R_ASSERT2(fixed_element, "fixed bone has no physics");
 		//if(!fixed_element) continue;
 		fixed_element->Fix();
@@ -158,19 +159,19 @@ static BONE_P_MAP bone_map = BONE_P_MAP();
 CPhysicsShell* P_build_Shell(IPhysicsShellHolder* obj, bool not_active_state, U16Vec& fixed_bones)
 {
 	bone_map.clear();
-	CPhysicsShell* pPhysicsShell = 0;
+	CPhysicsShell* pPhysicsShell = nullptr;
 	if (!fixed_bones.empty())
-		for (U16It it = fixed_bones.begin(); it != fixed_bones.end(); it++)
-			bone_map.insert(mk_pair(*it, physicsBone()));
+		for (u16 bone_id : fixed_bones)
+			bone_map.insert(mk_pair(bone_id, physicsBone()));
 	pPhysicsShell = P_build_Shell(obj, not_active_state, &bone_map);
 
 	// fix bones
-	BONE_P_PAIR_IT i = bone_map.begin(), e = bone_map.end();
-	if (i != e)
+	if (!bone_map.empty())
 		pPhysicsShell->SetPrefereExactIntegration();
-	for (; i != e; i++)
+
+	for (auto& pair : bone_map)
 	{
-		CPhysicsElement* fixed_element = i->second.element;
+		CPhysicsElement* fixed_element = pair.second.element;
 		//R_ASSERT2(fixed_element,"fixed bone has no physics");
 		if (!fixed_element) continue;
 		fixed_element->Fix();
@@ -198,7 +199,7 @@ CPhysicsShell* P_build_SimpleShell(IPhysicsShellHolder* obj, float mass, bool no
 	pPhysicsShell->setMass(mass);
 	pPhysicsShell->set_PhysicsRefObject(obj);
 	if (!obj->has_parent_object())
-		pPhysicsShell->Activate(obj->ObjectXFORM(), 0, obj->ObjectXFORM(), not_active_state);
+		pPhysicsShell->Activate(obj->ObjectXFORM(), nullptr, obj->ObjectXFORM(), not_active_state);
 	return pPhysicsShell;
 }
 
@@ -372,17 +373,17 @@ float NonElasticCollisionEnergy(CPhysicsElement* e1, CPhysicsElement* e2, const 
 
 void StaticEnvironmentCB(bool& do_colide, bool bo1, dContact& c, SGameMtl* material_1, SGameMtl* material_2)
 {
-	dJointID contact_joint = dJointCreateContact(0, ContactGroup, &c);
+	dJointID contact_joint = dJointCreateContact(nullptr, ContactGroup, &c);
 
 	if (bo1)
 	{
 		((CPHIsland*)(retrieveGeomUserData(c.geom.g1)->callback_data))->DActiveIsland()->ConnectJoint(contact_joint);
-		dJointAttach(contact_joint, dGeomGetBody(c.geom.g1), 0);
+		dJointAttach(contact_joint, dGeomGetBody(c.geom.g1), nullptr);
 	}
 	else
 	{
 		((CPHIsland*)(retrieveGeomUserData(c.geom.g2)->callback_data))->DActiveIsland()->ConnectJoint(contact_joint);
-		dJointAttach(contact_joint, 0, dGeomGetBody(c.geom.g2));
+		dJointAttach(contact_joint, nullptr, dGeomGetBody(c.geom.g2));
 	}
 	do_colide = false;
 }
