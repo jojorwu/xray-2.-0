@@ -408,9 +408,9 @@ void dxRenderDeviceRender::End()
 	CHK_DX(HW.pDevice->EndScene());
 
 	if (!Device.m_SecondViewport.IsSVPFrame() && !Device.m_SecondViewport.isCamReady)
-		HW.pDevice->Present(NULL, NULL, NULL, NULL);
+		HW.pDevice->Present(nullptr, nullptr, nullptr, nullptr);
 #endif //-USE_DX10
-	//HRESULT _hr		= HW.pDevice->Present( NULL, NULL, NULL, NULL );
+	//HRESULT _hr		= HW.pDevice->Present( nullptr, nullptr, nullptr, nullptr );
 	//if				(D3DERR_DEVICELOST==_hr)	return;			// we will handle this later
 }
 

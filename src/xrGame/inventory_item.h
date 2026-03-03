@@ -128,9 +128,9 @@ public:
 	};
 
 	virtual void OnH_B_Chield();
-	virtual void OnH_A_Chield();
+	virtual void OnH_A_Chield() override;
 	virtual void OnH_B_Independent(bool just_before_destroy);
-	virtual void OnH_A_Independent();
+	virtual void OnH_A_Independent() override;
 
 	virtual void save(NET_Packet& output_packet);
 	virtual void load(IReader& input_packet);
@@ -256,7 +256,7 @@ protected:
 public:
 	virtual BOOL net_Spawn(CSE_Abstract* DC);
 	virtual void net_Destroy();
-	virtual void reload(LPCSTR section);
+	virtual void reload(LPCSTR section) override;
 	virtual void reinit();
 	virtual bool can_kill() const;
 	virtual CInventoryItem* can_kill(CInventory* inventory) const;
@@ -265,11 +265,11 @@ public:
 	virtual bool ready_to_kill() const;
 	IC bool useful_for_NPC() const;
 #ifdef DEBUG
-	virtual void				OnRender					();
+	virtual void				OnRender					() override;
 #endif
 
 public:
-	virtual DLL_Pure* _construct();
+	virtual DLL_Pure* _construct() override;
 	IC CPhysicsShellHolder& object() const
 	{
 		VERIFY(m_object);

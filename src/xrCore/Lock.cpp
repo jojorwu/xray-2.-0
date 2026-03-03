@@ -41,23 +41,16 @@ struct profiler
 	}
 };
 
-Lock::Lock(const char* id) : impl(new LockImpl), lockCounter(0), id(id) {}
+Lock::Lock(const char* id) : impl(xr_new<LockImpl>()), lockCounter(0), id(id) {}
 
 void Lock::Enter()
 {
-#if 0 // def DEBUG
-	static bool show_call_stack = false;
-	if (show_call_stack)
-		OutputDebugStackTrace("----------------------------------------------------");
-#endif // DEBUG
 	profiler temp(id);
-	mutex.lock();
-	isLocked = true;
+	impl->Lock();
+	++lockCounter;
 }
 #else
-Lock::Lock() : impl(new LockImpl), lockCounter(0) {}
-
-Lock::~Lock() { delete impl; }
+Lock::Lock() : impl(xr_new<LockImpl>()), lockCounter(0) {}
 
 void Lock::Enter()
 {
@@ -65,6 +58,8 @@ void Lock::Enter()
 	++lockCounter;
 }
 #endif // CONFIG_PROFILE_LOCKS
+
+Lock::~Lock() { xr_delete(impl); }
 
 bool Lock::TryEnter()
 {

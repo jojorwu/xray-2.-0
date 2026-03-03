@@ -113,6 +113,10 @@ struct spawn_and_prefetch_events
 	models_set* prefetched_models = nullptr;
 	bool* closeSignal = nullptr;
 	xrSRWLock* prefetch_lock = nullptr;
+
+	spawn_and_prefetch_events(NET_Queue_Event* spawn_events, prefetch_event_queue* prefetch_events, models_set* prefetched_models, bool* closeSignal, xrSRWLock* prefetch_lock)
+		: spawn_events(spawn_events), prefetch_events(prefetch_events), prefetched_models(prefetched_models), closeSignal(closeSignal), prefetch_lock(prefetch_lock)
+	{}
 };
 
 u16	GetSpawnInfo(NET_Packet &P, u16 &parent_id, shared_str& section)
@@ -270,7 +274,7 @@ CLevel::CLevel() :
 	spawn_events = xr_new<NET_Queue_Event>();
 	prefetch_events = xr_new<prefetch_event_queue>();
 	prefetched_models = xr_new<models_set>();
-	auto events = new spawn_and_prefetch_events({ spawn_events, prefetch_events, prefetched_models, &closeSignal, &prefetch_lock });
+	auto events = xr_new<spawn_and_prefetch_events>(spawn_events, prefetch_events, prefetched_models, &closeSignal, &prefetch_lock);
 	createPrefetchThreadSignal();
 	thread_spawn(ProcessPrefetchEvents, "Pre-Spawn Prefetcher Thread", 0, events);
 	Msg("CLevel::CLevel() Spawn Antifreeze initialized");
@@ -568,7 +572,7 @@ void CLevel::ProcessPrefetchEvents(void* args)
 		{
 			if (spawn_antifreeze_debug) Msg("[ProcessPrefetchEvents] closeSignal received, destroying thread");
 			closePrefetchThreadSignal();
-			delete events;
+			xr_delete(events);
 			return;
 		}
 
@@ -1012,14 +1016,14 @@ void CLevel::OnFrame()
 			MapManager().Update();
 		if (IsGameTypeSingle() && Device.dwPrecacheFrame == 0)
 		{
-			// XXX nitrocaster: was enabled in x-ray 1.5; to be restored or removed
-			//if (g_mt_config.test(mtMap))
-			//{
-			//    Device.seqParallel.push_back(fastdelegate::FastDelegate0<>(
-			//    m_game_task_manager,&CGameTaskManager::UpdateTasks));
-			//}
-			//else
-			GameTaskManager().UpdateTasks();
+			if (g_mt_config.test(mtMap))
+			{
+				Device.seqParallel.push_back(fastdelegate::FastDelegate0<>(m_game_task_manager, &CGameTaskManager::UpdateTasks));
+			}
+			else
+			{
+				GameTaskManager().UpdateTasks();
+			}
 		}
 	}
 	// Inherited update

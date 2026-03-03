@@ -28,9 +28,9 @@ void resptrcode_texture::create(LPCSTR _name)
 //////////////////////////////////////////////////////////////////////
 CTexture::CTexture()
 {
-	pSurface = NULL;
-	pAVI = NULL;
-	pTheora = NULL;
+	pSurface = nullptr;
+	pAVI = nullptr;
+	pTheora = nullptr;
 	desc_cache = 0;
 	seqMSPF = 0;
 	flags.MemoryUsage = 0;
@@ -113,7 +113,7 @@ void CTexture::apply_avi(u32 dwStage)
 
 		// AVI
 		D3DLOCKED_RECT R;
-		R_CHK(T2D->LockRect(0,&R,NULL,0));
+		R_CHK(T2D->LockRect(0,&R,nullptr,0));
 		R_ASSERT(R.Pitch == int(pAVI->m_dwWidth*4));
 		//		R_ASSERT(pAVI->DecompressFrame((u32*)(R.pBits)));
 		BYTE* ptr;
@@ -202,7 +202,7 @@ void CTexture::Load()
 				u32 _h = pTheora->Height(false);
 
 				HRESULT hrr = HW.pDevice->CreateTexture(
-					_w, _h, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &pTexture, NULL);
+					_w, _h, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &pTexture, nullptr);
 
 				pSurface = pTexture;
 				if (FAILED(hrr))
@@ -232,7 +232,7 @@ void CTexture::Load()
 				ID3DTexture2D* pTexture = 0;
 				HRESULT hrr = HW.pDevice->CreateTexture(
 					pAVI->m_dwWidth, pAVI->m_dwHeight, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED,
-					&pTexture,NULL
+					&pTexture,nullptr
 				);
 				pSurface = pTexture;
 				if (FAILED(hrr))

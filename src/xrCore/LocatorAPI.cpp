@@ -494,19 +494,21 @@ void CLocatorAPI::ProcessArchive(LPCSTR _path)
 
 void CLocatorAPI::unload_archive(CLocatorAPI::archive& A)
 {
-	files_it I = m_files.begin();
-	for (; I != m_files.end(); ++I)
+	for (files_it I = m_files.begin(); I != m_files.end();)
 	{
 		const file& entry = *I;
 		if (entry.vfs == A.vfs_idx)
 		{
 #ifndef MASTER_GOLD
-            Msg("unregistering file [%s]", I->name);
+			Msg("unregistering file [%s]", I->name);
 #endif // #ifndef MASTER_GOLD
 			char* str = LPSTR(I->name);
 			xr_free(str);
-			m_files.erase(I);
-			break;
+			m_files.erase(I++);
+		}
+		else
+		{
+			++I;
 		}
 	}
 	A.close();
@@ -726,7 +728,7 @@ IReader* CLocatorAPI::setup_fs_ltx(LPCSTR fs_name)
 	              make_string("Cannot open file \"%s\".\nCheck your working folder.", fs_name));
 
 	void* buffer = FileDownload(fs_path, file_handle, file_size);
-	result = new CTempReader(buffer, (int)file_size, 0);
+	result = xr_new<CTempReader>(buffer, (int)file_size, 0);
 
 #ifdef DEBUG
 	if (result && m_Flags.is(flBuildCopy | flReady))
@@ -816,15 +818,27 @@ void CLocatorAPI::_initialize(u32 flags, LPCSTR target_folder, LPCSTR fs_name)
 				//Old good fsltx
 				//replace root with predefined path
 				//xr_strcpy(root, fsRoot.generic_string().c_str());
-				FS_Path* P = new FS_Path(xr_strdup(fsRoot.generic_string().c_str()), nullptr, nullptr, nullptr, 0);
-				pathes.insert(std::make_pair(xr_strdup("$fs_root$"), P));
+				FS_Path* P = xr_new<FS_Path>(fsRoot.generic_string().c_str(), nullptr, nullptr, nullptr, 0);
+				LPSTR fs_root_alias = xr_strdup("$fs_root$");
+				auto res = pathes.insert(std::make_pair(fs_root_alias, P));
+				if (!res.second)
+				{
+					xr_free(fs_root_alias);
+					xr_delete(P);
+				}
 				p_it = pathes.find(root);
 			}
 
-			FS_Path* P = new FS_Path((p_it != pathes.end()) ? p_it->second->m_Path : root, lp_add, lp_def, lp_capt, fl);
+			FS_Path* P = xr_new<FS_Path>((p_it != pathes.end()) ? p_it->second->m_Path : root, lp_add, lp_def, lp_capt, fl);
 			bNoRecurse = !(fl & FS_Path::flRecurse);
 			Recurse(P->m_Path);
-			auto I = pathes.insert(std::make_pair(xr_strdup(id), P));
+			LPSTR id_strdup = xr_strdup(id);
+			auto I = pathes.insert(std::make_pair(id_strdup, P));
+			if (!I.second)
+			{
+				xr_free(id_strdup);
+				xr_delete(P);
+			}
 #ifndef DEBUG
 			m_Flags.set(flCacheFiles, FALSE);
 #endif // DEBUG
@@ -1480,6 +1494,8 @@ BOOL CLocatorAPI::dir_delete(LPCSTR path, LPCSTR nm, BOOL remove_files)
 				// const char* entry_begin = entry.name+base_len;
 				if (!remove_files) return FALSE;
 				unlink(entry.name);
+				char* str = LPSTR(entry.name);
+				xr_free(str);
 				m_files.erase(cur_item);
 			}
 			else
@@ -1489,14 +1505,16 @@ BOOL CLocatorAPI::dir_delete(LPCSTR path, LPCSTR nm, BOOL remove_files)
 		}
 	}
 	// remove folders
-	files_set::reverse_iterator r_it = folders.rbegin();
-	for (; r_it != folders.rend(); r_it++)
+	for (files_set::reverse_iterator r_it = folders.rbegin(); r_it != folders.rend(); ++r_it)
 	{
-		const char* end_symbol = r_it->name + xr_strlen(r_it->name) - 1;
-		if ((*end_symbol) == '\\')
+		const file& entry = *r_it;
+		_rmdir(entry.name);
+		files_it it = m_files.find(entry);
+		if (it != m_files.end())
 		{
-			_rmdir(r_it->name);
-			m_files.erase(*r_it);
+			char* str = LPSTR(it->name);
+			xr_free(str);
+			m_files.erase(it);
 		}
 	}
 	return TRUE;
@@ -1586,7 +1604,14 @@ FS_Path* CLocatorAPI::append_path(LPCSTR path_alias, LPCSTR root, LPCSTR add, BO
 	FS_Path* P = xr_new<FS_Path>(root, add, LPCSTR(0), LPCSTR(0), 0);
 	bNoRecurse = !recursive;
 	Recurse(P->m_Path);
-	pathes.insert(mk_pair(xr_strdup(path_alias), P));
+	LPSTR alias_strdup = xr_strdup(path_alias);
+	auto res = pathes.insert(mk_pair(alias_strdup, P));
+	if (!res.second)
+	{
+		xr_free(alias_strdup);
+		xr_delete(P);
+		return res.first->second;
+	}
 	return P;
 }
 

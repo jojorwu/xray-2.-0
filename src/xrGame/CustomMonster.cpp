@@ -96,13 +96,13 @@ CCustomMonster::CCustomMonster() :
 	// just to remove warning C4355 if we use this instead
 	Feel::Vision(cast_game_object())
 {
-	m_sound_user_data_visitor = 0;
-	m_memory_manager = 0;
-	m_movement_manager = 0;
-	m_sound_player = 0;
+	m_sound_user_data_visitor = nullptr;
+	m_memory_manager = nullptr;
+	m_movement_manager = nullptr;
+	m_sound_player = nullptr;
 	m_already_dead = false;
 	m_invulnerable = false;
-	m_moving_object = 0;
+	m_moving_object = nullptr;
 }
 
 CCustomMonster::~CCustomMonster()
@@ -334,7 +334,7 @@ void CCustomMonster::shedule_Update(u32 DT)
 	// *** general stuff
 	if (g_Alive())
 	{
-		if (false && g_mt_config.test(mtAiVision))
+		if (g_mt_config.test(mtAiVision))
 #ifndef DEBUG
 			Device.seqParallel.push_back(fastdelegate::FastDelegate0<>(this, &CCustomMonster::Exec_Visibility));
 #else // DEBUG
@@ -591,7 +591,7 @@ void CCustomMonster::UpdatePositionAnimation()
 BOOL CCustomMonster::feel_visible_isRelevant(CObject* O)
 {
 	CEntityAlive* E = smart_cast<CEntityAlive*>(O);
-	if (0 == E) return FALSE;
+	if (nullptr == E) return FALSE;
 	if (E->g_Team() == g_Team()) return FALSE;
 	return TRUE;
 }
@@ -716,7 +716,7 @@ void CCustomMonster::UpdateCamera()
 	g_pGameLevel->Cameras().Update(eye_matrix.c, eye_matrix.k, eye_matrix.j, new_fov, .75f, new_range, 0);
 }
 
-void CCustomMonster::HitSignal(float /**perc/**/, Fvector& /**vLocalDir/**/, CObject* /**who/**/)
+void CCustomMonster::HitSignal(float /**perc/**/, Fvector& /**vLocalDir/**/, CObject* /**who/**/, s16 /**element/**/)
 {
 }
 
@@ -1272,7 +1272,7 @@ void CCustomMonster::OnRender()
 																 velocity,
 																 collide_position,
 																 this,
-																 NULL,
+																 nullptr,
 																 temp_rq_results,
 																 & m_jump_picks,
 																 & m_jump_collide_tris,
@@ -1285,12 +1285,8 @@ void CCustomMonster::OnRender()
 	if (m_jump_picks.size() < 1)
 		return;
 
-	xr_vector<trajectory_pick>::const_iterator	I = m_jump_picks.begin();
-	xr_vector<trajectory_pick>::const_iterator	E = m_jump_picks.end();
-	for ( ; I != E; ++I )
+	for (const auto& pick : m_jump_picks)
 	{
-		trajectory_pick pick				=	*I;	
-
 		float const inv_nx			=	(pick.invert_x & 1) ? -1.f : 1.f;
 		float const inv_ny			=	(pick.invert_y & 1) ? -1.f : 1.f;
 		float const inv_nz			=	(pick.invert_z & 1) ? -1.f : 1.f;

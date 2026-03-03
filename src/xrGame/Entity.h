@@ -60,18 +60,18 @@ public:
 	// General
 	CEntity();
 	virtual ~CEntity();
-	virtual DLL_Pure* _construct();
-	virtual CEntity* cast_entity() { return this; }
+	virtual DLL_Pure* _construct() override;
+	virtual CEntity* cast_entity() override { return this; }
 public:
 
 	// Core events
-	virtual void Load(LPCSTR section);
-	virtual void reinit();
-	virtual void reload(LPCSTR section);
-	virtual BOOL net_Spawn(CSE_Abstract* DC);
-	virtual void net_Destroy();
+	virtual void Load(LPCSTR section) override;
+	virtual void reinit() override;
+	virtual void reload(LPCSTR section) override;
+	virtual BOOL net_Spawn(CSE_Abstract* DC) override;
+	virtual void net_Destroy() override;
 
-	virtual void shedule_Update(u32 dt);
+	virtual void shedule_Update(u32 dt) override;
 
 	bool IsFocused() const;
 	bool IsMyCamera() const;
@@ -84,13 +84,13 @@ public:
 
 	virtual float GetGlowing();			//--DSR-- SilencerOverheat
 	virtual float GetHotness();			//--DSR-- HeatVision
-	virtual void  OnChangeVisual();		//--DSR-- HeatVision
+	virtual void  OnChangeVisual() override;		//--DSR-- HeatVision
 
 	/*virtual*/
 	IC BOOL g_Alive() const { return GetfHealth() > 0; }
-	virtual BOOL g_State(SEntityState&) const { return FALSE; }
+	virtual BOOL g_State(SEntityState&) const { return false; }
 
-	bool AlreadyDie() { return 0 != GetLevelDeathTime() ? true : false; }
+	bool AlreadyDie() { return 0 != GetLevelDeathTime(); }
 	ALife::_TIME_ID GetGameDeathTime() const { return m_game_death_time; }
 	u32 GetLevelDeathTime() const { return m_level_death_time; }
 
@@ -104,23 +104,23 @@ public:
 	int g_Group() const { return id_Group; }
 
 	// Health calculations
-	virtual void Hit(SHit* pHDS);
+	virtual void Hit(SHit* pHDS) override;
 	virtual void HitSignal(float P, Fvector& local_dir, CObject* who, s16 element) = 0;
 	virtual void HitImpulse(float P, Fvector& vWorldDir, Fvector& vLocalDir) = 0;
 
 	virtual void Die(CObject* who);
 	//			void			KillEntity			(CObject* who);
-	void KillEntity(u16 whoID, BOOL bypass_actor_check = FALSE);
+	void KillEntity(u16 whoID, BOOL bypass_actor_check = false);
 
 	// Events
-	virtual void OnEvent(NET_Packet& P, u16 type);
+	virtual void OnEvent(NET_Packet& P, u16 type) override;
 
 	virtual BOOL IsVisibleForHUD() { return g_Alive(); }
 
-	virtual void g_fireParams(const CHudItem*, Fvector&, Fvector&)
+	virtual void g_fireParams(const CHudItem*, Fvector&, Fvector&) override
 	{
 	};
-	virtual bool g_stateFire() { return true; }
+	virtual bool g_stateFire() override { return true; }
 	//time of entity death
 	u32 m_level_death_time;
 	ALife::_TIME_ID m_game_death_time;

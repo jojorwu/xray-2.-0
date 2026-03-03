@@ -42,7 +42,7 @@ SLuaWpnParams::~SLuaWpnParams()
 {
 }
 
-SLuaWpnParams* g_lua_wpn_params = NULL;
+SLuaWpnParams* g_lua_wpn_params = nullptr;
 
 void destroy_lua_wpn_params()
 {
@@ -86,6 +86,7 @@ CUIWpnParams::CUIWpnParams()
 
 CUIWpnParams::~CUIWpnParams()
 {
+	delete_data(m_vecStAmmoTypes);
 }
 
 void CUIWpnParams::InitFromXml(CUIXml& xml_doc)
@@ -136,7 +137,7 @@ void CUIWpnParams::InitFromXml(CUIXml& xml_doc)
 			bAmmoTypeExistInXML = xml_doc.NavigateToNode(str, 0) != nullptr;
 			if (bAmmoTypeExistInXML)
 			{
-				CUIStatic* pStAmmoType = new CUIStatic();
+				CUIStatic* pStAmmoType = xr_new<CUIStatic>();
 				AttachChild(pStAmmoType);
 				CUIXmlInit::InitStatic(xml_doc, str, 0, pStAmmoType);
 
@@ -248,7 +249,7 @@ void CUIWpnParams::SetInfo(CInventoryItem* slot_wpn, CInventoryItem& cur_wpn)
 		xr_vector<shared_str> good_ammo;
 		std::copy_if(ammo_types.begin(), ammo_types.end(), std::back_inserter(good_ammo), [](const shared_str& ammo_type)
 		{
-			return ammo_type != NULL && !strstr(ammo_type.c_str(), "_bad") && !strstr(ammo_type.c_str(), "_verybad");
+			return ammo_type != nullptr && !strstr(ammo_type.c_str(), "_bad") && !strstr(ammo_type.c_str(), "_verybad");
 		});
 
 		// Выводим иконки патронов --#SM+#--

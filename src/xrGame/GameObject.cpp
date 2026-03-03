@@ -50,18 +50,18 @@ extern ENGINE_API bool g_dedicated_server;
 
 CGameObject::CGameObject()
 {
-	m_ai_obstacle = 0;
+	m_ai_obstacle = nullptr;
 
 	init();
 	//-----------------------------------------
 	m_bCrPr_Activated = false;
 	m_dwCrPr_ActivationStep = 0;
 	m_spawn_time = 0;
-	m_ai_location = !g_dedicated_server ? xr_new<CAI_ObjectLocation>() : 0;
+	m_ai_location = !g_dedicated_server ? xr_new<CAI_ObjectLocation>() : nullptr;
 	m_server_flags.one();
 
 	m_callbacks = xr_new<CALLBACK_MAP>();
-	m_anim_mov_ctrl = 0;
+	m_anim_mov_ctrl = nullptr;
 }
 
 CGameObject::~CGameObject()
@@ -78,9 +78,9 @@ CGameObject::~CGameObject()
 
 void CGameObject::init()
 {
-	m_lua_game_object = 0;
+	m_lua_game_object = nullptr;
 	m_script_clsid = -1;
-	m_ini_file = 0;
+	m_ini_file = nullptr;
 	m_spawned = false;
 }
 
@@ -133,10 +133,10 @@ void CGameObject::net_Destroy()
 
 	m_script_clsid = -1;
 	if (Visual() && smart_cast<IKinematics*>(Visual()))
-		smart_cast<IKinematics*>(Visual())->Callback(0, 0);
+		smart_cast<IKinematics*>(Visual())->Callback(nullptr, nullptr);
 
 	inherited::net_Destroy();
-	setReady(FALSE);
+	setReady(false);
 
 	if (Level().IsDemoPlayStarted() && ID() == u16(-1))
 	{
@@ -151,9 +151,9 @@ void CGameObject::net_Destroy()
 	{
 		if (!Level().IsDemoPlayStarted())
 		{
-			Level().SetControlEntity(0);
+			Level().SetControlEntity(nullptr);
 		}
-		Level().SetEntity(0); // do not switch !!!
+		Level().SetEntity(nullptr); // do not switch !!!
 	}
 
 	Level().RemoveObject_From_4CrPr(this);
@@ -209,7 +209,7 @@ void CGameObject::OnEvent(NET_Packet& P, u16 type)
 			HDS.who = Hitter;
 			if (!HDS.who)
 			{
-				Msg("! ERROR: hitter object [%d] is NULL on client.", HDS.whoID);
+				Msg("! ERROR: hitter object [%d] is nullptr on client.", HDS.whoID);
 			}
 			//-------------------------------------------------------
 			switch (HDS.PACKET_TYPE)
@@ -247,7 +247,7 @@ void CGameObject::OnEvent(NET_Packet& P, u16 type)
 				    H_Parent()->ID(), H_Parent()->cName().c_str(), Device.dwFrame);
 
 				// This object will be destroy on call function <H_Parent::Destroy>
-				// or it will be call <H_Parent::Reject>  ==>  H_Parent = NULL
+				// or it will be call <H_Parent::Reject>  ==>  H_Parent = nullptr
 				// !!! ___ it is necessary to be check!
 				break;
 			}
@@ -255,7 +255,7 @@ void CGameObject::OnEvent(NET_Packet& P, u16 type)
 			Msg("--- Object: GE_DESTROY of [%d][%s]", ID(), cNameSect().c_str());
 #endif // MP_LOGGING
 
-			setDestroy(TRUE);
+			setDestroy(true);
 			//			MakeMeCrow		();
 		}
 		break;
@@ -313,13 +313,13 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
 	}
 	else
 	{
-		//R_ASSERT(Level().Objects.net_Find(E->ID) == NULL);
+		//R_ASSERT(Level().Objects.net_Find(E->ID) == nullptr);
 		CObject* o = Level().Objects.net_Find(E->ID);
-		if (o != NULL)
+		if (o != nullptr)
 		{
 			Msg("ERROR: CGameObject:net_spawn() Object with ID already exists! ID=%d self=%s other=%s", E->ID,
 			    *(cName()), *(o->cName()));
-			//ai().script_engine().script_log(eLuaMessageTypeError, "CGameObject:net_Spawn() | Level().Objects.net_Find(E->ID) != NULL (This mean object already exist on level by this ID) ID=%d s_name=%s", E->ID, *(E->s_name));
+			//ai().script_engine().script_log(eLuaMessageTypeError, "CGameObject:net_Spawn() | Level().Objects.net_Find(E->ID) != nullptr (This mean object already exist on level by this ID) ID=%d s_name=%s", E->ID, *(E->s_name));
 			return false;
 		}
 	}
@@ -366,11 +366,11 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
 	{
 		if (!demo_spectator)
 		{
-			setLocal(FALSE);
+			setLocal(false);
 		}
 	};
 
-	setReady(TRUE);
+	setReady(true);
 	if (!demo_spectator)
 		g_pGameLevel->Objects.net_Register(this);
 
@@ -579,15 +579,15 @@ void CGameObject::spawn_supplies()
 				if (n > 0)
 					j = atoi(_GetItem(V, 0, temp)); //count
 
-				if (NULL != strstr(V, "prob="))
+				if (nullptr != strstr(V, "prob="))
 					p = (float)atof(strstr(V, "prob=") + 5);
 				if (fis_zero(p))p = 1.f;
 				if (!j) j = 1;
-				if (NULL != strstr(V, "cond="))
+				if (nullptr != strstr(V, "cond="))
 					f_cond = (float)atof(strstr(V, "cond=") + 5);
-				bScope = (NULL != strstr(V, "scope"));
-				bSilencer = (NULL != strstr(V, "silencer"));
-				bLauncher = (NULL != strstr(V, "launcher"));
+				bScope = (nullptr != strstr(V, "scope"));
+				bSilencer = (nullptr != strstr(V, "silencer"));
+				bLauncher = (nullptr != strstr(V, "launcher"));
 			}
 			for (u32 i = 0; i < j; ++i)
 			{
@@ -611,8 +611,8 @@ void CGameObject::spawn_supplies()
 					}
 
 					NET_Packet P;
-					A->Spawn_Write(P, TRUE);
-					Level().Send(P, net_flags(TRUE));
+					A->Spawn_Write(P, true);
+					Level().Send(P, net_flags(true));
 					F_entity_Destroy(A);
 				}
 			}
@@ -1020,7 +1020,7 @@ void CGameObject::SetKinematicsCallback(bool set)
 	if (set)
 		smart_cast<IKinematics*>(Visual())->Callback(VisualCallback, this);
 	else
-		smart_cast<IKinematics*>(Visual())->Callback(0, 0);
+		smart_cast<IKinematics*>(Visual())->Callback(nullptr, nullptr);
 }
 
 void VisualCallback(IKinematics* tpKinematics)
@@ -1043,12 +1043,12 @@ void VisualCallback(IKinematics* tpKinematics)
 
 CScriptGameObject* CGameObject::lua_game_object() const
 {
-	if (!this) return NULL;
+	if (!this) return nullptr;
 	if (!m_spawned)
 	{
 		Msg("! you are trying to use a destroyed object [%i]", ID());
 		ai().script_engine().print_stack();
-		return NULL;
+		return nullptr;
 	}
 	if (!m_lua_game_object)
 		m_lua_game_object = xr_new<CScriptGameObject>(const_cast<CGameObject*>(this));

@@ -59,7 +59,7 @@ void CSoundRender_Core::i_create_all_sources()
 			UNUSED(scope);
 		}
 
-		CSoundRender_Source* S = new CSoundRender_Source();
+		CSoundRender_Source* S = xr_new<CSoundRender_Source>();
 		S->load(id);
 
 		lock.Enter();

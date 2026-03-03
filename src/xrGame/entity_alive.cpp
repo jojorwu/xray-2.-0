@@ -25,14 +25,14 @@
 #define BLOOD_MARKS_SECT		"bloody_marks"
 
 //отметки крови на стенах 
-FactoryPtr<IWallMarkArray>* CEntityAlive::m_pBloodMarksVector = NULL;
+FactoryPtr<IWallMarkArray>* CEntityAlive::m_pBloodMarksVector = nullptr;
 float CEntityAlive::m_fBloodMarkSizeMin = 0.f;
 float CEntityAlive::m_fBloodMarkSizeMax = 0.f;
 float CEntityAlive::m_fBloodMarkDistance = 0.f;
 float CEntityAlive::m_fNominalHit = 0.f;
 
 //капание крови
-FactoryPtr<IWallMarkArray>* CEntityAlive::m_pBloodDropsVector = NULL;
+FactoryPtr<IWallMarkArray>* CEntityAlive::m_pBloodDropsVector = nullptr;
 float CEntityAlive::m_fStartBloodWoundSize = 0.3f;
 float CEntityAlive::m_fStopBloodWoundSize = 0.1f;
 float CEntityAlive::m_fBloodDropSize = 0.03f;
@@ -46,7 +46,7 @@ float CEntityAlive::m_fStartBurnWoundSize = 0.3f;
 //размер раны, чтоб остановить партиклы
 float CEntityAlive::m_fStopBurnWoundSize = 0.1f;
 
-STR_VECTOR* CEntityAlive::m_pFireParticlesVector = NULL;
+STR_VECTOR* CEntityAlive::m_pFireParticlesVector = nullptr;
 
 /////////////////////////////////////////////
 // CEntityAlive
@@ -57,7 +57,7 @@ CEntityAlive::CEntityAlive() :
 	m_bMobility = false;
 	m_fAccuracy = 0.0f;
 	m_fIntelligence = 0.0f;
-	m_entity_condition = NULL;
+	m_entity_condition = nullptr;
 	m_ef_creature_type = 0;
 
 	monster_community = xr_new<MONSTER_COMMUNITY>();
@@ -71,7 +71,7 @@ CEntityAlive::CEntityAlive() :
 	m_used_time = Device.dwTimeGlobal;
 	m_squad_index = u8(-1);
 
-	m_material_manager = 0;
+	m_material_manager = nullptr;
 }
 
 CEntityAlive::~CEntityAlive()
@@ -89,10 +89,10 @@ void CEntityAlive::Load(LPCSTR section)
 	m_fFood = 100 * pSettings->r_float(section, "ph_mass");
 
 	//bloody wallmarks
-	if (0 == m_pBloodMarksVector)
+	if (nullptr == m_pBloodMarksVector)
 		LoadBloodyWallmarks(BLOOD_MARKS_SECT);
 
-	if (0 == m_pFireParticlesVector)
+	if (nullptr == m_pFireParticlesVector)
 		LoadFireParticles("entity_fire_particles");
 
 	//биолог. вид к торому принадлежит монстр или персонаж
@@ -101,8 +101,8 @@ void CEntityAlive::Load(LPCSTR section)
 
 void CEntityAlive::LoadBloodyWallmarks(LPCSTR section)
 {
-	VERIFY(0==m_pBloodMarksVector);
-	VERIFY(0==m_pBloodDropsVector);
+	VERIFY(nullptr==m_pBloodMarksVector);
+	VERIFY(nullptr==m_pBloodDropsVector);
 	m_pBloodMarksVector = xr_new<FactoryPtr<IWallMarkArray>>();
 	m_pBloodDropsVector = xr_new<FactoryPtr<IWallMarkArray>>();
 
@@ -248,11 +248,8 @@ BOOL CEntityAlive::net_Spawn(CSE_Abstract* DC)
 	BOOL res = inherited::net_Spawn(DC);
 
 	//добавить кровь и огонь на партиклы, если нужно
-	CEntityCondition::WOUND_VECTOR::const_iterator it = conditions().wounds().begin();
-	CEntityCondition::WOUND_VECTOR::const_iterator it_e = conditions().wounds().end();
-	for (; it != it_e; ++it)
+	for (auto& pWound : conditions().wounds())
 	{
-		CWound* pWound = *it;
 		if (pWound->GetDestroy())
 			continue;
 		StartFireParticles(pWound);
@@ -325,7 +322,7 @@ void CEntityAlive::Die(CObject* who)
 	inherited::Die(who);
 
 	const CGameObject* who_object = smart_cast<const CGameObject*>(who);
-	callback(GameObject::eDeath)(lua_game_object(), who_object ? who_object->lua_game_object() : 0);
+	callback(GameObject::eDeath)(lua_game_object(), who_object ? who_object->lua_game_object() : nullptr);
 
 	if (!getDestroy() && (GameID() == eGameIDSingle))
 	{
@@ -488,13 +485,8 @@ void CEntityAlive::StartFireParticles(CWound* pWound)
 
 void CEntityAlive::UpdateFireParticles()
 {
-	CEntityCondition::WOUND_VECTOR const& wounds = conditions().wounds();
-	CEntityCondition::WOUND_VECTOR::const_iterator it = wounds.begin();
-	CEntityCondition::WOUND_VECTOR::const_iterator it_e = wounds.end();
-
-	for (; it != it_e; ++it)
+	for (auto& pWound : conditions().wounds())
 	{
-		CWound* pWound = *it;
 		if (pWound->GetDestroy())
 			continue;
 
@@ -546,13 +538,8 @@ void CEntityAlive::UpdateBloodDrops()
 	if (!g_Alive())
 		return;
 
-	CEntityCondition::WOUND_VECTOR const& wounds = conditions().wounds();
-	CEntityCondition::WOUND_VECTOR::const_iterator it = wounds.begin();
-	CEntityCondition::WOUND_VECTOR::const_iterator it_e = wounds.end();
-
-	for (; it != it_e; ++it)
+	for (auto& pWound : conditions().wounds())
 	{
-		CWound* pWound = *it;
 		if (pWound->GetDestroy())
 			continue;
 
@@ -707,7 +694,7 @@ CIKLimbsController* CEntityAlive::character_ik_controller()
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -719,7 +706,7 @@ CPHSoundPlayer* CEntityAlive::ph_sound_player()
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -727,7 +714,7 @@ ICollisionHitCallback* CEntityAlive::get_collision_hit_callback()
 {
 	CCharacterPhysicsSupport* cs = character_physics_support();
 	if (cs)return cs->get_collision_hit_callback();
-	else return false;
+	else return nullptr;
 }
 
 void CEntityAlive::set_collision_hit_callback(ICollisionHitCallback* cc)
@@ -864,24 +851,23 @@ Fvector CEntityAlive::get_new_local_point_on_mesh(u16& bone_id) const
 		return inherited::get_new_local_point_on_mesh(bone_id);
 
 	float hit_bones_surface_area = 0.f;
-	hit_bone_surface_areas_type::const_iterator i = m_hit_bone_surface_areas.begin();
-	hit_bone_surface_areas_type::const_iterator const e = m_hit_bone_surface_areas.end();
-	for (; i != e; ++i)
+	for (auto& bone_area : m_hit_bone_surface_areas)
 	{
-		if (!kinematics->LL_GetBoneVisible((*i).first))
+		if (!kinematics->LL_GetBoneVisible(bone_area.first))
 			continue;
 
-		SBoneShape const& shape = kinematics->LL_GetData((*i).first).shape;
+		SBoneShape const& shape = kinematics->LL_GetData(bone_area.first).shape;
 		VERIFY(shape.type != SBoneShape::stNone);
 		VERIFY(!shape.flags.is(SBoneShape::sfNoPickable));
 
-		hit_bones_surface_area += (*i).second;
+		hit_bones_surface_area += bone_area.second;
 	}
 
 	VERIFY2(hit_bones_surface_area > 0.f, make_string("m_hit_bone_surface_areas[%d]", m_hit_bone_surface_areas.size()));
 	float const selected_area = m_hit_bones_random.randF(hit_bones_surface_area);
 
-	i = m_hit_bone_surface_areas.begin();
+	hit_bone_surface_areas_type::const_iterator i = m_hit_bone_surface_areas.begin();
+	hit_bone_surface_areas_type::const_iterator const e = m_hit_bone_surface_areas.end();
 	for (float accumulator = 0.f; i != e; ++i)
 	{
 		if (!kinematics->LL_GetBoneVisible((*i).first))

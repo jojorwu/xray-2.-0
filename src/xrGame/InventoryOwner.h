@@ -41,13 +41,13 @@ public:
 	virtual CInventoryOwner* cast_inventory_owner() { return this; }
 public:
 
-	virtual DLL_Pure* _construct();
+	virtual DLL_Pure* _construct() override;
 	virtual BOOL net_Spawn(CSE_Abstract* DC);
-	virtual void net_Destroy();
+	virtual void net_Destroy() override;
 	void Init();
 	virtual void Load(LPCSTR section);
-	virtual void reinit();
-	virtual void reload(LPCSTR section);
+	virtual void reinit() override;
+	virtual void reload(LPCSTR section) override;
 	virtual void OnEvent(NET_Packet& P, u16 type);
 
 	//serialization
@@ -214,7 +214,7 @@ protected:
 	xr_string m_game_name_str;
 
 public:
-	virtual void renderable_Render();
+	virtual void renderable_Render() override;
 	virtual void OnItemTake(CInventoryItem* inventory_item);
 
 	virtual void OnItemBelt(CInventoryItem* inventory_item, const SInvItemPlace& previous_place);

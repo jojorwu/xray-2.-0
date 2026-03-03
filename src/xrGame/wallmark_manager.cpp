@@ -45,7 +45,7 @@ void CWalmarkManager::AddWallmark(const Fvector& dir, const Fvector& start_pos,
 		}
 
 		/*
-		ref_shader* pWallmarkShader = wallmarks_vector.empty()?NULL:
+		ref_shader* pWallmarkShader = wallmarks_vector.empty()?nullptr:
 		&wallmarks_vector[::Random.randI(0,wallmarks_vector.size())];
 
 		if (pWallmarkShader)
@@ -89,9 +89,14 @@ void CWalmarkManager::PlaceWallmarks(const Fvector& start_pos)
 	//.	LPCSTR				sect				= pSettings->r_string(m_owner->cNameSect(), "wallmark_section");
 	Load("explosion_marks");
 
-	//.	Device.seqParallel.push_back	(fastdelegate::FastDelegate0<>(this,&CWalmarkManager::StartWorkflow));
-
-	StartWorkflow();
+	if (g_mt_config.test(mtMap))
+	{
+		Device.seqParallel.push_back(fastdelegate::FastDelegate0<>(this, &CWalmarkManager::StartWorkflow));
+	}
+	else
+	{
+		StartWorkflow();
+	}
 }
 
 float Distance(const Fvector& rkPoint, const Fvector rkTri[3], float& pfSParam, float& pfTParam, Fvector& closest,
@@ -166,7 +171,7 @@ void CWalmarkManager::StartWorkflow()
 
 		if (test > 0.f)
 		{
-			if (Level().ObjectSpace.RayTest(m_pos, pdir, test, collide::rqtStatic, NULL, m_owner))
+			if (Level().ObjectSpace.RayTest(m_pos, pdir, test, collide::rqtStatic, nullptr, m_owner))
 			{
 				++_ray_test;
 				continue;

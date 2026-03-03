@@ -74,12 +74,12 @@ float CWeapon::SDS_Radius(bool alt) {
 			scope_tex_name = alt ? m_secondary_scope_tex_name : m_primary_scope_tex_name;
 
 			// demonized: ugly hack to fix stuck scope texture on old scopes system
-			if (!READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", NULL)) {
-				scope_tex_name = NULL;
+			if (!READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", nullptr)) {
+				scope_tex_name = nullptr;
 			}
 		}
 
-		if (scope_tex_name != 0) {
+		if (scope_tex_name.size() != 0) {
 			auto item = listScopeRadii.find(scope_tex_name);
 			if (item != listScopeRadii.end()) {
 				return item->second;
@@ -122,28 +122,28 @@ CWeapon::CWeapon()
 
 	m_zoom_params.m_fCurrentZoomFactor = g_fov;
 	m_zoom_params.m_fZoomRotationFactor = 0.f;
-	m_zoom_params.m_pVision = NULL;
-	m_zoom_params.m_pNight_vision = NULL;
+	m_zoom_params.m_pVision = nullptr;
+	m_zoom_params.m_pNight_vision = nullptr;
 	m_zoom_params.m_fSecondVPFovFactor = 0.0f;
 
 	m_altAimPos = false;
 	m_zoomtype = 0;
 
-	m_pCurrentAmmo = NULL;
+	m_pCurrentAmmo = nullptr;
 
-	m_pFlameParticles2 = NULL;
-	m_sFlameParticles2 = NULL;
+	m_pFlameParticles2 = nullptr;
+	m_sFlameParticles2 = nullptr;
 
 	m_fCurrentCartirdgeDisp = 1.f;
 
-	m_strap_bone0 = 0;
-	m_strap_bone1 = 0;
+	m_strap_bone0 = nullptr;
+	m_strap_bone1 = nullptr;
 	m_StrapOffset.identity();
 	m_strapped_mode = false;
 	m_can_be_strapped = false;
 	m_ef_main_weapon_type = u32(-1);
 	m_ef_weapon_type = u32(-1);
-	m_UIScope = NULL;
+	m_UIScope = nullptr;
 	m_set_next_ammoType_on_reload = undefined_ammo_type;
 	m_crosshair_inertion = 0.f;
 	m_activation_speed_is_overriden = false;
@@ -311,7 +311,7 @@ void CWeapon::UpdateZoomParams() {
 	// Load scopes.xml if it's not loaded
 	if (pWpnScopeXml == nullptr)
 	{
-		pWpnScopeXml = new CUIXml();
+		pWpnScopeXml = xr_new<CUIXml>();
 		pWpnScopeXml->Load(CONFIG_PATH, UI_PATH, "scopes.xml");
 	}
 
@@ -324,7 +324,7 @@ void CWeapon::UpdateZoomParams() {
 	} else if (m_zoomtype == 1) //Alt
 	{
 		m_zoom_params.m_bUseDynamicZoom = m_zoom_params.m_bUseDynamicZoom_Alt || READ_IF_EXISTS(pSettings, r_bool, cNameSect(), "scope_dynamic_zoom_alt", false);
-		m_zoom_params.m_fScopeZoomFactor = (g_player_hud->m_adjust_mode ? g_player_hud->m_adjust_zoom_factor[2] : READ_IF_EXISTS(pSettings, r_float, cNameSect(), "scope_zoom_factor_alt", 0)) / (READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture_alt", NULL) && zoomFlags.test(SDS_ZOOM) && (SDS_Radius(true) > 0.0) ? zoom_multiple : 1);
+		m_zoom_params.m_fScopeZoomFactor = (g_player_hud->m_adjust_mode ? g_player_hud->m_adjust_zoom_factor[2] : READ_IF_EXISTS(pSettings, r_float, cNameSect(), "scope_zoom_factor_alt", 0)) / (READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture_alt", nullptr) && zoomFlags.test(SDS_ZOOM) && (SDS_Radius(true) > 0.0) ? zoom_multiple : 1);
 		m_zoom_params.m_fZoomStepCount = 0;
 	} else //Main Sight
 	{
@@ -347,7 +347,7 @@ void CWeapon::UpdateZoomParams() {
 		}
 		if (stepCount == 0)
 			stepCount = READ_IF_EXISTS(pSettings, r_float, cNameSect(), "zoom_step_count", 0);
-		m_zoom_params.m_fZoomStepCount = stepCount;
+		m_zoom_params.m_fZoomStepCount = (float)stepCount;
 	}
 
 	if (IsZoomed()) {
@@ -375,28 +375,28 @@ void CWeapon::UpdateUIScope()
 	{
 		if (0 != (m_flagsAddOnState & CSE_ALifeItemWeapon::eWeaponAddonScope) && m_scopes.size())
 		{
-			if (!m_primary_scope_tex_name || m_modular_attachments) {
+			if (!m_primary_scope_tex_name.size() || m_modular_attachments) {
 				m_primary_scope_tex_name = pSettings->r_string(GetScopeName(), "scope_texture");
 			}
 			scope_tex_name = m_primary_scope_tex_name;
 		}
 		else
 		{
-			if (!m_primary_scope_tex_name) {
-				m_primary_scope_tex_name = READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", NULL);
+			if (!m_primary_scope_tex_name.size()) {
+				m_primary_scope_tex_name = READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", nullptr);
 			}
 			scope_tex_name = m_primary_scope_tex_name;
 
 			// demonized: ugly hack to fix stuck scope texture on old scopes system
-			if (!READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", NULL)) {
-				scope_tex_name = NULL;
+			if (!READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", nullptr)) {
+				scope_tex_name = nullptr;
 			}
 		}
 	}
 	else if (m_zoomtype == 1)
 	{
-		if (!m_secondary_scope_tex_name) {
-			m_secondary_scope_tex_name = READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture_alt", NULL);
+		if (!m_secondary_scope_tex_name.size()) {
+			m_secondary_scope_tex_name = READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture_alt", nullptr);
 		}
 		scope_tex_name = m_secondary_scope_tex_name;
 	}
@@ -406,7 +406,7 @@ void CWeapon::UpdateUIScope()
 		xr_delete(m_UIScope);
 		scope_2dtexactive = 0; //crookr
 
-		if (!scope_tex_name || scope_tex_name.equal("none") || g_player_hud->m_adjust_mode) {
+		if (!scope_tex_name.size() || scope_tex_name.equal("none") || g_player_hud->m_adjust_mode) {
 			//
 		} else {
 			m_scope_tex_name = scope_tex_name;
@@ -501,7 +501,7 @@ void CWeapon::SetZoomType(u8 new_zoom_type)
     ::luabind::functor<void> funct;
     if (ai().script_engine().functor("_G.CWeapon_OnSwitchZoomType", funct))
     {
-        funct(this->lua_game_object(), previous_zoom_type, m_zoomtype);
+        funct(this->lua_game_object(), previous_zoom_type, (int)m_zoomtype);
     }
 }
 
@@ -749,7 +749,7 @@ void CWeapon::Load(LPCSTR section)
 	m_fMinRadius = pSettings->r_float(section, "min_radius");
 	m_fMaxRadius = pSettings->r_float(section, "max_radius");
 
-	// èíôîðìàöèÿ î âîçìîæíûõ àïãðåéäàõ è èõ âèçóàëèçàöèè â èíâåíòàðå
+	// èíôîðìàöèÿ î âîçìîæíûõ àïãðåéäàõ è èõ âèçóàëèçàöèè â èíòåðôåéñå
 	m_eScopeStatus = (ALife::EWeaponAddonStatus)pSettings->r_s32(section, "scope_status");
 	m_eSilencerStatus = (ALife::EWeaponAddonStatus)pSettings->r_s32(section, "silencer_status");
 	m_eGrenadeLauncherStatus = (ALife::EWeaponAddonStatus)pSettings->r_s32(section, "grenade_launcher_status");
@@ -793,14 +793,14 @@ void CWeapon::Load(LPCSTR section)
 	}
 	else if (m_eScopeStatus == ALife::eAddonPermanent)
 	{
-		shared_str scope_tex_name = READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", NULL);
+		shared_str scope_tex_name = READ_IF_EXISTS(pSettings, r_string, cNameSect(), "scope_texture", nullptr);
 
 		if (!!scope_tex_name && !scope_tex_name.equal("none") && !g_player_hud->m_adjust_mode)
 		{
 			if (!g_dedicated_server)
 			{
 				m_UIScope = xr_new<CUIWindow>();
-				if (!pWpnScopeXml)
+				if (pWpnScopeXml == nullptr)
 				{
 					pWpnScopeXml = xr_new<CUIXml>();
 					pWpnScopeXml->Load(CONFIG_PATH, UI_PATH, "scopes.xml");
@@ -869,8 +869,8 @@ void CWeapon::Load(LPCSTR section)
 	}
 
 	m_zoom_params.m_bUseDynamicZoom = READ_IF_EXISTS(pSettings, r_bool, section, "scope_dynamic_zoom", FALSE);
-	m_zoom_params.m_sUseZoomPostprocess = 0;
-	m_zoom_params.m_sUseBinocularVision = 0;
+	m_zoom_params.m_sUseZoomPostprocess = nullptr;
+	m_zoom_params.m_sUseBinocularVision = nullptr;
 
 	// Added by Axel, to enable optional condition use on any item
 	m_flags.set(FUsingCondition, READ_IF_EXISTS(pSettings, r_bool, section, "use_condition", TRUE));
@@ -969,7 +969,7 @@ void NewGetZoomData(const float scope_factor, const float zoom_step_count, float
 		min_zoom_factor = loc_min_zoom_factor;
 	}
 
-	float steps = zoom_step_count ? zoom_step_count : n_zoom_step_count;
+	float steps = zoom_step_count != 0 ? zoom_step_count : n_zoom_step_count;
 	delta = (min_zoom_factor - scope_factor) / steps;
 
 	if (useNewZoomDeltaAlgorithm)
@@ -1003,7 +1003,7 @@ BOOL CWeapon::net_Spawn(CSE_Abstract* DC)
 	
 	if (m_modular_attachments && m_cur_scope == 0 && (m_flagsAddOnState & CSE_ALifeItemWeapon::eWeaponAddonScope) != 0 && m_scopes.size() > 1)
 	{
-		m_cur_scope = ::Random.randI(1, m_scopes.size());
+		m_cur_scope = (u8)::Random.randI(1, m_scopes.size());
 		CWeaponMagazined* wm = smart_cast<CWeaponMagazined*>(this);
 		if (wm)
 		{
@@ -1013,7 +1013,7 @@ BOOL CWeapon::net_Spawn(CSE_Abstract* DC)
 		}
 	}
 
-	m_ammoType = E->ammo_type;
+	m_ammoType = (u8)E->ammo_type;
 	SetState(E->wpn_state);
 	SetNextState(E->wpn_state);
 
@@ -1095,7 +1095,7 @@ void CWeapon::net_Import(NET_Packet& P)
 	P.r_u8(wstate);
 
 	u8 Zoom;
-	P.r_u8((u8)Zoom);
+	P.r_u8(Zoom);
 
 	if (H_Parent() && H_Parent()->Remote())
 	{
@@ -1346,7 +1346,7 @@ void CWeapon::UpdateCL()
 				GetState() == eIdle &&
 				(Device.dwTimeGlobal - m_dw_curr_substate_time > 20000) &&
 				!IsZoomed() &&
-				g_player_hud->attached_item(1) == NULL)
+				g_player_hud->attached_item(1) == nullptr)
 			{
 				if (AllowBore())
 					SwitchState(eBore);
@@ -1629,7 +1629,7 @@ void CWeapon::SpawnAmmo(u32 boxCurr, LPCSTR ammoSect, u32 ParentID)
 	int l_type = 0;
 	l_type %= m_ammoTypes.size();
 
-	if (!ammoSect) ammoSect = m_ammoTypes[l_type].c_str();
+	if (ammoSect == nullptr) ammoSect = m_ammoTypes[l_type].c_str();
 
 	++l_type;
 	l_type %= m_ammoTypes.size();
@@ -1722,22 +1722,18 @@ int CWeapon::GetAmmoCount_forType(shared_str const& ammo_type) const
 {
 	int res = 0;
 
-	TIItemContainer::iterator itb = m_pInventory->m_belt.begin();
-	TIItemContainer::iterator ite = m_pInventory->m_belt.end();
-	for (; itb != ite; ++itb)
+	for (auto& item : m_pInventory->m_belt)
 	{
-		CWeaponAmmo* pAmmo = smart_cast<CWeaponAmmo*>(*itb);
+		CWeaponAmmo* pAmmo = smart_cast<CWeaponAmmo*>(item);
 		if (pAmmo && (pAmmo->cNameSect() == ammo_type))
 		{
 			res += pAmmo->m_boxCurr;
 		}
 	}
 
-	itb = m_pInventory->m_ruck.begin();
-	ite = m_pInventory->m_ruck.end();
-	for (; itb != ite; ++itb)
+	for (auto& item : m_pInventory->m_ruck)
 	{
-		CWeaponAmmo* pAmmo = smart_cast<CWeaponAmmo*>(*itb);
+		CWeaponAmmo* pAmmo = smart_cast<CWeaponAmmo*>(item);
 		if (pAmmo && (pAmmo->cNameSect() == ammo_type))
 		{
 			res += pAmmo->m_boxCurr;
@@ -2070,7 +2066,7 @@ void CWeapon::OnZoomIn()
 	if (GetHUDmode())
 		GamePersistent().SetPickableEffectorDOF(true);
 
-	if (m_zoom_params.m_sUseBinocularVision.size() && IsScopeAttached() && NULL == m_zoom_params.m_pVision)
+	if (m_zoom_params.m_sUseBinocularVision.size() && IsScopeAttached() && nullptr == m_zoom_params.m_pVision)
 		m_zoom_params.m_pVision = xr_new<CBinocularsVision>(m_zoom_params.m_sUseBinocularVision);
 
 	if (m_zoom_params.m_sUseZoomPostprocess.size() && IsScopeAttached())
@@ -2078,7 +2074,7 @@ void CWeapon::OnZoomIn()
 		CActor* pA = smart_cast<CActor *>(H_Parent());
 		if (pA)
 		{
-			if (NULL == m_zoom_params.m_pNight_vision)
+			if (nullptr == m_zoom_params.m_pNight_vision)
 			{
 				m_zoom_params.m_pNight_vision = xr_new<CNightVisionEffector>(
 					m_zoom_params.m_sUseZoomPostprocess);
@@ -2128,7 +2124,7 @@ CUIWindow* CWeapon::ZoomTexture()
 	else
 	{
 		scope_2dtexactive = 0; //crookr
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -2140,7 +2136,7 @@ void CWeapon::SwitchState(u32 S)
     if ( bDebug )
     {
         Msg("---Server is going to send GE_WPN_STATE_CHANGE to [%d], weapon_section[%s], parent[%s]",
-            S, cNameSect().c_str(), H_Parent() ? H_Parent()->cName().c_str() : "NULL Parent");
+            S, cNameSect().c_str(), H_Parent() ? H_Parent()->cName().c_str() : "nullptr Parent");
     }
 #endif // #ifndef MASTER_GOLD
 
@@ -2308,53 +2304,49 @@ ALife::_TIME_ID CWeapon::TimePassedAfterIndependant() const
 bool CWeapon::can_kill() const
 {
 	if (GetSuitableAmmoTotal(true) || m_ammoTypes.empty())
-		return (true);
+		return true;
 
-	return (false);
+	return false;
 }
 
 CInventoryItem* CWeapon::can_kill(CInventory* inventory) const
 {
 	if (const_cast<CWeapon*>(this)->unlimited_ammo() || GetAmmoElapsed() || m_ammoTypes.empty())
-		return (const_cast<CWeapon*>(this));
+		return const_cast<CWeapon*>(this);
 
-	TIItemContainer::iterator I = inventory->m_all.begin();
-	TIItemContainer::iterator E = inventory->m_all.end();
-	for (; I != E; ++I)
+	for (auto& item : inventory->m_all)
 	{
-		CInventoryItem* inventory_item = smart_cast<CInventoryItem*>(*I);
+		CInventoryItem* inventory_item = smart_cast<CInventoryItem*>(item);
 		if (!inventory_item)
 			continue;
 
 		xr_vector<shared_str>::const_iterator i = std::find(m_ammoTypes.begin(), m_ammoTypes.end(),
 		                                                    inventory_item->object().cNameSect());
 		if (i != m_ammoTypes.end())
-			return (inventory_item);
+			return inventory_item;
 	}
 
-	return (0);
+	return nullptr;
 }
 
 const CInventoryItem* CWeapon::can_kill(const xr_vector<const CGameObject*>& items) const
 {
 	if (const_cast<CWeapon*>(this)->unlimited_ammo() || m_ammoTypes.empty())
-		return (this);
+		return this;
 
-	xr_vector<const CGameObject*>::const_iterator I = items.begin();
-	xr_vector<const CGameObject*>::const_iterator E = items.end();
-	for (; I != E; ++I)
+	for (const auto& item : items)
 	{
-		const CInventoryItem* inventory_item = smart_cast<const CInventoryItem*>(*I);
+		const CInventoryItem* inventory_item = smart_cast<const CInventoryItem*>(item);
 		if (!inventory_item)
 			continue;
 
 		xr_vector<shared_str>::const_iterator i = std::find(m_ammoTypes.begin(), m_ammoTypes.end(),
 		                                                    inventory_item->object().cNameSect());
 		if (i != m_ammoTypes.end())
-			return (inventory_item);
+			return inventory_item;
 	}
 
-	return (0);
+	return nullptr;
 }
 
 bool CWeapon::ready_to_kill() const
@@ -2364,7 +2356,7 @@ bool CWeapon::ready_to_kill() const
 	if (!io)
 		return false;
 
-	if (io->inventory().ActiveItem() == NULL || io->inventory().ActiveItem()->object().ID() != ID())
+	if (io->inventory().ActiveItem() == nullptr || io->inventory().ActiveItem()->object().ID() != ID())
 		return false;
 	//-Alundaio
 	return (
@@ -3046,7 +3038,7 @@ void CWeapon::AmmoTypeForEach(const ::luabind::functor<bool> &funct)
 {
 	for (u8 i = 0; i < u8(m_ammoTypes.size()); ++i)
 	{
-		if (funct(i, *m_ammoTypes[i]))
+		if (funct((int)i, *m_ammoTypes[i]))
 			break;
 	}
 }
@@ -3285,7 +3277,7 @@ float CWeapon::GetSecondVPFov() const
 
 void CWeapon::UpdateSecondVP()
 {
-	if (!(ParentIsActor() && (m_pInventory != NULL) && (m_pInventory->ActiveItem() == this)))
+	if (!(ParentIsActor() && (m_pInventory != nullptr) && (m_pInventory->ActiveItem() == this)))
 		return;
 
 	CActor* pActor = smart_cast<CActor*>(H_Parent());

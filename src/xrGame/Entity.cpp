@@ -138,7 +138,7 @@ void CEntity::Load(LPCSTR section)
 {
 	inherited::Load(section);
 
-	setVisible(FALSE);
+	setVisible(false);
 
 	// Team params
 	id_Team = READ_IF_EXISTS(pSettings, r_s32, section, "team", -1);
@@ -233,7 +233,7 @@ BOOL CEntity::net_Spawn(CSE_Abstract* DC)
 
 	//	SetfHealth			(E->fHealth);
 	IKinematics* pKinematics = smart_cast<IKinematics*>(Visual());
-	CInifile* ini = NULL;
+	CInifile* ini = nullptr;
 
 	if (pKinematics) ini = pKinematics->LL_UserData();
 	if (ini)
@@ -243,7 +243,7 @@ BOOL CEntity::net_Spawn(CSE_Abstract* DC)
 
 		CParticlesPlayer::LoadParticles(pKinematics);
 	}
-	return TRUE;
+	return true;
 }
 
 void CEntity::net_Destroy()
@@ -266,9 +266,9 @@ void CEntity::KillEntity(u16 whoID, BOOL bypass_actor_check /*AVO: added for act
 	//IMPORTANT: if you wish to kill actor you need to call db.actor:kill(level:object_by_id(whoID), true) in actor_before_death callback, to ensure all objects are properly destroyed
 	// this will bypass below if block and go to normal KillEntity routine.
 #ifdef ACTOR_BEFORE_DEATH_CALLBACK
-	if (IsGameTypeSingle() && (this->ID() == Actor()->ID()) && (bypass_actor_check != TRUE))
+	if (IsGameTypeSingle() && (this->ID() == Actor()->ID()) && (bypass_actor_check != true))
 	{
-		Actor()->use_HolderEx(NULL, false);
+		Actor()->use_HolderEx(nullptr, false);
 		Actor()->callback(GameObject::eActorBeforeDeath)(whoID);
 		return;
 	}
@@ -307,7 +307,7 @@ void CEntity::KillEntity(u16 whoID, BOOL bypass_actor_check /*AVO: added for act
 		P.w_u16(u16(whoID));
 		P.w_u32(0);
 		if (OnServer())
-			u_EventSend(P, net_flags(TRUE, TRUE, FALSE, TRUE));
+			u_EventSend(P, net_flags(true, true, false, true));
 	}
 };
 
@@ -353,7 +353,7 @@ DLL_Pure* CEntity::_construct()
 {
 	inherited::_construct();
 	CDamageManager::_construct();
-	m_entity_condition = create_entity_condition(NULL);
+	m_entity_condition = create_entity_condition(nullptr);
 	return (this);
 }
 
@@ -421,7 +421,7 @@ float CEntity::GetHotness() {
 void CEntity::OnChangeVisual()
 {
 	inherited::OnChangeVisual();
-	if (renderable.visual != 0)
+	if (renderable.visual != nullptr)
 		renderable.visual->MarkAsHot(true);
 }
 //--DSR-- HeatVision_end

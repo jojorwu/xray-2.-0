@@ -8,13 +8,13 @@ void CRenderTarget::phase_accumulator()
 		// normal operation - setup
 		if (!RImplementation.o.dx10_msaa)
 		{
-			if (RImplementation.o.fp16_blend) u_setrt(rt_Accumulator, NULL,NULL, HW.pBaseZB);
-			else u_setrt(rt_Accumulator_temp, NULL,NULL, HW.pBaseZB);
+			if (RImplementation.o.fp16_blend) u_setrt(rt_Accumulator, nullptr,nullptr, HW.pBaseZB);
+			else u_setrt(rt_Accumulator_temp, nullptr,nullptr, HW.pBaseZB);
 		}
 		else
 		{
-			if (RImplementation.o.fp16_blend) u_setrt(rt_Accumulator, NULL,NULL, rt_MSAADepth->pZRT);
-			else u_setrt(rt_Accumulator_temp, NULL,NULL, rt_MSAADepth->pZRT);
+			if (RImplementation.o.fp16_blend) u_setrt(rt_Accumulator, nullptr,nullptr, rt_MSAADepth->pZRT);
+			else u_setrt(rt_Accumulator_temp, nullptr,nullptr, rt_MSAADepth->pZRT);
 		}
 	}
 	else
@@ -24,9 +24,9 @@ void CRenderTarget::phase_accumulator()
 
 		// clear
 		if (!RImplementation.o.dx10_msaa)
-			u_setrt(rt_Accumulator, NULL,NULL, HW.pBaseZB);
+			u_setrt(rt_Accumulator, nullptr,nullptr, HW.pBaseZB);
 		else
-			u_setrt(rt_Accumulator, NULL,NULL, rt_MSAADepth->pZRT);
+			u_setrt(rt_Accumulator, nullptr,nullptr, rt_MSAADepth->pZRT);
 		//dwLightMarkerID						= 5;					// start from 5, increment in 2 units
 		reset_light_marker();
 		//	Igor: AMD bug workaround. Should be fixed in 8.7 catalyst
@@ -36,7 +36,7 @@ void CRenderTarget::phase_accumulator()
 			HW.pContext->OMSetRenderTargets(1, &(rt_Accumulator->pRT), 0);
 		}
 		//		u32		clr4clear					= color_rgba(0,0,0,0);	// 0x00
-		//CHK_DX	(HW.pDevice->Clear			( 0L, NULL, D3DCLEAR_TARGET, clr4clear, 1.0f, 0L));
+		//CHK_DX	(HW.pDevice->Clear			( 0L, nullptr, D3DCLEAR_TARGET, clr4clear, 1.0f, 0L));
 		FLOAT ColorRGBA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 		HW.pContext->ClearRenderTargetView(rt_Accumulator->pRT, ColorRGBA);
 
@@ -75,7 +75,7 @@ void CRenderTarget::phase_vol_accumulator()
 			HW.pContext->ClearRenderTargetView(rt_Generic_2->pRT, ColorRGBA);
 		}
 
-		u_setrt(rt_Generic_2, NULL, NULL, NULL);
+		u_setrt(rt_Generic_2, nullptr, nullptr, nullptr);
 	}
 	else
 	{
@@ -83,7 +83,7 @@ void CRenderTarget::phase_vol_accumulator()
 		// ID3D11DeviceContext::OMSetRenderTargets: The RenderTargetView at slot 0 is not compatible with the DepthStencilView. DepthStencilViews may only be used with RenderTargetViews if the effective dimensions of the Views are equal, as well as the Resource types, multisample count, and multisample quality. The RenderTargetView at slot 0 has (w:2560,h:1440,as:1), while the Resource is a Texture2D with (mc:4,mq:4294967295). The DepthStencilView has (w:2560,h:1440,as:1), while the Resource is a Texture2D with (mc:1,mq:0).
 		// this seems to be because the pBaseZB target is always (SampleCount, SampleQuality) = (1, 0) (see dx10HW.cpp) but the
 		// `rt_Generic_2` render target is a multisampled rendertarget
-		// Not sure how to fix it correctly, if it doesn't need a depth buffer then just pass NULL, if it does
+		// Not sure how to fix it correctly, if it doesn't need a depth buffer then just pass nullptr, if it does
 		// we probably need to create a multisampled depth target (e.g. `rt_Generic_2_zb`)
 		//
 		// The best way I've found to see this happen is to launch the DX11 exe with `--dxgi-dbg` to enable the debug layer,
@@ -98,20 +98,20 @@ void CRenderTarget::phase_vol_accumulator()
 		{
 			m_bHasActiveVolumetric = true;
 			if (!RImplementation.o.dx10_msaa)
-				u_setrt(rt_Generic_2, NULL, NULL, HW.pBaseZB);
+				u_setrt(rt_Generic_2, nullptr, nullptr, HW.pBaseZB);
 			else
-				u_setrt(rt_Generic_2, NULL, NULL, RImplementation.Target->rt_MSAADepth->pZRT);
+				u_setrt(rt_Generic_2, nullptr, nullptr, RImplementation.Target->rt_MSAADepth->pZRT);
 			//u32		clr4clearVol				= color_rgba(0,0,0,0);	// 0x00
-			//CHK_DX	(HW.pDevice->Clear			( 0L, NULL, D3DCLEAR_TARGET, clr4clearVol, 1.0f, 0L));
+			//CHK_DX	(HW.pDevice->Clear			( 0L, nullptr, D3DCLEAR_TARGET, clr4clearVol, 1.0f, 0L));
 			FLOAT ColorRGBA[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			HW.pContext->ClearRenderTargetView(rt_Generic_2->pRT, ColorRGBA);
 		}
 		else
 		{
 			if (!RImplementation.o.dx10_msaa)
-				u_setrt(rt_Generic_2, NULL, NULL, HW.pBaseZB);
+				u_setrt(rt_Generic_2, nullptr, nullptr, HW.pBaseZB);
 			else
-				u_setrt(rt_Generic_2, NULL, NULL, RImplementation.Target->rt_MSAADepth->pZRT);
+				u_setrt(rt_Generic_2, nullptr, nullptr, RImplementation.Target->rt_MSAADepth->pZRT);
 		}
 	}
 

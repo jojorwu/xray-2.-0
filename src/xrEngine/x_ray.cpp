@@ -39,7 +39,7 @@ extern "C" void XR_EARLY_INIT();
 
 //---------------------------------------------------------------------
 #define XRAY_MONOLITH_VERSION "X-Ray Monolith v1.5.3"
-ENGINE_API CInifile* pGameIni = NULL;
+ENGINE_API CInifile* pGameIni = nullptr;
 BOOL g_bIntroFinished = FALSE;
 extern void Intro(void* fn);
 extern void Intro_DSHOW(void* fn);
@@ -153,8 +153,8 @@ struct _SoundProcessor : public pureFrame
 
 //////////////////////////////////////////////////////////////////////////
 // global variables
-ENGINE_API CApplication* pApp = NULL;
-static HWND logoWindow = NULL;
+ENGINE_API CApplication* pApp = nullptr;
+static HWND logoWindow = nullptr;
 
 int doLauncher();
 void doBenchmark(LPCSTR name);
@@ -599,7 +599,7 @@ void Startup()
 
 	// Destroy LOGO
 	DestroyWindow(logoWindow);
-	logoWindow = NULL;
+	logoWindow = nullptr;
 
 	//Discord Rich Presence - Rezy
 	Init_Discord();
@@ -630,7 +630,7 @@ void Startup()
 	DEL_INSTANCE(g_pGamePersistent);
 
 	xr_delete(pApp);
-	pApp = NULL;
+	pApp = nullptr;
 
 	Engine.Event.Dump();
 
@@ -778,7 +778,7 @@ struct damn_keys_filter
 
 		if (bScreenSaverState)
 			// Disable screensaver
-			SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, FALSE, NULL, 0);
+			SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, FALSE, nullptr, 0);
 
 		dwStickyKeysFlags = 0;
 		dwFilterKeysFlags = 0;
@@ -827,7 +827,7 @@ struct damn_keys_filter
 	{
 		if (bScreenSaverState)
 			// Restoring screen saver
-			SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, TRUE, NULL, 0);
+			SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, TRUE, nullptr, 0);
 
 		if (dwStickyKeysFlags)
 		{
@@ -950,7 +950,7 @@ int APIENTRY WinMain_impl(HINSTANCE hInstance,
 #ifdef NO_MULTI_INSTANCES
 #define STALKER_PRESENCE_MUTEX "Local\\STALKER-COP"
 	char exePath[MAX_PATH] = {};
-	DWORD bytes = GetModuleFileNameA(NULL, exePath, MAX_PATH);
+	DWORD bytes = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
 	exePath[MAX_PATH - 1] = '\0';
 	if (bytes == 0)
 		return 2;
@@ -970,7 +970,7 @@ int APIENTRY WinMain_impl(HINSTANCE hInstance,
 	string256 mutexName = {};
 	xr_sprintf(mutexName, sizeof(mutexName), STALKER_PRESENCE_MUTEX"_%08x", pathHash);
 
-	HANDLE hCheckPresenceMutex = CreateMutex(NULL, TRUE, mutexName);
+	HANDLE hCheckPresenceMutex = CreateMutex(nullptr, TRUE, mutexName);
 	if (!hCheckPresenceMutex)
 		return 2;
 
@@ -985,7 +985,7 @@ int APIENTRY WinMain_impl(HINSTANCE hInstance,
 #endif // DEDICATED_SERVER
 
 	// Title window
-	logoWindow = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_STARTUP), 0, logDlgProc);
+	logoWindow = CreateDialog(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_STARTUP), 0, logDlgProc);
 
 	HWND logoPicture = GetDlgItem(logoWindow, IDC_STATIC_LOGO);
 	RECT logoRect;
@@ -1019,8 +1019,8 @@ int APIENTRY WinMain_impl(HINSTANCE hInstance,
 	// AVI
 	g_bIntroFinished = TRUE;
 
-	g_sLaunchOnExit_app[0] = NULL;
-	g_sLaunchOnExit_params[0] = NULL;
+	g_sLaunchOnExit_app[0] = nullptr;
+	g_sLaunchOnExit_params[0] = nullptr;
 
 	LPCSTR fsgame_ltx_name = "-fsltx ";
 	string_path fsgame = "";
@@ -1035,7 +1035,7 @@ int APIENTRY WinMain_impl(HINSTANCE hInstance,
 	// g_temporary_stuff = &trivial_encryptor::decode;
 
 	compute_build_id();
-	Core._initialize("xray", NULL, TRUE, fsgame[0] ? fsgame : NULL);
+	Core._initialize("xray", nullptr, TRUE, fsgame[0] ? fsgame : nullptr);
 
 	InitSettings();
 	Msg(XRAY_MONOLITH_VERSION);
@@ -1151,8 +1151,8 @@ int APIENTRY WinMain_impl(HINSTANCE hInstance,
 			si.cb = sizeof(si);
 			ZeroMemory(&pi, sizeof(pi));
 			//We use CreateProcess to setup working folder
-			char const* temp_wf = (xr_strlen(g_sLaunchWorkingFolder) > 0) ? g_sLaunchWorkingFolder : NULL;
-			CreateProcess(g_sLaunchOnExit_app, g_sLaunchOnExit_params, NULL, NULL, FALSE, 0, NULL,
+			char const* temp_wf = (xr_strlen(g_sLaunchWorkingFolder) > 0) ? g_sLaunchWorkingFolder : nullptr;
+			CreateProcess(g_sLaunchOnExit_app, g_sLaunchOnExit_params, nullptr, nullptr, FALSE, 0, nullptr,
 			              temp_wf, &si, &pi);
 		}
 #ifndef DEDICATED_SERVER
@@ -1230,11 +1230,11 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 		}
 	}
   
-	//DllMainOpenAL32(NULL, DLL_PROCESS_ATTACH, NULL);
-	DllMainXrCore(NULL, DLL_PROCESS_ATTACH, NULL);
-	DllMainXrPhysics(NULL, DLL_PROCESS_ATTACH, NULL);
+	//DllMainOpenAL32(nullptr, DLL_PROCESS_ATTACH, nullptr);
+	DllMainXrCore(nullptr, DLL_PROCESS_ATTACH, nullptr);
+	DllMainXrPhysics(nullptr, DLL_PROCESS_ATTACH, nullptr);
 
-	DllMainXrCore(NULL, DLL_THREAD_ATTACH, NULL);
+	DllMainXrCore(nullptr, DLL_THREAD_ATTACH, nullptr);
 
 	__try
 	{
@@ -1246,9 +1246,9 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 		FATAL("stack overflow");
 	}
 
-	DllMainXrPhysics(NULL, DLL_PROCESS_DETACH, NULL);
-	DllMainXrCore(NULL, DLL_PROCESS_DETACH, NULL);
-	//DllMainOpenAL32(NULL, DLL_PROCESS_DETACH, NULL);
+	DllMainXrPhysics(nullptr, DLL_PROCESS_DETACH, nullptr);
+	DllMainXrCore(nullptr, DLL_PROCESS_DETACH, nullptr);
+	//DllMainOpenAL32(nullptr, DLL_PROCESS_DETACH, nullptr);
 
 	return (0);
 }
@@ -1325,7 +1325,7 @@ CApplication::CApplication()
 	Level_Scan();
 
 	// Font
-	pFontSystem = NULL;
+	pFontSystem = nullptr;
 
 	// Register us
 	Device.seqFrame.Add(this, REG_PRIORITY_HIGH + 1000);
@@ -1389,7 +1389,7 @@ void CApplication::OnEvent(EVENT E, u64 P1, u64 P2)
 
 #ifdef NO_SINGLE
         Console->Execute("main_menu on");
-        if ((op_server == NULL) ||
+        if ((op_server == nullptr) ||
                 (!xr_strlen(op_server)) ||
                 (
                     (strstr(op_server, "/dm") || strstr(op_server, "/deathmatch") ||
@@ -1705,7 +1705,7 @@ int CApplication::Level_ID(LPCSTR name, LPCSTR ver, bool bSet)
 	for (; it != it_e; ++it)
 	{
 		CLocatorAPI::archive& A = *it;
-		if (A.hSrcFile == NULL)
+		if (A.hSrcFile == nullptr)
 		{
 			LPCSTR ln = A.header->r_string("header", "level_name");
 			LPCSTR lv = A.header->r_string("header", "level_ver");
@@ -1760,7 +1760,7 @@ CInifile* CApplication::GetArchiveHeader(LPCSTR name, LPCSTR ver)
 			return A.header;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 void CApplication::LoadAllArchives()
@@ -1779,8 +1779,8 @@ extern "C" {
 typedef int __cdecl LauncherFunc(int);
 }
 
-HMODULE hLauncher = NULL;
-LauncherFunc* pLauncher = NULL;
+HMODULE hLauncher = nullptr;
+LauncherFunc* pLauncher = nullptr;
 
 void InitLauncher()
 {
@@ -1800,8 +1800,8 @@ void FreeLauncher()
 	if (hLauncher)
 	{
 		FreeLibrary(hLauncher);
-		hLauncher = NULL;
-		pLauncher = NULL;
+		hLauncher = nullptr;
+		pLauncher = nullptr;
 	};
 }
 
@@ -1891,7 +1891,7 @@ void CApplication::load_draw_internal()
 	u32 C = 0xffffffff;
 	u32 _w = Device.dwWidth;
 	u32 _h = Device.dwHeight;
-	FVF::TL* pv = NULL;
+	FVF::TL* pv = nullptr;
 
 	//progress
 	float bw = 1024.0f;
