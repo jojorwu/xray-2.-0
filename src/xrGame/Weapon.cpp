@@ -769,7 +769,8 @@ void CWeapon::Load(LPCSTR section)
 			LPCSTR scope_group = pSettings->r_string(section, "modular_scope_group");
 			LPCSTR scopes = pSettings->r_string(scope_group, "scopes");
 
-			for (int i = 0, count = _GetItemCount(scopes); i < count; ++i)
+		int count = _GetItemCount(scopes);
+		for (int i = 0; i < count; ++i)
 			{
 				string128 scope;
 				_GetItem(scopes, i, scope);
@@ -779,7 +780,8 @@ void CWeapon::Load(LPCSTR section)
 		else if (pSettings->line_exist(section, "scopes_sect"))
 		{
 			LPCSTR str = pSettings->r_string(section, "scopes_sect");
-			for (int i = 0, count = _GetItemCount(str); i < count; ++i)
+		int count = _GetItemCount(str);
+		for (int i = 0; i < count; ++i)
 			{
 				string128 scope_section;
 				_GetItem(str, i, scope_section);
@@ -1693,9 +1695,9 @@ int CWeapon::GetSuitableAmmoTotal(bool use_item_to_spawn) const
 	m_BriefInfo_CalcFrame = Device.dwFrame;
 
 	m_iAmmoCurrentTotal = 0;
-	for (u8 i = 0; i < u8(m_ammoTypes.size()); ++i)
+	for (const auto& ammoType : m_ammoTypes)
 	{
-		m_iAmmoCurrentTotal += GetAmmoCount_forType(m_ammoTypes[i]);
+		m_iAmmoCurrentTotal += GetAmmoCount_forType(ammoType);
 
 		if (!use_item_to_spawn)
 		{
@@ -3034,9 +3036,9 @@ float CWeapon::GetMagazineWeight(const decltype(CWeapon::m_magazine)& mag) const
 	return res;
 }
 
-void CWeapon::AmmoTypeForEach(const ::luabind::functor<bool> &funct)
+void CWeapon::AmmoTypeForEach(const ::luabind::functor<bool>& funct)
 {
-	for (u8 i = 0; i < u8(m_ammoTypes.size()); ++i)
+	for (u32 i = 0; i < m_ammoTypes.size(); ++i)
 	{
 		if (funct((int)i, *m_ammoTypes[i]))
 			break;

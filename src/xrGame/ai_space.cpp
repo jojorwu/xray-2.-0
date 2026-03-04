@@ -25,20 +25,20 @@
 
 extern ENGINE_API bool g_dedicated_server;
 
-CAI_Space* g_ai_space = 0;
+CAI_Space* g_ai_space = nullptr;
 
 CAI_Space::CAI_Space()
 {
-	m_ef_storage = 0;
-	m_game_graph = 0;
-	m_graph_engine = 0;
-	m_cover_manager = 0;
-	m_level_graph = 0;
-	m_alife_simulator = 0;
-	m_patrol_path_storage = 0;
-	m_script_engine = 0;
-	m_moving_objects = 0;
-	m_doors_manager = 0;
+	m_ef_storage = nullptr;
+	m_game_graph = nullptr;
+	m_graph_engine = nullptr;
+	m_cover_manager = nullptr;
+	m_level_graph = nullptr;
+	m_alife_simulator = nullptr;
+	m_patrol_path_storage = nullptr;
+	m_script_engine = nullptr;
+	m_moving_objects = nullptr;
+	m_doors_manager = nullptr;
 }
 
 void CAI_Space::init()
@@ -221,7 +221,7 @@ void CAI_Space::set_alife(CALifeSimulator* alife_simulator)
 		return;
 
 	VERIFY(m_game_graph);
-	m_game_graph = 0;
+	m_game_graph = nullptr;
 	xr_delete(m_graph_engine);
 }
 

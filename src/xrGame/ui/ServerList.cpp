@@ -12,7 +12,7 @@
 
 
 LPCSTR GameTypeToString(EGameIDs gt, bool bShort);
-CGameSpy_Browser* g_gs_browser = NULL;
+CGameSpy_Browser* g_gs_browser = nullptr;
 
 CServerList::CServerList()
 {
@@ -71,7 +71,7 @@ void CServerList::on_game_spy_browser_destroy(CGameSpy_Browser* browser)
 {
 	VERIFY(m_GSBrowser);
 	VERIFY(m_GSBrowser == browser);
-	m_GSBrowser = 0;
+	m_GSBrowser = nullptr;
 }
 
 void CServerList::Update()
@@ -835,19 +835,14 @@ void CServerList::DestroySrvItems()
 	m_last_retreived_index = u32(-1);
 
 	m_list[LST_SERVER].Clear();
-	SrvItems_It it = m_items_cache.begin();
-	SrvItems_It it_e = m_items_cache.end();
-
-	for (; it != it_e; ++it)
-		xr_delete((*it).m_ui_item);
+	for (auto& item : m_items_cache)
+		xr_delete(item.m_ui_item);
 }
 
 void CServerList::ClearSrvItems()
 {
-	SrvItems_It it = m_items_cache.begin();
-	SrvItems_It it_e = m_items_cache.end();
-	for (; it != it_e; ++it)
-		(*it).m_busy = false;
+	for (auto& item : m_items_cache)
+		item.m_busy = false;
 
 	m_last_retreived_index = u32(-1);
 }

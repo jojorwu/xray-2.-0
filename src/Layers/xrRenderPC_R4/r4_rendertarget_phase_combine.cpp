@@ -342,9 +342,9 @@ void CRenderTarget::phase_combine()
 		HW.pContext->ClearRenderTargetView(rt_ssfx_temp2->pRT, ColorRGBA);
 
 		if (!RImplementation.o.dx10_msaa)
-			u_setrt(rt_ssfx_temp, 0, 0, 0);
+			u_setrt(rt_ssfx_temp, nullptr, nullptr, nullptr);
 		else
-			u_setrt(rt_ssfx_temp, 0, 0, 0);
+			u_setrt(rt_ssfx_temp, nullptr, nullptr, nullptr);
 
 		float w = float(Device.dwWidth);
 		float h = float(Device.dwHeight);
@@ -370,9 +370,9 @@ void CRenderTarget::phase_combine()
 	}
 
 	if (!RImplementation.o.dx10_msaa)
-		u_setrt(rt_Generic_0, 0, 0, HW.pBaseZB);
+		u_setrt(rt_Generic_0, nullptr, nullptr, HW.pBaseZB);
 	else
-		u_setrt(rt_Generic_0_r, 0, 0, rt_MSAADepth->pZRT);
+		u_setrt(rt_Generic_0_r, nullptr, nullptr, rt_MSAADepth->pZRT);
 
 	// Final water rendering ( All the code above can be omitted if the Water module isn't installed )
 	RCache.set_xform_world(Fidentity);
@@ -384,9 +384,9 @@ void CRenderTarget::phase_combine()
 			phase_ssfx_rain(); // Render a small color buffer to do the refraction and more
 
 			if (!RImplementation.o.dx10_msaa)
-				u_setrt(rt_Generic_0, 0, rt_ssfx_motion_vectors, HW.pBaseZB);
+				u_setrt(rt_Generic_0, nullptr, rt_ssfx_motion_vectors, HW.pBaseZB);
 			else
-				u_setrt(rt_Generic_0_r, 0, rt_ssfx_motion_vectors, rt_MSAADepth->pZRT);
+				u_setrt(rt_Generic_0_r, nullptr, rt_ssfx_motion_vectors, rt_MSAADepth->pZRT);
 		}
 
 		g_pGamePersistent->Environment().RenderLast(); // rain/thunder-bolts
@@ -594,13 +594,13 @@ void CRenderTarget::phase_combine()
 	// Combine everything + perform AA
 	if (RImplementation.o.dx10_msaa)
 	{
-		if (PP_Complex) u_setrt(rt_Generic, 0, 0, HW.pBaseZB); // LDR RT
-		else u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT,nullptr,nullptr, HW.pBaseZB);
+		if (PP_Complex) u_setrt(rt_Generic, nullptr, nullptr, HW.pBaseZB); // LDR RT
+		else u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT, nullptr, nullptr, HW.pBaseZB);
 	}
 	else
 	{
-		if (PP_Complex) u_setrt(rt_Color, 0, 0, HW.pBaseZB); // LDR RT
-		else u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT,nullptr,nullptr, HW.pBaseZB);
+		if (PP_Complex) u_setrt(rt_Color, nullptr, nullptr, HW.pBaseZB); // LDR RT
+		else u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT, nullptr, nullptr, HW.pBaseZB);
 	}
 	//. u_setrt				( Device.dwWidth,Device.dwHeight,HW.pBaseRT,nullptr,nullptr,HW.pBaseZB);
 	RCache.set_CullMode(CULL_NONE);
@@ -876,11 +876,11 @@ void CRenderTarget::phase_combine_volumetric()
 
 	//	TODO: DX10: Remove half pixel offset here
 
-	//u_setrt(rt_Generic_0,0,0,HW.pBaseZB );			// LDR RT
+	//u_setrt(rt_Generic_0,nullptr,nullptr,HW.pBaseZB );			// LDR RT
 	if (!RImplementation.o.dx10_msaa)
-		u_setrt(rt_Generic_0, rt_Generic_1, 0, HW.pBaseZB);
+		u_setrt(rt_Generic_0, rt_Generic_1, nullptr, HW.pBaseZB);
 	else
-		u_setrt(rt_Generic_0_r, rt_Generic_1_r, 0, RImplementation.Target->rt_MSAADepth->pZRT);
+		u_setrt(rt_Generic_0_r, rt_Generic_1_r, nullptr, RImplementation.Target->rt_MSAADepth->pZRT);
 	//	Sets limits to both render targets
 	RCache.set_ColorWriteEnable(D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE);
 	{

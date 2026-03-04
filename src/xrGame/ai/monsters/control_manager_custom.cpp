@@ -13,8 +13,8 @@
 
 CControlManagerCustom::CControlManagerCustom()
 {
-	m_critical_wound = NULL;
-	m_threaten_anim = NULL;
+	m_critical_wound = nullptr;
+	m_threaten_anim = nullptr;
 	m_threaten_time = 0.0f;
 	m_sequencer = 0;
 	m_triple_anim = 0;
@@ -491,7 +491,7 @@ bool CControlManagerCustom::jump_if_possible(Fvector const& target,
 	if (!m_object->check_start_conditions(ControlCom::eControlJump))
 		return false;
 
-	bool const aggressive_jump = target_object ? m_object->can_use_agressive_jump(target_object) : NULL;
+	bool const aggressive_jump = target_object ? m_object->can_use_agressive_jump(target_object) : false;
 	if (check_possibility && !m_jump->can_jump(target, aggressive_jump))
 		return false;
 
@@ -520,19 +520,18 @@ void CControlManagerCustom::check_jump_over_physics()
 	Fvector prev_pos = m_object->Position();
 	float dist_sum = 0.f;
 
-	for (u32 i = m_man->path_builder().detail().curr_travel_point_index(); i < m_man
-	                                                                           ->path_builder().detail().path().size();
-	     i++)
+	u32 const travel_point_count = (u32)m_man->path_builder().detail().path().size();
+	for (u32 i = m_man->path_builder().detail().curr_travel_point_index(); i < travel_point_count; ++i)
 	{
 		const DetailPathManager::STravelPathPoint& travel_point = m_man->path_builder().detail().path()[i];
 
 		// получить список объектов вокруг врага
 		m_nearest.clear_not_free();
-		Level().ObjectSpace.GetNearest(m_nearest, travel_point.position, m_object->Radius(), NULL);
+		Level().ObjectSpace.GetNearest(m_nearest, travel_point.position, m_object->Radius(), nullptr);
 
-		for (u32 k = 0; k < m_nearest.size(); k++)
+		for (CObject* nearest_obj : m_nearest)
 		{
-			CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder *>(m_nearest[k]);
+			CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder*>(nearest_obj);
 			if (!obj || !obj->PPhysicsShell() || !obj->PPhysicsShell()->isActive() || (obj->Radius() < 0.5f)) continue;
 			if (m_object->Position().distance_to(obj->Position()) < MAX_DIST_SUM / 2) continue;
 

@@ -501,24 +501,24 @@ public:
 	void phase_combine_volumetric();
 	void phase_pp();
 
-	virtual void set_blur(float f) { param_blur = f; }
-	virtual void set_gray(float f) { param_gray = f; }
-	virtual void set_duality_h(float f) { param_duality_h = _abs(f); }
-	virtual void set_duality_v(float f) { param_duality_v = _abs(f); }
-	virtual void set_noise(float f) { param_noise = f; }
-	virtual void set_noise_scale(float f) { param_noise_scale = f; }
-	virtual void set_noise_fps(float f) { param_noise_fps = _abs(f) + EPS_S; }
-	virtual void set_color_base(u32 f) { param_color_base = f; }
-	virtual void set_color_gray(u32 f) { param_color_gray = f; }
-	virtual void set_color_add(const Fvector& f) { param_color_add = f; }
+	virtual void set_blur(float f) override { param_blur = f; }
+	virtual void set_gray(float f) override { param_gray = f; }
+	virtual void set_duality_h(float f) override { param_duality_h = _abs(f); }
+	virtual void set_duality_v(float f) override { param_duality_v = _abs(f); }
+	virtual void set_noise(float f) override { param_noise = f; }
+	virtual void set_noise_scale(float f) override { param_noise_scale = f; }
+	virtual void set_noise_fps(float f) override { param_noise_fps = _abs(f) + EPS_S; }
+	virtual void set_color_base(u32 f) override { param_color_base = f; }
+	virtual void set_color_gray(u32 f) override { param_color_gray = f; }
+	virtual void set_color_add(const Fvector& f) override { param_color_add = f; }
 
-	virtual u32 get_width() { return dwWidth; }
-	virtual u32 get_height() { return dwHeight; }
+	virtual u32 get_width() override { return dwWidth; }
+	virtual u32 get_height() override { return dwHeight; }
 
-	virtual void set_cm_imfluence(float f) { param_color_map_influence = f; }
-	virtual void set_cm_interpolate(float f) { param_color_map_interpolate = f; }
+	virtual void set_cm_imfluence(float f) override { param_color_map_influence = f; }
+	virtual void set_cm_interpolate(float f) override { param_color_map_interpolate = f; }
 
-	virtual void set_cm_textures(const shared_str& tex0, const shared_str& tex1)
+	virtual void set_cm_textures(const shared_str& tex0, const shared_str& tex1) override
 	{
 		color_map_manager.SetTextures(tex0, tex1);
 	}

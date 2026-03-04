@@ -44,10 +44,8 @@ CFontManager::CFontManager()
 	m_all_fonts.push_back(&pFontLetterica25);
 	m_all_fonts.push_back(&pFontStat);
 
-	FONTS_VEC_IT it = m_all_fonts.begin();
-	FONTS_VEC_IT it_e = m_all_fonts.end();
-	for (; it != it_e; ++it)
-		(**it) = NULL;
+	for (CGameFont** font : m_all_fonts)
+		(*font) = nullptr;
 
 	InitializeFonts();
 }
@@ -115,18 +113,14 @@ void CFontManager::InitializeFont(CGameFont*& F, LPCSTR section, u32 flags)
 CFontManager::~CFontManager()
 {
 	Device.seqDeviceReset.Remove(this);
-	FONTS_VEC_IT it = m_all_fonts.begin();
-	FONTS_VEC_IT it_e = m_all_fonts.end();
-	for (; it != it_e; ++it)
-		xr_delete(**it);
+	for (CGameFont** font : m_all_fonts)
+		xr_delete(*font);
 }
 
 void CFontManager::Render()
 {
-	FONTS_VEC_IT it = m_all_fonts.begin();
-	FONTS_VEC_IT it_e = m_all_fonts.end();
-	for (; it != it_e; ++it)
-		(**it)->OnRender();
+	for (CGameFont** font : m_all_fonts)
+		(*font)->OnRender();
 }
 
 void CFontManager::OnDeviceReset()
@@ -135,7 +129,7 @@ void CFontManager::OnDeviceReset()
 }
 
 //--------------------------------------------------------------------
-CHUDManager::CHUDManager() : pUIGame(NULL), m_pHUDTarget(xr_new<CHUDTarget>()), b_online(false)
+CHUDManager::CHUDManager() : pUIGame(nullptr), m_pHUDTarget(xr_new<CHUDTarget>()), b_online(false)
 {
 }
 
@@ -188,8 +182,8 @@ void CHUDManager::Render_First()
 
 bool need_render_hud()
 {
-	CObject* O = g_pGameLevel ? g_pGameLevel->CurrentViewEntity() : NULL;
-	if (0 == O)
+	CObject* O = g_pGameLevel ? g_pGameLevel->CurrentViewEntity() : nullptr;
+	if (nullptr == O)
 		return false;
 
 	CActor* A = smart_cast<CActor*>(O);
@@ -204,7 +198,7 @@ bool need_render_hud()
 
 void CHUDManager::Render_Last()
 {
-	if (0 == pUIGame) return;
+	if (nullptr == pUIGame) return;
 	if (g_actor) g_actor->RenderCamAttached();
 	if (!psHUD_Flags.is(HUD_WEAPON | HUD_WEAPON_RT | HUD_WEAPON_RT2 | HUD_DRAW_RT2))return;
 	if (!need_render_hud()) return;
@@ -383,7 +377,7 @@ bool CHUDManager::DoPick(SPickParam& pp)
 {
 	VERIFY(!fis_zero(pp.defs.dir.square_magnitude()));
 
-	pp.result.set(NULL, pp.defs.range, -1);
+	pp.result.set(nullptr, pp.defs.range, -1);
 	pp.power = 1.0f;
 	pp.pass = 0;
 
@@ -394,7 +388,7 @@ bool CHUDManager::DoPick(SPickParam& pp)
 		pp.defs,
 		pick_trace_callback,
 		&pp,
-		NULL,
+		nullptr,
 		Level().CurrentEntity()
 	);
 }
@@ -499,7 +493,7 @@ void CHUDManager::OnConnected()
 void CHUDManager::net_Relcase(CObject* obj)
 {
 	if (PP.result.O == obj)
-		PP.result.O = NULL;
+		PP.result.O = nullptr;
 
 	HitMarker.net_Relcase(obj);
 

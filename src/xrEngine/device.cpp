@@ -195,9 +195,14 @@ void mt_Thread(void* ptr)
 		STOP_PROFILE;
 
 		START_PROFILE("Process seqParallel");
-		for (u32 pit = 0; pit < device.seqParallel.size(); pit++)
-			device.seqParallel[pit]();
-		device.seqParallel.clear_not_free();
+		if (!device.seqParallel.empty())
+		{
+			xr_task_group tasks;
+			for (const auto& task : device.seqParallel)
+				tasks.run(task);
+			tasks.wait();
+			device.seqParallel.clear_not_free();
+		}
 		STOP_PROFILE;
 
 		START_PROFILE("Process seqFrameMT");
@@ -531,9 +536,14 @@ void CRenderDevice::on_idle()
 	if (dwFrame != mt_Thread_marker)
 	{
 		PROF_EVENT("Execute second thread");
-		for (u32 pit = 0; pit < Device.seqParallel.size(); pit++)
-			Device.seqParallel[pit]();
-		Device.seqParallel.clear_not_free();
+		if (!Device.seqParallel.empty())
+		{
+			xr_task_group tasks;
+			for (const auto& task : Device.seqParallel)
+				tasks.run(task);
+			tasks.wait();
+			Device.seqParallel.clear_not_free();
+		}
 		seqFrameMT.Process(rp_Frame);
 	}
 

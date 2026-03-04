@@ -140,10 +140,10 @@ void CAI_Stalker::react_on_grenades()
 				sound().play(StalkerSpace::eStalkerSoundGrenadeAlarm);
 			else if (missile->Position().distance_to(Position()) < FRIENDLY_GRENADE_ALARM_DIST)
 			{
-				u32 const time = missile->destroy_time() >= Device.dwTimeGlobal
+				u32 const time_to_explosion = missile->destroy_time() >= Device.dwTimeGlobal
 					                 ? u32(missile->destroy_time() - Device.dwTimeGlobal)
 					                 : 0;
-				sound().play(StalkerSpace::eStalkerSoundFriendlyGrenadeAlarm, time + 1500, time + 1000);
+				sound().play(StalkerSpace::eStalkerSoundFriendlyGrenadeAlarm, time_to_explosion + 1500, time_to_explosion + 1000);
 			}
 		}
 	}
@@ -177,17 +177,14 @@ void CAI_Stalker::process_enemies()
 		return;
 
 	typedef MemorySpace::squad_mask_type squad_mask_type;
-	typedef CVisualMemoryManager::VISIBLES VISIBLES;
 
 	squad_mask_type mask = memory().visual().mask();
-	VISIBLES::const_iterator I = memory().visual().objects().begin();
-	VISIBLES::const_iterator E = memory().visual().objects().end();
-	for (; I != E; ++I)
+	for (const auto& visible_object : memory().visual().objects())
 	{
-		if (!(*I).visible(mask))
+		if (!visible_object.visible(mask))
 			continue;
 
-		const CAI_Stalker* member = smart_cast<const CAI_Stalker*>((*I).m_object);
+		const CAI_Stalker* member = smart_cast<const CAI_Stalker*>(visible_object.m_object);
 		if (!member)
 			continue;
 

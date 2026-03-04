@@ -120,7 +120,7 @@ void CObject::cNameVisual_set(shared_str N)
 #endif
 
 		::Render->model_Delete(renderable.visual);
-		NameVisual = 0;
+		NameVisual = nullptr;
 	}
 	OnChangeVisual();
 }
@@ -130,7 +130,7 @@ void CObject::processing_activate()
 {
 	VERIFY3(255 != Props.bActiveCounter, "Invalid sequence of processing enable/disable calls: overflow", *cName());
 	Props.bActiveCounter++;
-	if (0 == (Props.bActiveCounter - 1)) g_pGameLevel->Objects.o_activate(this);
+	if (1 == Props.bActiveCounter) g_pGameLevel->Objects.o_activate(this);
 }
 
 void CObject::processing_deactivate()
@@ -250,10 +250,10 @@ BOOL CObject::net_Spawn(CSE_Abstract* data)
 
 	VERIFY(_valid(renderable.xform));
 
-	if (0 == Visual() && pSettings->line_exist(cNameSect(), "visual"))
+	if (nullptr == Visual() && pSettings->line_exist(cNameSect(), "visual"))
 		cNameVisual_set(pSettings->r_string(cNameSect(), "visual"));
 
-	if (0 == collidable.model)
+	if (nullptr == collidable.model)
 	{
 		if (pSettings->line_exist(cNameSect(), "cform"))
 		{
@@ -438,15 +438,15 @@ CObject* CObject::H_SetParent(CObject* new_parent, bool just_before_destroy)
 
 	CObject* old_parent = Parent;
 
-	VERIFY2((new_parent == 0) || (old_parent == 0), "Before set parent - execute H_SetParent(0)");
+	VERIFY2((new_parent == nullptr) || (old_parent == nullptr), "Before set parent - execute H_SetParent(nullptr)");
 
 	// if (Parent) Parent->H_ChildRemove (this);
-	if (0 == old_parent) OnH_B_Chield(); // before attach
+	if (nullptr == old_parent) OnH_B_Chield(); // before attach
 	else OnH_B_Independent(just_before_destroy); // before detach
 	if (new_parent) spatial_unregister();
 	else spatial_register();
 	Parent = new_parent;
-	if (0 == old_parent) OnH_A_Chield(); // after attach
+	if (nullptr == old_parent) OnH_A_Chield(); // after attach
 	else OnH_A_Independent(); // after detach
 	// if (Parent) Parent->H_ChildAdd (this);
 	MakeMeCrow();

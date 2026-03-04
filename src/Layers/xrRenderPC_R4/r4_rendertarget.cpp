@@ -917,10 +917,10 @@ CRenderTarget::CRenderTarget()
 			rt_LUM_pool[it].create(name, 1, 1, D3DFMT_R32F);
 			//u_setrt						(rt_LUM_pool[it],	0,	0,	0			);
 			//CHK_DX						(HW.pDevice->Clear( 0L, nullptr, D3DCLEAR_TARGET,	0x7f7f7f7f,	1.0f, 0L));
-			FLOAT ColorRGBA[4] = {127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f};
+		FLOAT ColorRGBA[4] = { 127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f };
 			HW.pContext->ClearRenderTargetView(rt_LUM_pool[it]->pRT, ColorRGBA);
 		}
-		u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT,nullptr,nullptr, HW.pBaseZB);
+	u_setrt(Device.dwWidth, Device.dwHeight, HW.pBaseRT, nullptr, nullptr, HW.pBaseZB);
 	}
 
 	// HBAO
@@ -1318,7 +1318,7 @@ CRenderTarget::~CRenderTarget()
 	t_LUM_dest->surface_set(nullptr);
 
 #ifdef DEBUG
-	ID3DBaseTexture*	pSurf = 0;
+	ID3DBaseTexture*	pSurf = nullptr;
 
 	pSurf = t_envmap_0->surface_get();
 	if (pSurf) pSurf->Release();

@@ -71,7 +71,7 @@ void CUIActorMenu::SetPartner(CInventoryOwner* io)
 		else
 			m_PartnerCharacterInfo->InitCharacter(m_pPartnerInvOwner->object_id());
 
-		SetInvBox(NULL);
+		SetInvBox(nullptr);
 	}
 	else
 		m_PartnerCharacterInfo->ClearInfo();
@@ -84,14 +84,14 @@ void CUIActorMenu::SetInvBox(CInventoryBox* box)
 	if (box)
 	{
 		m_pInvBox->set_in_use(true);
-		SetPartner(NULL);
+		SetPartner(nullptr);
 	}
 }
 
 void CUIActorMenu::SetMenuMode(EMenuMode mode)
 {
-	SetCurrentItem(NULL);
-	m_hint_wnd->set_text(NULL);
+	SetCurrentItem(nullptr);
+	m_hint_wnd->set_text(nullptr);
 
 	if (mode != m_currMenuMode)
 	{
@@ -170,7 +170,7 @@ void CUIActorMenu::SetMenuMode(EMenuMode mode)
 void CUIActorMenu::PlaySnd(eActorMenuSndAction a)
 {
 	if (sounds[a]._handle())
-		sounds[a].play(NULL, sm_2D);
+		sounds[a].play(nullptr, sm_2D);
 }
 
 void CUIActorMenu::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
@@ -346,7 +346,7 @@ CUIDragDropListEx* CUIActorMenu::GetListByType(EDDListType t)
 		}
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 CUICellItem* CUIActorMenu::CurrentItem()
@@ -356,7 +356,7 @@ CUICellItem* CUIActorMenu::CurrentItem()
 
 PIItem CUIActorMenu::CurrentIItem()
 {
-	return (m_pCurrentCellItem) ? (PIItem)m_pCurrentCellItem->m_pData : NULL;
+	return (m_pCurrentCellItem) ? (PIItem)m_pCurrentCellItem->m_pData : nullptr;
 }
 
 void CUIActorMenu::SetCurrentItem(CUICellItem* itm)
@@ -365,7 +365,7 @@ void CUIActorMenu::SetCurrentItem(CUICellItem* itm)
 	m_pCurrentCellItem = itm;
 	if (!itm)
 	{
-		InfoCurItem(NULL);
+		InfoCurItem(nullptr);
 	}
 	TryHidePropertiesBox();
 
@@ -379,12 +379,12 @@ void CUIActorMenu::InfoCurItem(CUICellItem* cell_item)
 {
 	if (!cell_item || !cell_item->m_pData)
 	{
-		m_ItemInfo->InitItem(NULL);
+		m_ItemInfo->InitItem(nullptr);
 		return;
 	}
 	PIItem current_item = (PIItem)cell_item->m_pData;
 
-	PIItem compare_item = NULL;
+	PIItem compare_item = nullptr;
 	u16 compare_slot = current_item->BaseSlot();
 	if (compare_slot != NO_ACTIVE_SLOT)
 	{
@@ -851,9 +851,9 @@ void CUIActorMenu::CallMessageBoxOK(LPCSTR text)
 void CUIActorMenu::ResetMode()
 {
 	ClearAllLists();
-	m_pMouseCapturer = NULL;
+	m_pMouseCapturer = nullptr;
 	m_UIPropertiesBox->Hide();
-	SetCurrentItem(NULL);
+	SetCurrentItem(nullptr);
 }
 
 void CUIActorMenu::UpdateActorMP()

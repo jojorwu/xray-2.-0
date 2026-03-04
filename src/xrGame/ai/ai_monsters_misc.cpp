@@ -31,7 +31,7 @@ bool bfGetActionSuccessProbability(GroupHierarchyHolder::MEMBER_REGISTRY& Member
                                    CBaseFunction& fSuccessProbabilityFunction)
 {
 	int i = 0, j = 0, I = (int)Members.size(), J = (int)VisibleEnemies.size();
-	xr_vector<const CEntityAlive*>::const_iterator II = VisibleEnemies.begin();
+	auto II = VisibleEnemies.begin();
 	for (; (i < I) && (j < J);)
 	{
 		ai().ef_storage().non_alife().member() = smart_cast<CEntityAlive *>(Members[i]);
@@ -125,41 +125,45 @@ u32 dwfChooseAction(u32 dwActionRefreshRate, float fMinProbability0, float fMinP
 
 	GroupHierarchyHolder::MEMBER_REGISTRY Members;
 	if (!tpEntity)
-		for (int k = 0; k < (int)Group.members().size(); ++k)
+	{
+		for (auto* member : Group.members())
 		{
-			if (Group.members()[k]->g_Alive() && ((Group.members()[k]->spatial.type & STYPE_VISIBLEFORAI) ==
-				STYPE_VISIBLEFORAI))
-				Members.push_back(Group.members()[k]);
+			if (member->g_Alive() && ((member->spatial.type & STYPE_VISIBLEFORAI) == STYPE_VISIBLEFORAI))
+				Members.push_back(member);
 		}
+	}
 	else
-		for (int k = 0; k < (int)Group.members().size(); ++k)
+	{
+		for (auto* member : Group.members())
 		{
-			if (Group.members()[k]->g_Alive() && ((Group.members()[k]->spatial.type & STYPE_VISIBLEFORAI) ==
-				STYPE_VISIBLEFORAI))
-				if (tpEntity->Position().distance_to(Group.members()[k]->Position()) < fGroupDistance)
+			if (member->g_Alive() && ((member->spatial.type & STYPE_VISIBLEFORAI) == STYPE_VISIBLEFORAI))
+			{
+				if (tpEntity->Position().distance_to(member->Position()) < fGroupDistance)
 				{
 					if (!stalker)
 					{
-						Members.push_back(Group.members()[k]);
+						Members.push_back(member);
 						continue;
 					}
 
-					const CAI_Stalker* member = smart_cast<CAI_Stalker*>(Group.members()[k]);
-					if (!member)
+					const CAI_Stalker* stalker_member = smart_cast<CAI_Stalker*>(member);
+					if (!stalker_member)
 					{
-						Members.push_back(Group.members()[k]);
+						Members.push_back(member);
 						continue;
 					}
 
-					if (Group.agent_manager().member().registered_in_combat(member))
-						Members.push_back(Group.members()[k]);
-					else if (member->ID() == tpEntity->ID())
-						Members.push_back(Group.members()[k]);
+					if (Group.agent_manager().member().registered_in_combat(stalker_member))
+						Members.push_back(member);
+					else if (stalker_member->ID() == tpEntity->ID())
+						Members.push_back(member);
 				}
+			}
 		}
+	}
 
-	ai().ef_storage().non_alife().member_item() = 0;
-	ai().ef_storage().non_alife().enemy_item() = 0;
+	ai().ef_storage().non_alife().member_item() = nullptr;
+	ai().ef_storage().non_alife().enemy_item() = nullptr;
 
 	WRITE_QUERY_TO_LOG("\nNew query");
 	if (bfGetActionSuccessProbability(Members, VisibleEnemies, fMinProbability0,

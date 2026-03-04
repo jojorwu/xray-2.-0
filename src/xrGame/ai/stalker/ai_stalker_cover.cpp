@@ -63,10 +63,8 @@ void CAI_Stalker::on_best_cover_changed(const CCoverPoint* new_cover, const CCov
 	}
 #endif
 
-	cover_delegates::const_iterator I = m_cover_delegates.begin();
-	cover_delegates::const_iterator E = m_cover_delegates.end();
-	for (; I != E; ++I)
-		(*I)(new_cover, old_cover);
+	for (auto& delegate : m_cover_delegates)
+		delegate(new_cover, old_cover);
 }
 
 void CAI_Stalker::compute_enemy_distances(float& minimum_enemy_distance, float& maximum_enemy_distance)
@@ -261,7 +259,7 @@ const CCoverPoint* CAI_Stalker::best_cover(const Fvector& position_to_cover_from
 	{
 		on_best_cover_changed(best_cover, m_best_cover);
 		m_best_cover = best_cover;
-		m_best_cover_advance_cover = 0;
+		m_best_cover_advance_cover = nullptr;
 		m_best_cover_can_try_advance = false;
 	}
 

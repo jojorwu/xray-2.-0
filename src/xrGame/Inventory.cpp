@@ -85,12 +85,7 @@ CInventory::CInventory()
 		xr_sprintf(slot_active, "%s%d", "slot_active_", k);
 	}
 
-	m_blocked_slots.resize(k + 1);
-
-	for (u16 i = 0; i <= k; ++i)
-	{
-		m_blocked_slots[i] = 0;
-	}
+	m_blocked_slots.assign(k + 1, 0);
 	//-Alundaio
 
 	m_bSlotsUseful = true;
@@ -116,7 +111,7 @@ void CInventory::Clear()
 	m_ruck.clear();
 	m_belt.clear();
 
-	for (u16 i = FirstSlot(); i <= LastSlot(); i++)
+	for (u16 i = FirstSlot(); i <= LastSlot(); ++i)
 		m_slots[i].m_pIItem = nullptr;
 
 	m_pOwner = nullptr;
@@ -1064,9 +1059,9 @@ bool CInventory::bfCheckForObject(ALife::_OBJECT_ID tObjectID)
 	for (const auto& l_pIItem : m_all)
 	{
 		if (l_pIItem->object().ID() == tObjectID)
-			return (true);
+			return true;
 	}
-	return (false);
+	return false;
 }
 
 CInventoryItem* CInventory::get_object_by_id(ALife::_OBJECT_ID tObjectID)
@@ -1074,7 +1069,7 @@ CInventoryItem* CInventory::get_object_by_id(ALife::_OBJECT_ID tObjectID)
 	for (auto& l_pIItem : m_all)
 	{
 		if (l_pIItem->object().ID() == tObjectID)
-			return (l_pIItem);
+			return l_pIItem;
 	}
 	return nullptr;
 }
@@ -1284,9 +1279,9 @@ bool CInventory::CanTakeItem(CInventoryItem* inventory_item) const
 
 	if (!inventory_item->CanTake()) return false;
 
-	TIItemContainer::const_iterator it;
-	for (it = m_all.begin(); it != m_all.end(); it++)
-		if ((*it)->object().ID() == inventory_item->object().ID()) break;
+	auto it = std::find_if(m_all.begin(), m_all.end(), [&](PIItem item) {
+		return item->object().ID() == inventory_item->object().ID();
+	});
 	VERIFY3(it == m_all.end(), "item already exists in inventory", *inventory_item->object().cName());
 
 	CActor* pActor = smart_cast<CActor*>(m_pOwner);
@@ -1361,14 +1356,12 @@ void CInventory::AddAvailableItems(TIItemContainer& items_container, bool for_tr
 
 	if (m_bSlotsUseful)
 	{
-		u16 I = FirstSlot();
-		u16 E = LastSlot();
-		for (; I <= E; ++I)
+		for (u16 i = FirstSlot(); i <= LastSlot(); ++i)
 		{
-			PIItem item = ItemFromSlot(I);
+			PIItem item = ItemFromSlot(i);
 			if (item && (!for_trade || item->CanTrade()))
 			{
-				if (!SlotIsPersistent(I) || item->BaseSlot() == GRENADE_SLOT)
+				if (!SlotIsPersistent(i) || item->BaseSlot() == GRENADE_SLOT)
 				{
 					if (bOverride)
 					{
@@ -1392,11 +1385,9 @@ bool CInventory::isBeautifulForActiveSlot(CInventoryItem* pIItem)
 	if (!IsGameTypeSingle())
 		return true;
 
-	u16 I = FirstSlot();
-	u16 E = LastSlot();
-	for (; I <= E; ++I)
+	for (u16 i = FirstSlot(); i <= LastSlot(); ++i)
 	{
-		PIItem item = ItemFromSlot(I);
+		PIItem item = ItemFromSlot(i);
 		if (item && item->IsNecessaryItem(pIItem))
 			return true;
 	}

@@ -25,15 +25,22 @@ public:
 		return (*geom)->geometry_transform();
 	}
 
-	IC CPHPositionsPairs& operator ++(int)
+	IC CPHPositionsPairs operator ++(int)
 	{
+		CPHPositionsPairs tmp = *this;
 		geom++;
-		return *this;
+		return tmp;
 	}
 
 	IC CPHPositionsPairs& operator =(const CPHPositionsPairs& right)
 	{
 		geom = right.geom;
+		return *this;
+	}
+
+	IC CPHPositionsPairs& operator *()
+	{
+		return *this;
 	}
 
 	IC bool operator ==(const CPHPositionsPairs& right) const

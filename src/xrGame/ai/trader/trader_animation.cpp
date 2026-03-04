@@ -13,11 +13,11 @@ void CTraderAnimation::reinit()
 {
 	m_motion_head.invalidate();
 	m_motion_global.invalidate();
-	m_sound = 0;
-	m_external_sound = 0;
+	m_sound = nullptr;
+	m_external_sound = false;
 
-	m_anim_global = 0;
-	m_anim_head = 0;
+	m_anim_global = nullptr;
+	m_anim_head = nullptr;
 }
 
 

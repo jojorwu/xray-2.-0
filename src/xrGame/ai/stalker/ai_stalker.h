@@ -277,7 +277,7 @@ public:
 	virtual const MonsterSpace::SBoneRotation& head_orientation() const override;
 
 	//InventoryOwner stuff
-	virtual bool CanPutInSlot(PIItem item, u32 slot) override { return (slot != OUTFIT_SLOT) && (slot != PDA_SLOT); };
+	virtual bool CanPutInSlot(PIItem item, u32 slot) override { return (slot != OUTFIT_SLOT) && (slot != PDA_SLOT); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// action/evaluators support functions

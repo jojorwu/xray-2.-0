@@ -20,12 +20,15 @@ void CSheduler::Destroy()
 {
 	internal_Registration();
 
-	for (u32 it = 0; it < Items.size(); it++)
+	for (auto it = Items.begin(); it != Items.end();)
 	{
-		if (0 == Items[it].Object)
+		if (nullptr == it->Object)
 		{
-			Items.erase(Items.begin() + it);
-			it--;
+			it = Items.erase(it);
+		}
+		else
+		{
+			++it;
 		}
 	}
 #ifdef DEBUG
@@ -35,8 +38,8 @@ void CSheduler::Destroy()
         _objects[0] = 0;
 
         Msg("! Sheduler work-list is not empty");
-        for (u32 it = 0; it < Items.size(); it++)
-            Msg("%s", Items[it].Object->shedule_Name().c_str());
+        for (Item& it : Items)
+            Msg("%s", it.Object->shedule_Name().c_str());
     }
 #endif // DEBUG
 	ItemsRT.clear();
@@ -47,21 +50,19 @@ void CSheduler::Destroy()
 
 void CSheduler::internal_Registration()
 {
-	for (u32 it = 0; it < Registration.size(); it++)
+	for (ItemReg& R : Registration)
 	{
-		ItemReg& R = Registration[it];
 		if (R.OP)
 		{
 			// register
 			// search for paired "unregister"
 			BOOL bFoundAndErased = FALSE;
-			for (u32 pair = it + 1; pair < Registration.size(); pair++)
+			for (auto pair = &R + 1; pair != Registration.data() + Registration.size(); ++pair)
 			{
-				ItemReg& R_pair = Registration[pair];
-				if ((!R_pair.OP) && (R_pair.Object == R.Object))
+				if ((!pair->OP) && (pair->Object == R.Object))
 				{
 					bFoundAndErased = TRUE;
-					Registration.erase(Registration.begin() + pair);
+					pair->Object = nullptr; // Mark as processed
 					break;
 				}
 			}
@@ -82,7 +83,8 @@ void CSheduler::internal_Registration()
 		else
 		{
 			// unregister
-			internal_Unregister(R.Object, R.RT);
+			if (R.Object)
+				internal_Unregister(R.Object, R.RT);
 		}
 	}
 	Registration.clear();
@@ -124,28 +126,28 @@ bool CSheduler::internal_Unregister(ISheduled* O, BOOL RT, bool warn_on_not_foun
 	//VERIFY (!O->shedule.b_locked) ;
 	if (RT)
 	{
-		for (u32 i = 0; i < ItemsRT.size(); i++)
+		for (auto it = ItemsRT.begin(); it != ItemsRT.end(); ++it)
 		{
-			if (ItemsRT[i].Object == O)
+			if (it->Object == O)
 			{
 #ifdef DEBUG_SCHEDULER
                 Msg("SCHEDULER: internal unregister [%s][%x][%s]", "unknown", O, "true");
 #endif // DEBUG_SCHEDULER
-				ItemsRT.erase(ItemsRT.begin() + i);
+				ItemsRT.erase(it);
 				return (true);
 			}
 		}
 	}
 	else
 	{
-		for (u32 i = 0; i < Items.size(); i++)
+		for (Item& item : Items)
 		{
-			if (Items[i].Object == O)
+			if (item.Object == O)
 			{
 #ifdef DEBUG_SCHEDULER
-                Msg("SCHEDULER: internal unregister [%s][%x][%s]", *Items[i].scheduled_name, O, "false");
+                Msg("SCHEDULER: internal unregister [%s][%x][%s]", *item.scheduled_name, O, "false");
 #endif // DEBUG_SCHEDULER
-				Items[i].Object = nullptr;
+				item.Object = nullptr;
 				return (true);
 			}
 		}
@@ -288,12 +290,12 @@ void CSheduler::EnsureOrder(ISheduled* Before, ISheduled* After)
 {
 	VERIFY(Before->shedule.b_RT && After->shedule.b_RT);
 
-	for (u32 i = 0; i < ItemsRT.size(); i++)
+	for (auto it = ItemsRT.begin(); it != ItemsRT.end(); ++it)
 	{
-		if (ItemsRT[i].Object == After)
+		if (it->Object == After)
 		{
-			Item A = ItemsRT[i];
-			ItemsRT.erase(ItemsRT.begin() + i);
+			Item A = *it;
+			ItemsRT.erase(it);
 			ItemsRT.push_back(A);
 			return;
 		}
@@ -455,9 +457,8 @@ void CSheduler::Update()
 	// Realtime priority
 	m_processing_now = true;
 	u32 dwTime = Device.dwTimeGlobal;
-	for (u32 it = 0; it < ItemsRT.size(); it++)
+	for (Item& T : ItemsRT)
 	{
-		Item& T = ItemsRT[it];
 		R_ASSERT(T.Object);
 #ifdef DEBUG_SCHEDULER
         Msg("SCHEDULER: process step [%s][%x][true]", *T.Object->shedule_Name(), T.Object);

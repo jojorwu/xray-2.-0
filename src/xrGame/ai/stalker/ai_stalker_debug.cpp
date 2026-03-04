@@ -57,7 +57,7 @@
 #include "../../ui_base.h"
 #include "../../doors_actor.h"
 
-CActor *g_debug_actor = 0;
+CActor *g_debug_actor = nullptr;
 
 void try_change_current_entity()
 {
@@ -73,7 +73,7 @@ void try_change_current_entity()
 	g_SpatialSpace->q_frustum			(ISpatialResult, 0, STYPE_COLLIDEABLE, frustum);
 
 	float								maxlen = 1000.0f;
-	CCustomMonster*						nearest_agent = 0;
+	CCustomMonster*						nearest_agent = nullptr;
 
 	OBJECTS::const_iterator				I = ISpatialResult.begin();
 	OBJECTS::const_iterator				E = ISpatialResult.end();
@@ -303,7 +303,7 @@ void CAI_Stalker::debug_text			()
 		DBG_OutText	("%s%sobjects     : %d",indent,indent,memory().hit().objects().size());
 		ALife::_OBJECT_ID					object_id = memory().hit().last_hit_object_id();
 		DBG_OutText	("%s%slast hit object id   : %d",indent,indent,object_id);
-		CObject								*object = (object_id == ALife::_OBJECT_ID(-1)) ? 0 : Level().Objects.net_Find(object_id);
+		CObject								*object = (object_id == ALife::_OBJECT_ID(-1)) ? nullptr : Level().Objects.net_Find(object_id);
 		DBG_OutText	("%s%slast hit object name : %s",indent,indent,object ? *object->cName() : "");
 #ifdef USE_SELECTED_HIT
 		if (memory().hit().hit()) {
@@ -1025,7 +1025,7 @@ void fill_points			(CCustomMonster *self, const Fvector &position, const Fvector
 	
 	ray_query_param					params(self,self->memory().visual().transparency_threshold(),distance,position,direction,points);
 
-	Level().ObjectSpace.RayQuery	(rq_storage,ray_defs,_ray_query_callback,&params,NULL,self);
+	Level().ObjectSpace.RayQuery	(rq_storage,ray_defs,_ray_query_callback,&params,nullptr,self);
 
 	pick_distance					= params.m_pick_distance;
 }
@@ -1035,7 +1035,7 @@ void draw_visiblity_rays	(CCustomMonster *self, const CObject *object, collide::
 	typedef Feel::Vision::feel_visible_Item		feel_visible_Item;
 	typedef xr_vector<feel_visible_Item>		VISIBLE_ITEMS;
 
-	feel_visible_Item		*item = 0;
+	feel_visible_Item		*item = nullptr;
 	{
 		VISIBLE_ITEMS::iterator	I = self->feel_visible.begin();
 		VISIBLE_ITEMS::iterator	E = self->feel_visible.end();
@@ -1255,14 +1255,14 @@ static void fill_bones				(CAI_Stalker& self, Fmatrix const& transform, IKinemat
 
 	for (u16 i=0; i<MAX_PARTS; ++i) {
 #if 0
-		CBlend* const blend				= kinematics_animated->LL_PlayCycle(i, animation, 0, 0, 0, 1);
+		CBlend* const blend				= kinematics_animated->LL_PlayCycle(i, animation, 0, nullptr, nullptr, 1);
 		if (blend)
 			blend->timeCurrent			= 0.f;//blend->timeTotal - (SAMPLE_SPF + EPS);
 #else // #if 0
 		u32 const blend_count			= kinematics_animated->LL_PartBlendsCount(i);
 		for (u32 j=0; j<blend_count; ++j) {
 			CBlend* const blend			= kinematics_animated->LL_PartBlend(i, j);
-			CBlend* const new_blend		= kinematics_animated->LL_PlayCycle( i, blend->motionID, TRUE, 0, 0, 1 );
+			CBlend* const new_blend		= kinematics_animated->LL_PlayCycle( i, blend->motionID, TRUE, nullptr, nullptr, 1 );
 			VERIFY						(new_blend);
 			*new_blend					= *blend;
 			new_blend->channel			= 1;
@@ -1319,7 +1319,7 @@ static void draw_bones				(
 		Fvector const& box_size,
 		u32 const& box_color,
 		u32 const& line_color,
-		Fmatrix const* const transform = 0
+		Fmatrix const* const transform = nullptr
 	)
 {
 	CDebugRenderer&						renderer = Level().debug_renderer();
@@ -1677,7 +1677,7 @@ void CAI_Stalker::OnRender				()
 #if 0
 	if (inventory().ActiveItem()) {
 		Fvector				position, direction;
-		g_fireParams		(0,position,direction);
+		g_fireParams		(nullptr,position,direction);
 
 		float				yaw, pitch, safety_fire_angle = 1.f*PI_DIV_8*.125f;
 		direction.getHP		(yaw,pitch);

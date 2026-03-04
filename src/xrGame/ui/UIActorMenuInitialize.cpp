@@ -232,7 +232,7 @@ void CUIActorMenu::Construct()
 	//-	AttachChild							(m_ItemInfo);
 	m_ItemInfo->InitItemInfo("actor_menu_item.xml");
 
-	m_upgrade_info = NULL;
+	m_upgrade_info = nullptr;
 	if (ai().get_alife())
 	{
 		m_upgrade_info = xr_new<UIInvUpgradeInfo>();
@@ -327,14 +327,14 @@ void CUIActorMenu::Construct()
 	m_allowed_drops[iQuickSlot].push_back(iActorBag);
 	m_allowed_drops[iQuickSlot].push_back(iActorTrade);
 
-	m_upgrade_selected = NULL;
-	SetCurrentItem(NULL);
-	SetActor(NULL);
-	SetPartner(NULL);
-	SetInvBox(NULL);
+	m_upgrade_selected = nullptr;
+	SetCurrentItem(nullptr);
+	SetActor(nullptr);
+	SetPartner(nullptr);
+	SetInvBox(nullptr);
 
-	m_actor_trade = NULL;
-	m_partner_trade = NULL;
+	m_actor_trade = nullptr;
+	m_partner_trade = nullptr;
 	m_repair_mode = false;
 	m_item_info_view = false;
 	m_highlight_clear = true;

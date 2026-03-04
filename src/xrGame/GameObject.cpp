@@ -103,7 +103,8 @@ void CGameObject::reinit()
 		ai_location().reinit();
 
 	// clear callbacks	
-	for (CALLBACK_MAP_IT it = m_callbacks->begin(); it != m_callbacks->end(); ++it) it->second.clear();
+	for (auto& pair : *m_callbacks)
+		pair.second.clear();
 }
 
 void CGameObject::reload(LPCSTR section)
@@ -1035,10 +1036,8 @@ void VisualCallback(IKinematics* tpKinematics)
 
 	VERIFY(game_object);
 
-	CGameObject::CALLBACK_VECTOR_IT I = game_object->visual_callbacks().begin();
-	CGameObject::CALLBACK_VECTOR_IT E = game_object->visual_callbacks().end();
-	for (; I != E; ++I)
-		(*I)(tpKinematics);
+	for (auto& callback : game_object->visual_callbacks())
+		callback(tpKinematics);
 }
 
 CScriptGameObject* CGameObject::lua_game_object() const
