@@ -8,8 +8,8 @@
 
 CPhantom::CPhantom()
 {
-	m_fly_particles = NULL;
-	m_enemy = NULL;
+	m_fly_particles = nullptr;
+	m_enemy = nullptr;
 	fSpeed = 4.f;
 	fASpeed = 1.7f;
 	vHP.set(0, 0);
@@ -87,7 +87,7 @@ BOOL CPhantom::net_Spawn(CSE_Abstract* DC)
 	VERIFY(m_enemy);
 
 	// default init 
-	m_fly_particles = 0;
+	m_fly_particles = nullptr;
 	SetfHealth(0.001f);
 
 	// orientate to enemy
@@ -326,7 +326,7 @@ CParticlesObject* CPhantom::PlayParticles(const shared_str& name, BOOL bAutoRemo
 	CParticlesObject* ps = CParticlesObject::Create(name.c_str(), bAutoRemove);
 	ps->UpdateParent(xform, zero_vel);
 	ps->Play(false);
-	return bAutoRemove ? 0 : ps;
+	return bAutoRemove ? nullptr : ps;
 }
 
 //---------------------------------------------------------------------

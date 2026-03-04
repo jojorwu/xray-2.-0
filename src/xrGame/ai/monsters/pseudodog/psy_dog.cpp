@@ -21,8 +21,8 @@
 CPsyDog::CPsyDog()
 {
 	m_aura = xr_new<CPsyDogAura>(this);
-	m_max_phantoms_count = NULL;
-	m_phantoms_die_time = NULL;
+	m_max_phantoms_count = 0;
+	m_phantoms_die_time = nullptr;
 }
 
 CPsyDog::~CPsyDog()
@@ -204,7 +204,7 @@ BOOL CPsyDogPhantom::net_Spawn(CSE_Abstract* dc)
 
 	CSE_ALifeMonsterBase* se_monster = smart_cast<CSE_ALifeMonsterBase*>(dc);
 	m_parent_id = se_monster->m_spec_object_id;
-	m_parent = 0;
+	m_parent = nullptr;
 	VERIFY(m_parent_id != 0xffff);
 
 	try_to_register_to_parent();
@@ -298,7 +298,7 @@ void CPsyDogPhantom::Think()
 void CPsyDogPhantom::Hit(SHit* pHDS)
 {
 	if (is_wait_to_destroy_object()) return;
-	if ((pHDS->who == EnemyMan.get_enemy()) && (pHDS->who != 0)) destroy_me();
+	if ((pHDS->who == EnemyMan.get_enemy()) && (pHDS->who != nullptr)) destroy_me();
 }
 
 void CPsyDogPhantom::net_Destroy()
@@ -310,7 +310,7 @@ void CPsyDogPhantom::net_Destroy()
 	if (m_parent && !is_wait_to_destroy_object())
 	{
 		m_parent->unregister_phantom(this);
-		m_parent = 0;
+		m_parent = nullptr;
 		m_parent_id = 0xffff;
 	}
 
@@ -352,7 +352,7 @@ void CPsyDogPhantom::destroy_me()
 	if (m_parent)
 	{
 		m_parent->unregister_phantom(this);
-		m_parent = 0;
+		m_parent = nullptr;
 		m_parent_id = 0xffff;
 	}
 

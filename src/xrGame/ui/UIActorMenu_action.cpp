@@ -71,12 +71,12 @@ void CUIActorMenu::OnDragItemOnTrash(CUIDragItem* item, bool b_receive)
 	if (b_receive && !CurrentIItem()->IsQuestItem())
 		item->SetCustomDraw(xr_new<CUITrashIcon>());
 	else
-		item->SetCustomDraw(NULL);
+		item->SetCustomDraw(nullptr);
 }
 
 bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 {
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	CUIDragDropListEx* old_owner = itm->OwnerList();
 	CUIDragDropListEx* new_owner = CUIDragDropListEx::m_drag_item->BackList();
 	if (!old_owner || !new_owner)
@@ -99,7 +99,7 @@ bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 		if (ai().script_engine().functor("actor_menu_inventory.CUIActorMenu_OnItemDropped", funct1))
 		{
 			//If list only has 1 item, get it, otherwise try to get item at current drag position
-			CUICellItem* _citem = (new_owner->ItemsCount() == 1) ? new_owner->GetItemIdx(0) : NULL;
+			CUICellItem* _citem = (new_owner->ItemsCount() == 1) ? new_owner->GetItemIdx(0) : nullptr;
 			if (!_citem)
 			{
 				CUICellContainer* c = old_owner->GetContainer();
@@ -112,10 +112,10 @@ bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 				}
 			}
 
-			PIItem _iitem = _citem ? (PIItem)_citem->m_pData : NULL;
+			PIItem _iitem = _citem ? (PIItem)_citem->m_pData : nullptr;
 
 			CGameObject* GO1 = smart_cast<CGameObject*>(CurrentIItem());
-			CGameObject* GO2 = _iitem ? smart_cast<CGameObject*>(_iitem) : NULL;
+			CGameObject* GO2 = _iitem ? smart_cast<CGameObject*>(_iitem) : nullptr;
 			if (funct1(GO1 ? GO1->lua_game_object() : (0), GO2 ? GO2->lua_game_object() : (0), (int)t_old,
 			           (int)t_new) == false)
 				return false;
@@ -137,7 +137,7 @@ bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 				return true;
 			}
 			SendEvent_Item_Drop(CurrentIItem(), m_pActorInvOwner->object_id());
-			SetCurrentItem(NULL);
+			SetCurrentItem(nullptr);
 		}
 		break;
 	case iActorSlot:
@@ -196,7 +196,7 @@ bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 	if (ai().script_engine().functor("actor_menu_inventory.CUIActorMenu_OnItemDropped", funct1))
 	{
 		//If list only has 1 item, get it, otherwise try to get item at current drag position
-		CUICellItem* _citem = (new_owner->ItemsCount() == 1) ? new_owner->GetItemIdx(0) : NULL;
+		CUICellItem* _citem = (new_owner->ItemsCount() == 1) ? new_owner->GetItemIdx(0) : nullptr;
 		if (!_citem)
 		{
 			CUICellContainer* c = old_owner->GetContainer();
@@ -209,10 +209,10 @@ bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 			}
 		}
 
-		PIItem _iitem = _citem ? (PIItem)_citem->m_pData : NULL;
+		PIItem _iitem = _citem ? (PIItem)_citem->m_pData : nullptr;
 
 		CGameObject* GO1 = smart_cast<CGameObject*>(CurrentIItem());
-		CGameObject* GO2 = _iitem ? smart_cast<CGameObject*>(_iitem) : NULL;
+		CGameObject* GO2 = _iitem ? smart_cast<CGameObject*>(_iitem) : nullptr;
 		if (funct1(GO1 ? GO1->lua_game_object() : (0), GO2 ? GO2->lua_game_object() : (0), (int)t_old,
 		           (int)t_new) == false)
 			return false;
@@ -227,14 +227,14 @@ bool CUIActorMenu::OnItemDrop(CUICellItem* itm)
 
 bool CUIActorMenu::OnItemStartDrag(CUICellItem* itm)
 {
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	return false; //default behaviour
 }
 
 bool CUIActorMenu::OnItemDbClick(CUICellItem* itm)
 {
 	SetCurrentItem(itm);
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	CUIDragDropListEx* old_owner = itm->OwnerList();
 	EDDListType t_old = GetListType(old_owner);
 
@@ -328,7 +328,7 @@ bool CUIActorMenu::OnItemDbClick(CUICellItem* itm)
 bool CUIActorMenu::OnItemSelected(CUICellItem* itm)
 {
 	SetCurrentItem(itm);
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	m_item_info_view = false;
 	return false;
 }
@@ -336,7 +336,7 @@ bool CUIActorMenu::OnItemSelected(CUICellItem* itm)
 bool CUIActorMenu::OnItemRButtonClick(CUICellItem* itm)
 {
 	SetCurrentItem(itm);
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	ActivatePropertiesBox();
 	m_item_info_view = false;
 	return false;
@@ -344,7 +344,7 @@ bool CUIActorMenu::OnItemRButtonClick(CUICellItem* itm)
 
 bool CUIActorMenu::OnItemFocusReceive(CUICellItem* itm)
 {
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	m_item_info_view = true;
 
 	itm->m_selected = true;
@@ -355,7 +355,7 @@ bool CUIActorMenu::OnItemFocusReceive(CUICellItem* itm)
 	{
 		PIItem _iitem = (PIItem)itm->m_pData;
 
-		CGameObject* GO = _iitem ? smart_cast<CGameObject*>(_iitem) : NULL;
+		CGameObject* GO = _iitem ? smart_cast<CGameObject*>(_iitem) : nullptr;
 		if (GO)
 			funct1(GO->lua_game_object());
 	}
@@ -369,7 +369,7 @@ bool CUIActorMenu::OnItemFocusLost(CUICellItem* itm)
 	{
 		itm->m_selected = false;
 	}
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	clear_highlight_lists();
 
 	::luabind::functor<bool> funct1;
@@ -377,7 +377,7 @@ bool CUIActorMenu::OnItemFocusLost(CUICellItem* itm)
 	{
 		PIItem _iitem = (PIItem)itm->m_pData;
 
-		CGameObject* GO = _iitem ? smart_cast<CGameObject*>(_iitem) : NULL;
+		CGameObject* GO = _iitem ? smart_cast<CGameObject*>(_iitem) : nullptr;
 		if (GO)
 			funct1(GO->lua_game_object());
 	}
@@ -417,14 +417,14 @@ bool CUIActorMenu::OnMouseAction(float x, float y, EUIMessages mouse_action)
 
 bool CUIActorMenu::OnKeyboardAction(int dik, EUIMessages keyboard_action)
 {
-	InfoCurItem(NULL);
+	InfoCurItem(nullptr);
 	if (is_binded(kDROP, dik))
 	{
 		if (WINDOW_KEY_PRESSED == keyboard_action && CurrentIItem() && !CurrentIItem()->IsQuestItem()
 			&& CurrentIItem()->parent_id() == m_pActorInvOwner->object_id())
 		{
 			SendEvent_Item_Drop(CurrentIItem(), m_pActorInvOwner->object_id());
-			SetCurrentItem(NULL);
+			SetCurrentItem(nullptr);
 		}
 		return true;
 	}

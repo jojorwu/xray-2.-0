@@ -60,7 +60,7 @@ bool CControlAnimationBase::accel_chain_get(float cur_speed, EMotionAnim target_
 		SEQ_VECTOR_IT IT_B = I->begin(), IT;
 		SEQ_VECTOR_IT IT_E = I->end();
 		SEQ_VECTOR_IT best_anim = IT_E;
-		SVelocityParam* best_param = 0;
+		SVelocityParam* best_param = nullptr;
 
 		bool found = false;
 

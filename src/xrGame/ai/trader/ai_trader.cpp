@@ -176,21 +176,23 @@ void CAI_Trader::OnEvent(NET_Packet& P, u16 type)
 	{
 	case GE_TRADE_BUY:
 	case GE_OWNERSHIP_TAKE:
-		P.r_u16(id);
-		Obj = Level().Objects.net_Find(id);
-		if (inventory().CanTakeItem(smart_cast<CInventoryItem*>(Obj)))
 		{
-			Obj->H_SetParent(this);
-			inventory().Take(smart_cast<CGameObject*>(Obj), false, false);
+			P.r_u16(id);
+			Obj = Level().Objects.net_Find(id);
+			if (inventory().CanTakeItem(smart_cast<CInventoryItem*>(Obj)))
+			{
+				Obj->H_SetParent(this);
+				inventory().Take(smart_cast<CGameObject*>(Obj), false, false);
+			}
+			else
+			{
+				NET_Packet P_reject;
+				u_EventGen(P_reject, GE_OWNERSHIP_REJECT, ID());
+				P_reject.w_u16(u16(Obj->ID()));
+				u_EventSend(P_reject);
+			}
+			break;
 		}
-		else
-		{
-			NET_Packet P;
-			u_EventGen(P, GE_OWNERSHIP_REJECT, ID());
-			P.w_u16(u16(Obj->ID()));
-			u_EventSend(P);
-		}
-		break;
 	case GE_TRADE_SELL:
 	case GE_OWNERSHIP_REJECT:
 		{
@@ -201,8 +203,6 @@ void CAI_Trader::OnEvent(NET_Packet& P, u16 type)
 
 			Obj->SetTmpPreDestroy(just_before_destroy);
 			inventory().DropItem(smart_cast<CGameObject*>(Obj), just_before_destroy, dont_create_shell);
-			//if(inventory().DropItem(smart_cast<CGameObject*>(Obj), just_before_destroy)) 
-			//	Obj->H_SetParent(0, just_before_destroy); //moved to DropItem
 		}
 		break;
 	case GE_TRANSFER_AMMO:
@@ -264,7 +264,7 @@ void CAI_Trader::g_fireParams(const CHudItem* pHudItem, Fvector& P, Fvector& D)
 	if (g_Alive() && inventory().ActiveItem())
 	{
 		Center(P);
-		D.setHP(0, 0);
+		D.setHP(0.f, 0.f);
 		D.normalize_safe();
 	}
 }

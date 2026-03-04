@@ -71,7 +71,7 @@ void CControlAnimationBase::reinit()
 	m_cur_anim.time_started = 0;
 	m_cur_anim.speed._set_current(-1.f);
 	m_cur_anim.speed._set_target(-1.f);
-	m_cur_anim.blend = 0;
+	m_cur_anim.blend = nullptr;
 	m_cur_anim.speed_change_vel = 1.f;
 
 	prev_motion = cur_anim_info().get_motion();
@@ -374,7 +374,7 @@ void CControlAnimationBase::FX_Play(EHitSide side, float amount)
 
 	clamp(amount, 0.f, 1.f);
 
-	shared_str* p_str = 0;
+	shared_str* p_str = nullptr;
 	switch (side)
 	{
 	case eSideFront: p_str = &anim_it->fxs.front;
@@ -746,18 +746,17 @@ void CControlAnimationBase::init_anim_storage()
 {
 	m_anim_storage.reserve(eAnimCount);
 	for (u32 i = 0; i < eAnimCount; i++)
-		m_anim_storage.push_back((SAnimItem *)0);
+		m_anim_storage.push_back(nullptr);
 }
 
 void CControlAnimationBase::free_anim_storage()
 {
-	for (u32 i = 0; i < eAnimCount; i++)
+	for (auto& item : m_anim_storage)
 	{
-		SAnimItem* item = m_anim_storage[i];
 		if (item)
 		{
 			xr_delete(item);
-			m_anim_storage[i] = 0;
+			item = nullptr;
 		}
 	}
 }

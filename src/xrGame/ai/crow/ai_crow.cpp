@@ -60,15 +60,15 @@ void CAI_Crow::SSound::Load(LPCSTR prefix)
 
 void CAI_Crow::SSound::SetPosition(const Fvector& pos)
 {
-	for (int i = 0; i < (int)m_Sounds.size(); ++i)
-		if (m_Sounds[i]._feedback())
-			m_Sounds[i].set_position(pos);
+	for (auto& sound : m_Sounds)
+		if (sound._feedback())
+			sound.set_position(pos);
 }
 
 void CAI_Crow::SSound::Unload()
 {
-	for (int i = 0; i < (int)m_Sounds.size(); ++i)
-		::Sound->destroy(m_Sounds[i]);
+	for (auto& sound : m_Sounds)
+		::Sound->destroy(sound);
 }
 
 void cb_OnHitEndPlaying(CBlend* B)
@@ -321,8 +321,8 @@ void CAI_Crow::Die(CObject* who)
 	CreateSkeleton();
 
 	const CGameObject* who_object = smart_cast<const CGameObject*>(who);
-	callback(GameObject::eDeath)(lua_game_object(), who_object ? who_object->lua_game_object() : 0);
-};
+	callback(GameObject::eDeath)(lua_game_object(), who_object ? who_object->lua_game_object() : nullptr);
+}
 
 void CAI_Crow::UpdateWorkload(float fdt)
 {
@@ -400,7 +400,7 @@ void CAI_Crow::shedule_Update(u32 DT)
 		{
 			fGoalChangeTime += fGoalChangeDelta + fGoalChangeDelta * Random.randF(-0.5f, 0.5f);
 
-			Level().ObjectSpace.GetNearest(nearbyObjects, Position(), 300.0f, NULL);
+			Level().ObjectSpace.GetNearest(nearbyObjects, Position(), 300.0f, nullptr);
 			for (CObject* obj : nearbyObjects) 
 			{
 				if (CEntityAlive* entity = smart_cast<CEntityAlive*>(obj); entity && !entity->g_Alive()) 
@@ -560,7 +560,7 @@ void CAI_Crow::Hit(SHit* pHDS)
 	inherited::Hit(&HDS);
 
 	const CGameObject* who_object = smart_cast<const CGameObject*>(pHDS->who);
-	callback(GameObject::eHit)(lua_game_object(), who_object ? who_object->lua_game_object() : 0);
+	callback(GameObject::eHit)(lua_game_object(), who_object ? who_object->lua_game_object() : nullptr);
 }
 
 BOOL CAI_Crow::UsedAI_Locations()

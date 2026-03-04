@@ -272,10 +272,10 @@ void CPseudoGigant::on_activate_control(ControlCom::EControlType type)
 
 		// callback for start animation, will be triggered by everyone in radius
 		m_nearest.clear_not_free();
-		Level().ObjectSpace.GetNearest(m_nearest, Position(), 15.f, NULL);
-		for (u32 i = 0; i < m_nearest.size(); i++)
+		Level().ObjectSpace.GetNearest(m_nearest, Position(), 15.f, nullptr);
+		for (auto* item : m_nearest)
 		{
-			CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder*>(m_nearest[i]);
+			CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder*>(item);
 			if (obj && obj->ID() != 0 && obj->ID() != ID()) {
 				::luabind::functor<void> funct;
 				if (ai().script_engine().functor("_G.CPseudoGigant__OnStartStompAnimation", funct))
@@ -291,11 +291,11 @@ void CPseudoGigant::on_threaten_execute()
 {
 	// разбросить объекты
 	m_nearest.clear_not_free();
-	Level().ObjectSpace.GetNearest(m_nearest, Position(), 15.f, NULL);
-	for (u32 i = 0; i < m_nearest.size(); i++)
+	Level().ObjectSpace.GetNearest(m_nearest, Position(), 15.f, nullptr);
+	for (auto* item : m_nearest)
 	{
-		CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder *>(m_nearest[i]);
-		CInventoryItem* itm = smart_cast<CInventoryItem*>(m_nearest[i]);
+		CPhysicsShellHolder* obj = smart_cast<CPhysicsShellHolder *>(item);
+		CInventoryItem* itm = smart_cast<CInventoryItem*>(item);
 
 		if (pseudogiantCanDamageObjects && obj && obj->ID() != 0 && obj->ID() != ID()) {
 			float dist_to_enemy = obj->Position().distance_to(Position());
@@ -314,7 +314,7 @@ void CPseudoGigant::on_threaten_execute()
 			HS.boneID = smart_cast<IKinematics*>(obj->Visual())->LL_GetBoneRoot();
 			HS.p_in_bone_space = Fvector().set(0.f, 0.f, 0.f);
 
-			HS.impulse = obj->cast_entity_alive() && obj->cast_entity_alive()->g_Alive() ? 80 * 80 : 0; // 0 impulse for not alive objects, they will receive the impulse later
+			HS.impulse = obj->cast_entity_alive() && obj->cast_entity_alive()->g_Alive() ? 80.0f * 80.0f : 0.0f; // 0 impulse for not alive objects, they will receive the impulse later
 			//HS.impulse = 80 * obj->character_physics_support()->movement()->GetMass();
 
 			HS.hit_type = ALife::eHitTypeStrike;

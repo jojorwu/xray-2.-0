@@ -366,8 +366,8 @@ public:
 	virtual CParticlesPlayer* cast_particles_player() { return this; }
 	virtual CCustomMonster* cast_custom_monster() { return this; }
 	virtual CScriptEntity* cast_script_entity() { return this; }
-	virtual CWeapon* cast_weapon() { return NULL; }
-	virtual CAI_Rat* dcast_Rat() { return this; };
+	virtual CWeapon* cast_weapon() { return nullptr; }
+	virtual CAI_Rat* dcast_Rat() { return this; }
 
 public:
 

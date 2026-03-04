@@ -463,8 +463,8 @@ void CAI_Stalker::update_best_item_info_impl()
 	if (ai().script_engine().functor("_g.update_best_weapon", funct))
 	{
 		CGameObject* cur_itm = smart_cast<CGameObject*>(m_best_item_to_kill);
-		CScriptGameObject* GO = funct(this->lua_game_object(), cur_itm ? cur_itm->lua_game_object() : NULL);
-		CInventoryItem* bw = GO ? smart_cast<CInventoryItem*>(&GO->object()) : NULL;
+		CScriptGameObject* GO = funct(this->lua_game_object(), cur_itm ? cur_itm->lua_game_object() : nullptr);
+		CInventoryItem* bw = GO ? smart_cast<CInventoryItem*>(&GO->object()) : nullptr;
 		if (bw)
 		{
 			m_best_item_to_kill = bw;
@@ -498,26 +498,24 @@ void CAI_Stalker::update_best_item_info_impl()
 	m_item_actuality = true;
 	ai().ef_storage().non_alife().member() = this;
 	ai().ef_storage().non_alife().enemy() = memory().enemy().selected() ? memory().enemy().selected() : this;
-	m_best_item_to_kill = 0;
-	m_best_ammo = 0;
-	m_best_found_item_to_kill = 0;
-	m_best_found_ammo = 0;
+	m_best_item_to_kill = nullptr;
+	m_best_ammo = nullptr;
+	m_best_found_item_to_kill = nullptr;
+	m_best_found_ammo = nullptr;
 	m_best_item_value = 0.f;
 
 	// try to find the best item which can kill
 	{
-		TIItemContainer::iterator I = inventory().m_all.begin();
-		TIItemContainer::iterator E = inventory().m_all.end();
-		for (; I != E; ++I)
+		for (auto& item : inventory().m_all)
 		{
-			if ((*I)->can_kill())
+			if (item->can_kill())
 			{
-				ai().ef_storage().non_alife().member_item() = &(*I)->object();
+				ai().ef_storage().non_alife().member_item() = &item->object();
 				float value;
 				if (memory().enemy().selected())
 					value = ai().ef_storage().m_pfWeaponEffectiveness->ffGetValue();
 				else
-					value = (float)(*I)->Cost();
+					value = (float)item->Cost();
 
 				if (!fsimilar(value, m_best_item_value) && (value < m_best_item_value))
 					continue;
@@ -525,16 +523,16 @@ void CAI_Stalker::update_best_item_info_impl()
 				if (!fsimilar(value, m_best_item_value) && (value > m_best_item_value))
 				{
 					m_best_item_value = value;
-					m_best_item_to_kill = *I;
+					m_best_item_to_kill = item;
 					continue;
 				}
 
-				VERIFY(fsimilar(value,m_best_item_value));
-				if (m_best_item_to_kill && ((*I)->Cost() <= m_best_item_to_kill->Cost()))
+				VERIFY(fsimilar(value, m_best_item_value));
+				if (m_best_item_to_kill && (item->Cost() <= m_best_item_to_kill->Cost()))
 					continue;
 
 				m_best_item_value = value;
-				m_best_item_to_kill = *I;
+				m_best_item_to_kill = item;
 			}
 		}
 	}
@@ -550,11 +548,9 @@ void CAI_Stalker::update_best_item_info_impl()
 	// check if we remember we saw item which can kill
 	// or items which can make my item killing
 	{
-		xr_vector<const CGameObject*>::const_iterator I = memory().item().objects().begin();
-		xr_vector<const CGameObject*>::const_iterator E = memory().item().objects().end();
-		for (; I != E; ++I)
+		for (const auto& item_obj : memory().item().objects())
 		{
-			const CInventoryItem* inventory_item = smart_cast<const CInventoryItem*>(*I);
+			const CInventoryItem* inventory_item = smart_cast<const CInventoryItem*>(item_obj);
 			if (!inventory_item || !memory().item().useful(&inventory_item->object()))
 				continue;
 			CInventoryItem* item = inventory_item->can_kill(&inventory());
@@ -566,7 +562,7 @@ void CAI_Stalker::update_best_item_info_impl()
 				{
 					m_best_item_value = value;
 					m_best_found_item_to_kill = inventory_item;
-					m_best_found_ammo = 0;
+					m_best_found_ammo = nullptr;
 					m_best_ammo = item;
 				}
 			}
@@ -582,7 +578,7 @@ void CAI_Stalker::update_best_item_info_impl()
 				{
 					m_best_item_value = value;
 					m_best_item_to_kill = item;
-					m_best_found_item_to_kill = 0;
+					m_best_found_item_to_kill = nullptr;
 					m_best_found_ammo = inventory_item;
 				}
 			}
@@ -595,11 +591,9 @@ void CAI_Stalker::update_best_item_info_impl()
 
 	// check if we remember we saw item to kill
 	// and item which can make this item killing
-	xr_vector<const CGameObject*>::const_iterator I = memory().item().objects().begin();
-	xr_vector<const CGameObject*>::const_iterator E = memory().item().objects().end();
-	for (; I != E; ++I)
+	for (const auto& item_obj : memory().item().objects())
 	{
-		const CInventoryItem* inventory_item = smart_cast<const CInventoryItem*>(*I);
+		const CInventoryItem* inventory_item = smart_cast<const CInventoryItem*>(item_obj);
 		if (!inventory_item || !memory().item().useful(&inventory_item->object()))
 			continue;
 		const CInventoryItem* item = inventory_item->can_kill(memory().item().objects());
@@ -734,7 +728,7 @@ void CAI_Stalker::can_kill_entity(const Fvector& position, const Fvector& direct
 
 	ray_query_param params(this, memory().visual().transparency_threshold(), distance);
 
-	Level().ObjectSpace.RayQuery(rq_storage, ray_defs, ray_query_callback, &params,NULL, this);
+	Level().ObjectSpace.RayQuery(rq_storage, ray_defs, ray_query_callback, &params,nullptr, this);
 	m_can_kill_enemy = m_can_kill_enemy || params.m_can_kill_enemy;
 	m_can_kill_member = m_can_kill_member || params.m_can_kill_member;
 	m_pick_distance = _max(m_pick_distance, params.m_pick_distance);
@@ -821,11 +815,9 @@ bool CAI_Stalker::undetected_anomaly()
 
 bool CAI_Stalker::inside_anomaly()
 {
-	xr_vector<CObject*>::const_iterator I = feel_touch.begin();
-	xr_vector<CObject*>::const_iterator E = feel_touch.end();
-	for (; I != E; ++I)
+	for (auto* object : feel_touch)
 	{
-		CCustomZone* zone = smart_cast<CCustomZone*>(*I);
+		CCustomZone* zone = smart_cast<CCustomZone*>(object);
 		if (zone && (zone->restrictor_type() != RestrictionSpace::eRestrictorTypeNone))
 		{
 			if (smart_cast<CRadioactiveZone*>(zone))
@@ -960,9 +952,7 @@ void CAI_Stalker::notify_on_wounded_or_killed(CObject* object)
 
 	stalker->on_enemy_wounded_or_killed(this);
 
-	typedef CAgentCorpseManager::MEMBER_CORPSES MEMBER_CORPSES;
-
-	const MEMBER_CORPSES& corpses = agent_manager().corpse().corpses();
+	const auto& corpses = agent_manager().corpse().corpses();
 	if (std::find(corpses.begin(), corpses.end(), this) != corpses.end())
 		return;
 
@@ -1102,8 +1092,8 @@ void CAI_Stalker::check_throw_trajectory(const float& throw_time)
 {
 	m_throw_enabled = false;
 
-	xr_vector<trajectory_pick>* trajectory_picks = NULL;
-	xr_vector<Fvector>* collide_tris = NULL;
+	xr_vector<trajectory_pick>* trajectory_picks = nullptr;
+	xr_vector<Fvector>* collide_tris = nullptr;
 #ifdef DEBUG
 	trajectory_picks				=	& m_throw_picks;
 	collide_tris					=	& m_throw_collide_tris;
