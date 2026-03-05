@@ -7,12 +7,12 @@
 #include "../../Layers/xrRender/dxRenderFactory.h"
 
 #define FACTORY_PTR_INSTANCIATE(Class) \
-	inline void FactoryPtr<I##Class>::CreateObject(void) \
+	template<> inline void FactoryPtr<I##Class>::CreateObject(void) \
 { \
 	if (!RenderFactory) RenderFactory = &RenderFactoryImpl; \
 	m_pObject = RenderFactory->Create##Class(); \
 } \
-	inline void FactoryPtr<I##Class>::DestroyObject(void) \
+	template<> inline void FactoryPtr<I##Class>::DestroyObject(void) \
 { \
 	RenderFactory->Destroy##Class(m_pObject); \
 	m_pObject = NULL; \
@@ -66,7 +66,7 @@ FACTORY_PTR_INSTANCIATE(RenderDeviceRender)
 #	endif // DEBUG
 FACTORY_PTR_INSTANCIATE(ApplicationRender)
 FACTORY_PTR_INSTANCIATE(WallMarkArray)
-FACTORY_PTR_INSTANCIATE(StatsRender);
+FACTORY_PTR_INSTANCIATE(StatsRender)
 #endif // _EDITOR
 
 #ifndef _EDITOR

@@ -11,8 +11,8 @@
 
 #include "pure.h"
 //#include "hw.h"
-#include "../xrcore/ftimer.h"
-#include "stats.h"
+#include "../xrCore/FTimer.h"
+#include "Stats.h"
 //#include "shader.h"
 //#include "R_Backend.h"
 
@@ -30,7 +30,7 @@
 #include "../Include/xrRender/RenderDeviceRender.h"
 #include "imgui_base.h"
 
-#ifdef INGAME_EDITOR
+#if defined(INGAME_EDITOR) && defined(_WIN32)
 # include "../Include/editor/interfaces.hpp"
 #endif // #ifdef INGAME_EDITOR
 
@@ -118,6 +118,9 @@ public:
 	CRegistrator<pureScreenResolutionChanged> seqResolutionChanged;
 
 	HWND m_hWnd;
+#ifndef _WIN32
+    void* m_XWindow;
+#endif
 	// CStats* Statistic;
 };
 
@@ -170,7 +173,9 @@ private:
 	void _SetupStates();
 public:
 	// HWND m_hWnd;
+#ifdef _WIN32
 	LRESULT MsgProc(HWND, UINT, WPARAM, LPARAM);
+#endif
 
 	// u32 dwFrame;
 	// u32 dwPrecacheFrame;
@@ -180,7 +185,9 @@ public:
 	float fWidth_2, fHeight_2;
 	// BOOL b_is_Ready;
 	// BOOL b_is_Active;
+#ifdef _WIN32
 	void OnWM_Activate(WPARAM wParam, LPARAM lParam);
+#endif
 public:
 	//ref_shader m_WireShader;
 	//ref_shader m_SelectionShader;
@@ -263,7 +270,7 @@ public:
 	CRenderDevice()
 		:
 		m_pRender(0)
-#ifdef INGAME_EDITOR
+#if defined(INGAME_EDITOR) && defined(_WIN32)
         , m_editor_module(0),
         m_editor_initialize(0),
         m_editor_finalize(0),
@@ -469,7 +476,9 @@ public:
 
 public:
 	void xr_stdcall on_idle();
+#ifdef _WIN32
 	bool xr_stdcall on_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT& result);
+#endif
 
 private:
 	void message_loop();
@@ -483,7 +492,7 @@ private:
 public:
 	xr_imgui::ide& imgui() { return m_imgui; }
 	bool imgui_shown() const { return m_imgui.is_shown(); }
-#ifdef INGAME_EDITOR
+#if defined(INGAME_EDITOR) && defined(_WIN32)
 public:
     IC editor::ide* editor() const { return m_editor; }
 
@@ -501,6 +510,9 @@ private:
     finalize_function_ptr m_editor_finalize;
     editor::ide* m_editor;
     engine_impl* m_engine;
+#else
+public:
+    IC void* editor() const { return nullptr; }
 #endif // #ifdef INGAME_EDITOR
 };
 

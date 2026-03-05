@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "../xrCDB/frustum.h"
+#include "../xrCDB/Frustum.h"
 #include "xr_ioconsole.h"
 #include "xr_input.h"
 #include "../xrCore/profiler.h"

@@ -4,7 +4,7 @@
 
 #include "stdafx.h"
 #include "EngineAPI.h"
-#include "../xrcdb/xrXRC.h"
+#include "../xrCDB/xrXRC.h"
 
 //#include "securom_api.h"
 
@@ -125,7 +125,11 @@ extern BOOL DllMainXrRenderR1(HANDLE hModule, DWORD ul_reason_for_call, LPVOID l
 extern BOOL DllMainXrRenderR2(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
 extern BOOL DllMainXrRenderR3(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
 extern BOOL DllMainXrRenderR4(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
+extern BOOL DllMainXrRenderVulkan(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
 
+#ifdef STATIC_RENDERER_VULKAN
+	#define DLL_MAIN_RENDERER DllMainXrRenderVulkan
+#endif
 #ifdef STATIC_RENDERER_R1
 	#define DLL_MAIN_RENDERER DllMainXrRenderR1
 #endif
@@ -144,6 +148,17 @@ void CEngineAPI::InitializeNotDedicated()
 	LPCSTR r2_name = "xrRender_R2.dll";
 	LPCSTR r3_name = "xrRender_R3.dll";
 	LPCSTR r4_name = "xrRender_R4.dll";
+	LPCSTR rvk_name = "xrRenderVulkan.dll";
+#ifdef STATIC_RENDERER_VULKAN
+	{
+		psDeviceFlags.set(rsR2, FALSE);
+		psDeviceFlags.set(rsR3, FALSE);
+		psDeviceFlags.set(rsR4, FALSE);
+		Log("Loading DLL:", rvk_name);
+		DllMainXrRenderVulkan(NULL, DLL_PROCESS_ATTACH, NULL);
+		g_current_renderer = 4;
+	}
+#endif
 #ifdef STATIC_RENDERER_R4
 	//if (psDeviceFlags.test(rsR4))
     {
@@ -229,6 +244,9 @@ void CEngineAPI::Initialize(void)
         psDeviceFlags.set(rsR4, FALSE);
         psDeviceFlags.set(rsR3, FALSE);
         psDeviceFlags.set(rsR2, FALSE);
+#ifdef STATIC_RENDERER_VULKAN
+		psDeviceFlags.set(rsVulkan, FALSE);
+#endif
         renderer_value = 0; //con cmd
 
         Log("Loading DLL:", r1_name);
@@ -293,6 +311,7 @@ extern "C" {
 typedef bool __cdecl SupportsAdvancedRenderingREF(void);
 typedef bool /*_declspec(dllexport)*/ SupportsDX10RenderingREF();
 typedef bool /*_declspec(dllexport)*/ SupportsDX11RenderingREF();
+typedef bool SupportsVulkanRenderingREF();
 };
 
 extern "C" {
@@ -305,6 +324,9 @@ bool /*_declspec(dllexport)*/ SupportsDX10Rendering();
 #endif
 #ifdef STATIC_RENDERER_R4
 	bool /*_declspec(dllexport)*/ SupportsDX11Rendering();
+#endif
+#ifdef STATIC_RENDERER_VULKAN
+	bool SupportsVulkanRendering();
 #endif
 };
 
@@ -327,6 +349,7 @@ void CEngineAPI::CreateRendererList()
 	bool bSupports_r2_5 = false;
 	bool bSupports_r3 = false;
 	bool bSupports_r4 = false;
+	bool bSupports_rvk = false;
 
 	LPCSTR r2_name = "xrRender_R2.dll";
 	LPCSTR r3_name = "xrRender_R3.dll";
@@ -338,6 +361,7 @@ void CEngineAPI::CreateRendererList()
 		bSupports_r2_5 = true;
 		bSupports_r3 = true;
 		bSupports_r4 = true;
+		bSupports_rvk = true;
 	}
 	else
 	{
@@ -373,6 +397,17 @@ void CEngineAPI::CreateRendererList()
 			R_ASSERT(test_dx10_rendering);
 			bSupports_r3 = test_dx10_rendering();
 			//FreeLibrary(hRender);
+		}
+#endif
+
+#ifdef STATIC_RENDERER_VULKAN
+		// try to initialize Vulkan
+		Log("Loading DLL:", rvk_name);
+		DllMainXrRenderVulkan(NULL, DLL_PROCESS_ATTACH, NULL);
+		{
+			SupportsVulkanRenderingREF* test_rendering = SupportsVulkanRendering;
+			R_ASSERT(test_rendering);
+			bSupports_rvk = test_rendering();
 		}
 #endif
 
@@ -418,6 +453,10 @@ void CEngineAPI::CreateRendererList()
 #ifdef STATIC_RENDERER_R4
 	if (proceed &= bSupports_r4, proceed)
         _tmp.push_back("renderer_r4");
+#endif
+#ifdef STATIC_RENDERER_VULKAN
+	if (proceed &= bSupports_rvk, proceed)
+		_tmp.push_back("renderer_vulkan");
 #endif
 
 	R_ASSERT2(_tmp.size() != 0, "No valid renderer found, please use a render system that's supported by your PC");

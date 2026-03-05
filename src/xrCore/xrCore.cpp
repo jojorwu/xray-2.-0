@@ -115,6 +115,10 @@ extern "C" {
         return FALSE;
     }
 
+    DWORD GetCurrentThreadId() {
+        return (DWORD)pthread_self();
+    }
+
     void InitializeCriticalSection(CRITICAL_SECTION* lpCriticalSection) {
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);

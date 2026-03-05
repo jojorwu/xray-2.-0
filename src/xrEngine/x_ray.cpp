@@ -20,7 +20,7 @@
 #include "GameFont.h"
 #include "resource.h"
 #include "LightAnimLibrary.h"
-#include "../xrcdb/ispatial.h"
+#include "../xrCDB/ispatial.h"
 #include "Text_Console.h"
 #include <process.h>
 #include <locale.h>

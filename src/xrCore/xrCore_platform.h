@@ -71,6 +71,8 @@
 #include <stdio.h>
 
 typedef uint32_t DWORD;
+typedef uint32_t UINT;
+typedef uint32_t UINT32;
 typedef uint16_t WORD;
 typedef uint8_t BYTE;
 typedef int32_t BOOL;
@@ -82,6 +84,21 @@ typedef void* LPVOID;
 typedef const void* LPCVOID;
 typedef long LONG;
 typedef unsigned long ULONG;
+typedef long long HRESULT;
+typedef void* HMODULE;
+
+typedef struct {
+    long left, top, right, bottom;
+} RECT;
+
+typedef long long LRESULT;
+typedef unsigned long long WPARAM;
+typedef long long LPARAM;
+
+#define S_OK 0ll
+#define E_FAIL -1ll
+#define E_NOTIMPL -2ll
+#define S_FALSE 1ll
 typedef uint64_t UINT64;
 typedef int64_t INT64;
 
@@ -227,6 +244,7 @@ inline void _splitpath_s(const char* path, char* drive, size_t drive_sz, char* d
 #ifdef __cplusplus
 extern "C" {
 #endif
+    DWORD GetCurrentThreadId();
     HANDLE CreateFile(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void* lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
     BOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, DWORD* lpNumberOfBytesRead, void* lpOverlapped);
     BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, DWORD* lpNumberOfBytesWritten, void* lpOverlapped);
@@ -266,6 +284,8 @@ extern "C" {
 #define GetLastError() errno
 
 #define GetCommandLine() "" // Will be handled in xrCore.cpp
+
+#define RGB(r,g,b)          ((DWORD)(((BYTE)(r)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(b))<<16)))
 
 #endif
 
