@@ -29,11 +29,15 @@ std::vector<std::string> splitStringLimit(const std::string& inputString, std::s
 std::string getFilename(std::string& s);
 void printIniItemLine(const CInifile::Item& s);
 void trim(std::string& s, const char* t = " \t\n\r\f\v");
+#ifndef __linux__
 void trim(xr_string& s, const char* t = " \t\n\r\f\v");
+#endif
 std::string trimCopy(std::string s, const char* t = " \t\n\r\f\v");
 void toLowerCase(std::string& s);
 std::string toLowerCaseCopy(std::string s);
+#ifndef __linux__
 void toLowerCase(xr_string& s);
 xr_string toLowerCaseCopy(xr_string s);
+#endif
 void replaceAll(std::string& str, const std::string& from, const std::string& to);
 std::string replaceAllCopy(std::string str, const std::string& from, const std::string& to);

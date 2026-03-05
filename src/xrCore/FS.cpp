@@ -4,10 +4,13 @@
 #include "fs_internal.h"
 
 #pragma warning(disable:4995)
+#ifdef _WIN32
 #include <io.h>
 #include <direct.h>
-#include <fcntl.h>
 #include <sys\stat.h>
+#endif
+#include <fcntl.h>
+#include <sys/stat.h>
 #pragma warning(default:4995)
 
 //typedef void DUMMY_STUFF (const void*,const u32&,void*);
@@ -82,11 +85,15 @@ void VerifyPath(LPCSTR path)
 	string1024 tmp;
 	for (int i = 0; path[i]; i++)
 	{
-		if (path[i] != '\\' || i == 0)
+		if ((path[i] != '\\' && path[i] != '/') || i == 0)
 			continue;
 		CopyMemory(tmp, path, i);
 		tmp[i] = 0;
+#ifdef _WIN32
 		_mkdir(tmp);
+#else
+        mkdir(tmp, 0777);
+#endif
 	}
 }
 
@@ -96,16 +103,26 @@ bool file_handle_internal(LPCSTR file_name, u32& size, int& hFile)
     hFile = _open(file_name, O_RDONLY | O_BINARY | O_SEQUENTIAL);
     if (hFile <= 0)
     {
+#ifdef _WIN32
         Sleep(1);
+#else
+        usleep(1000);
+#endif
         hFile = _open(file_name, O_RDONLY | O_BINARY | O_SEQUENTIAL);
         if (hFile <= 0)
             return (false);
     }
 
+#ifdef _WIN32
     size = filelength(hFile);
+#else
+    struct stat st;
+    fstat(hFile, &st);
+    size = st.st_size;
+#endif
     return (true);
 }
-#else // EDITOR
+#elif defined(_WIN32)
 static errno_t open_internal(LPCSTR fn, int& handle)
 {
 	return (
@@ -131,7 +148,24 @@ bool file_handle_internal(LPCSTR file_name, u32& size, int& file_handle)
 	size = _filelength(file_handle);
 	return (true);
 }
-#endif // EDITOR
+#else // LINUX
+bool file_handle_internal(LPCSTR file_name, u32& size, int& file_handle)
+{
+    file_handle = open(file_name, O_RDONLY);
+    if (file_handle == -1)
+    {
+        usleep(1000);
+        file_handle = open(file_name, O_RDONLY);
+        if (file_handle == -1)
+            return (false);
+    }
+
+    struct stat st;
+    fstat(file_handle, &st);
+    size = st.st_size;
+    return (true);
+}
+#endif
 
 void* FileDownload(LPCSTR file_name, const int& file_handle, u32& file_size)
 {
@@ -142,7 +176,11 @@ void* FileDownload(LPCSTR file_name, const int& file_handle, u32& file_size)
 #endif // DEBUG_MEMORY_NAME
 	);
 
+#ifdef _WIN32
 	int r_bytes = _read(file_handle, buffer, file_size);
+#else
+    ssize_t r_bytes = read(file_handle, buffer, file_size);
+#endif
 	R_ASSERT3(
 		// !file_size ||
 		// (r_bytes && (file_size >= (u32)r_bytes)),
@@ -153,11 +191,19 @@ void* FileDownload(LPCSTR file_name, const int& file_handle, u32& file_size)
 
 	// file_size = r_bytes;
 
+#ifdef _WIN32
 	R_ASSERT3(
 		!_close(file_handle),
 		"can't close file : ",
 		file_name
 	);
+#else
+    R_ASSERT3(
+        !close(file_handle),
+        "can't close file : ",
+        file_name
+    );
+#endif
 
 	return (buffer);
 }
@@ -177,7 +223,12 @@ void* FileDownload(LPCSTR file_name, u32* buffer_size)
 typedef char MARK[9];
 IC void mk_mark(MARK& M, const char* S)
 {
+#ifdef _WIN32
 	strncpy_s(M, sizeof(M), S, 8);
+#else
+    strncpy(M, S, 8);
+    M[8] = 0;
+#endif
 }
 
 void FileCompress(const char* fn, const char* sign, void* data, u32 size)
@@ -185,11 +236,21 @@ void FileCompress(const char* fn, const char* sign, void* data, u32 size)
 	MARK M;
 	mk_mark(M, sign);
 
+#ifdef _WIN32
 	int H = open(fn, O_BINARY | O_CREAT | O_WRONLY | O_TRUNC, S_IREAD | S_IWRITE);
+#else
+    int H = open(fn, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+#endif
 	R_ASSERT2(H > 0, fn);
+#ifdef _WIN32
 	_write(H, &M, 8);
 	_writeLZ(H, data, size);
 	_close(H);
+#else
+    write(H, &M, 8);
+    _writeLZ(H, data, size);
+    close(H);
+#endif
 }
 
 void* FileDecompress(const char* fn, const char* sign, u32* size)
@@ -197,9 +258,17 @@ void* FileDecompress(const char* fn, const char* sign, u32* size)
 	MARK M, F;
 	mk_mark(M, sign);
 
+#ifdef _WIN32
 	int H = open(fn, O_BINARY | O_RDONLY);
+#else
+    int H = open(fn, O_RDONLY);
+#endif
 	R_ASSERT2(H > 0, fn);
+#ifdef _WIN32
 	_read(H, &F, 8);
+#else
+    read(H, &F, 8);
+#endif
 	if (strncmp(M, F, 8) != 0)
 	{
 		F[8] = 0;
@@ -209,8 +278,15 @@ void* FileDecompress(const char* fn, const char* sign, u32* size)
 
 	void* ptr = 0;
 	u32 SZ;
+#ifdef _WIN32
 	SZ = _readLZ(H, ptr, filelength(H) - 8);
 	_close(H);
+#else
+    struct stat st;
+    fstat(H, &st);
+    SZ = _readLZ(H, ptr, (u32)st.st_size - 8);
+    close(H);
+#endif
 	if (size) *size = SZ;
 	return ptr;
 }
@@ -333,8 +409,12 @@ void IWriter::w_printf(const char* format, ...)
 	char buf[1024];
 
 	va_start(mark, format);
+#ifdef _WIN32
 #ifndef _EDITOR
 	vsprintf_s(buf, format, mark);
+#else
+    vsprintf(buf, format, mark);
+#endif
 #else
     vsprintf(buf, format, mark);
 #endif
@@ -465,12 +545,16 @@ void IReader::r_string(char* dest, u32 tgt_sz)
 	char* src = (char*)data + Pos;
 	u32 sz = advance_term_string();
 	R_ASSERT2(sz < (tgt_sz - 1), "Dest string less than needed.");
+#ifdef _WIN32
 	R_ASSERT(!IsBadReadPtr((void*)src, sz));
+#endif
 
 #ifdef _EDITOR
     CopyMemory(dest, src, sz);
-#else
+#elif defined(_WIN32)
 	strncpy_s(dest, tgt_sz, src, sz);
+#else
+    strncpy(dest, src, sz);
 #endif
 	dest[sz] = 0;
 }
@@ -557,15 +641,31 @@ CVirtualFileRW::CVirtualFileRW(const char* cFileName)
 {
 	// Open the file
 	hSrcFile = CreateFile(cFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+#ifdef _WIN32
 	R_ASSERT3(hSrcFile != INVALID_HANDLE_VALUE, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(hSrcFile != INVALID_HANDLE_VALUE, cFileName, strerror(errno));
+#endif
 	Size = (int)GetFileSize(hSrcFile, nullptr);
+#ifdef _WIN32
 	R_ASSERT3(Size, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(Size != -1, cFileName, strerror(errno));
+#endif
 
 	hSrcMap = CreateFileMapping(hSrcFile, 0, PAGE_READWRITE, 0, 0, 0);
+#ifdef _WIN32
 	R_ASSERT3(hSrcMap != INVALID_HANDLE_VALUE, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(hSrcMap != INVALID_HANDLE_VALUE, cFileName, strerror(errno));
+#endif
 
 	data = (char*)MapViewOfFile(hSrcMap, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+#ifdef _WIN32
 	R_ASSERT3(data, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(data, cFileName, strerror(errno));
+#endif
 
 #ifdef FS_DEBUG
     register_file_mapping(data, Size, cFileName);
@@ -579,7 +679,9 @@ CVirtualFileRW::~CVirtualFileRW()
 #endif // DEBUG
 
 	UnmapViewOfFile((void*)data);
+#ifdef _WIN32
 	CloseHandle(hSrcMap);
+#endif
 	CloseHandle(hSrcFile);
 }
 
@@ -587,15 +689,31 @@ CVirtualFileReader::CVirtualFileReader(const char* cFileName)
 {
 	// Open the file
 	hSrcFile = CreateFile(cFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+#ifdef _WIN32
 	R_ASSERT3(hSrcFile != INVALID_HANDLE_VALUE, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(hSrcFile != INVALID_HANDLE_VALUE, cFileName, strerror(errno));
+#endif
 	Size = (int)GetFileSize(hSrcFile, nullptr);
+#ifdef _WIN32
 	R_ASSERT3(Size, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(Size != -1, cFileName, strerror(errno));
+#endif
 
 	hSrcMap = CreateFileMapping(hSrcFile, 0, PAGE_READONLY, 0, 0, 0);
+#ifdef _WIN32
 	R_ASSERT3(hSrcMap != INVALID_HANDLE_VALUE, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(hSrcMap != INVALID_HANDLE_VALUE, cFileName, strerror(errno));
+#endif
 
 	data = (char*)MapViewOfFile(hSrcMap, FILE_MAP_READ, 0, 0, 0);
+#ifdef _WIN32
 	R_ASSERT3(data, cFileName, Debug.error2string(GetLastError()));
+#else
+    R_ASSERT3(data, cFileName, strerror(errno));
+#endif
 
 #ifdef FS_DEBUG
     register_file_mapping(data, Size, cFileName);
@@ -609,6 +727,8 @@ CVirtualFileReader::~CVirtualFileReader()
 #endif // DEBUG
 
 	UnmapViewOfFile((void*)data);
+#ifdef _WIN32
 	CloseHandle(hSrcMap);
+#endif
 	CloseHandle(hSrcFile);
 }

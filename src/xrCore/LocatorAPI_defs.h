@@ -39,6 +39,7 @@ public:
 	void __stdcall rescan_path_cb();
 };
 
+#ifdef _WIN32
 #ifdef _EDITOR
 namespace std
 {
@@ -48,6 +49,14 @@ struct _finddata_t;
 #else
 struct _finddata64i32_t;
 # define _FINDDATA_T _finddata64i32_t
+#endif
+#else
+struct _FINDDATA_T {
+    uint32_t attrib;
+    time_t time_write;
+    long size;
+    char name[260];
+};
 #endif
 
 struct XRCORE_API FS_File

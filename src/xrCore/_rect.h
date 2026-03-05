@@ -73,7 +73,7 @@ public:
 		rb.y = type_min(T);
 		return *this;
 	};
-	IC bool valide() { return lt.x1 < rb.x && lt.y < rb.y; }
+	IC bool valide() { return x1 < x2 && y1 < y2; }
 	IC SelfRef set_empty() { return invalidate(); }
 	IC bool is_empty() { return !valide(); }
 	IC SelfRef add(T x, T y)
@@ -206,7 +206,7 @@ typedef _rect<int> Irect;
 template <class T>
 BOOL _valid(const _rect<T>& m)
 {
-	return lt._valid() && rb._valid();
+	return _valid(m.lt) && _valid(m.rb);
 }
 
 #endif

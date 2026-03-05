@@ -176,12 +176,20 @@ struct xr_special_free<false, T>
 	}
 };
 
+#ifdef __linux__
+#include <type_traits>
+#endif
+
 template <class T>
 IC void xr_delete(T*& ptr)
 {
 	if (ptr)
 	{
+#ifdef __linux__
+		xr_special_free<std::is_polymorphic<T>::value, T>()(ptr);
+#else
 		xr_special_free<is_polymorphic<T>::result, T>()(ptr);
+#endif
 		ptr = nullptr;
 	}
 }
@@ -191,7 +199,11 @@ IC void xr_delete(T* const& ptr)
 {
 	if (ptr)
 	{
+#ifdef __linux__
+		xr_special_free<std::is_polymorphic<T>::value, T> (ptr);
+#else
 		xr_special_free<is_polymorphic<T>::result, T> (ptr);
+#endif
 		const_cast<T*&>(ptr) = nullptr;
 	}
 }

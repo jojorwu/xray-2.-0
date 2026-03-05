@@ -1,10 +1,14 @@
 #include "stdafx.h"
 #pragma hdrstop
 
-#include "xrdebug.h"
+#include "xrDebug.h"
 #include "os_clipboard.h"
 
+#ifdef _WIN32
 #include <sal.h>
+#endif
+
+#ifdef _WIN32
 #include <dxerr.h>
 
 #pragma warning(push)
@@ -12,11 +16,15 @@
 #include <malloc.h>
 #include <direct.h>
 #pragma warning(pop)
+#else
+#include <malloc.h>
+#endif
 
 #include "../build_config_defines.h"
 
 extern bool shared_str_initialized;
 
+#ifdef _WIN32
 #ifdef __BORLANDC__
 # include "d3d9.h"
 # include "d3dx9.h"
@@ -62,6 +70,11 @@ static BOOL bException = FALSE;
 #else
 # define USE_OWN_MINI_DUMP
 #endif //-NO_BUG_TRAP //DEBUG
+#else
+#include <exception>
+#include <signal.h>
+static BOOL bException = FALSE;
+#endif
 
 XRCORE_API xrDebug Debug;
 
@@ -82,6 +95,7 @@ namespace crash_saving
 }
 
 // demonized: print stack trace
+#ifdef _WIN32
 #include <Windows.h>
 #include "mezz_stringbuffer.h"
 #include "../3rd party/stackwalker/include/StackWalker.h"
@@ -119,8 +133,10 @@ void LogStackTrace(LPCSTR header = nullptr, bool printStack = false)
     if (printStack) {
         printLuaStack();
         Msg("\n");
+#ifdef _WIN32
         auto s = xr_StackWalker();
         s.ShowCallstack();
+#endif
     }
 }
 
@@ -239,8 +255,13 @@ void xrDebug::gather_info(const char* expression, const char* description, const
 void xrDebug::do_exit(const std::string& message)
 {
 	FlushLog();
+#ifdef _WIN32
 	MessageBox(nullptr, message.c_str(), "Error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL);
 	TerminateProcess(GetCurrentProcess(), 1);
+#else
+    fprintf(stderr, "EXIT: %s\n", message.c_str());
+    _exit(1);
+#endif
 }
 
 #ifdef NO_BUG_TRAP
@@ -264,6 +285,7 @@ void xrDebug::backend(const char* expression, const char* description, const cha
 	gather_info(expression, description, argument0, argument1, file, line, function, assertion_info,
 	            sizeof(assertion_info));
 
+#ifdef _WIN32
 	LPCSTR endline = "\r\n";
 	LPSTR buffer = assertion_info + xr_strlen(assertion_info);
 	buffer += xr_sprintf(buffer, sizeof(assertion_info) - u32(buffer - &assertion_info[0]),
@@ -285,10 +307,21 @@ void xrDebug::backend(const char* expression, const char* description, const cha
 		"Fatal Error",
 		MB_OK | MB_ICONERROR | MB_SYSTEMMODAL
 	);
+#else
+    if (handler)
+        handler();
+    FlushLog();
+    fprintf(stderr, "FATAL ERROR: %s\n", assertion_info);
+    abort();
+#endif
 
 	CS.Leave();
 
+#ifdef _WIN32
 	TerminateProcess(GetCurrentProcess(), 1);
+#else
+    _exit(1);
+#endif
 }
 
 //-AVO
@@ -326,6 +359,7 @@ void xrDebug::backend(const char* expression, const char* description, const cha
 
     FlushLog();
 
+#ifdef _WIN32
 #ifdef XRCORE_STATIC
     MessageBox (nullptr,assertion_info,"X-Ray error",MB_OK|MB_ICONERROR|MB_SYSTEMMODAL);
 #else
@@ -376,6 +410,10 @@ void xrDebug::backend(const char* expression, const char* description, const cha
     DEBUG_INVOKE;
 # endif // USE_OWN_ERROR_MESSAGE_WINDOW
 #endif
+#else
+    fprintf(stderr, "FATAL ERROR: %s\n", assertion_info);
+    abort();
+#endif
 
     if (get_on_dialog())
         get_on_dialog() (false);
@@ -389,6 +427,7 @@ LPCSTR xrDebug::error2string(long code)
 	char* result = 0;
 	static string1024 desc_storage;
 
+#ifdef _WIN32
 #ifdef _M_AMD64
 #else
 	WCHAR err_result[1024];
@@ -400,6 +439,10 @@ LPCSTR xrDebug::error2string(long code)
 		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, code, 0, desc_storage, sizeof(desc_storage) - 1, 0);
 		result = desc_storage;
 	}
+#else
+    xr_sprintf(desc_storage, sizeof(desc_storage), "Error code: %ld", code);
+    result = desc_storage;
+#endif
 	return result;
 }
 
@@ -768,6 +811,7 @@ void save_mini_dump (_EXCEPTION_POINTERS* pExceptionInfo)
 
 void format_message(LPSTR buffer, const u32& buffer_size)
 {
+#ifdef _WIN32
 	LPVOID message;
 	DWORD error_code = GetLastError();
 
@@ -790,13 +834,19 @@ void format_message(LPSTR buffer, const u32& buffer_size)
 
 	xr_sprintf(buffer, buffer_size, "[error][%8d] : %s", error_code, message);
 	LocalFree(message);
+#else
+    xr_sprintf(buffer, buffer_size, "[error][%8d]", GetLastError());
+#endif
 }
 
+#ifdef _WIN32
 #ifndef _EDITOR
 #include <errorrep.h>
 #pragma comment( lib, "faultrep.lib" )
 #endif //-!_EDITOR
+#endif
 
+#ifdef _WIN32
 #ifdef NO_BUG_TRAP
 //AVO: simplify function
 LONG WINAPI UnhandledFilter(_EXCEPTION_POINTERS* pExceptionInfo)
@@ -869,9 +919,12 @@ LONG WINAPI UnhandledFilter(_EXCEPTION_POINTERS* pExceptionInfo)
 
 	return (EXCEPTION_CONTINUE_SEARCH);
 }
+#endif
+#endif
 
 //-AVO
 #else
+#ifdef _WIN32
 LONG WINAPI UnhandledFilter(_EXCEPTION_POINTERS* pExceptionInfo)
 {
     string256 error_message;
@@ -960,6 +1013,7 @@ LONG WINAPI UnhandledFilter(_EXCEPTION_POINTERS* pExceptionInfo)
 #endif // USE_OWN_ERROR_MESSAGE_WINDOW
     return (EXCEPTION_CONTINUE_SEARCH);
 }
+#endif
 #endif //-NO_BUG_TRAP
 
 //////////////////////////////////////////////////////////////////////
@@ -982,9 +1036,11 @@ void xrDebug::_initialize (const bool& dedicated)
     // ::SetUnhandledExceptionFilter (UnhandledFilter); // exception handler to all "unhandled" exceptions
 }
 #else
+#ifdef _WIN32
 typedef int (__cdecl* _PNH)(size_t);
 _CRTIMP int __cdecl _set_new_mode(int);
 //_CRTIMP _PNH __cdecl _set_new_handler(_PNH);
+#endif
 
 #ifdef LEGACY_CODE
 #ifndef USE_BUG_TRAP
@@ -1045,6 +1101,7 @@ static void handler_base(LPCSTR reason_string)
 	);
 }
 
+#ifdef _WIN32
 static void invalid_parameter_handler(
 	const wchar_t* expression,
 	const wchar_t* function,
@@ -1107,6 +1164,7 @@ static void invalid_parameter_handler(
 		ignore_always
 	);
 }
+#endif
 
 static void pure_call_handler()
 {
@@ -1147,6 +1205,7 @@ static void termination_handler(int signal)
 
 void debug_on_thread_spawn()
 {
+#ifdef _WIN32
 #ifdef USE_BUG_TRAP
     BT_SetTerminate();
 #else // USE_BUG_TRAP
@@ -1154,14 +1213,18 @@ void debug_on_thread_spawn()
 #endif // USE_BUG_TRAP
 
 	_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
 	signal(SIGABRT, abort_handler);
+#ifdef SIGABRT_COMPAT
 	signal(SIGABRT_COMPAT, abort_handler);
+#endif
 	signal(SIGFPE, floating_point_handler);
 	signal(SIGILL, illegal_instruction_handler);
 	signal(SIGINT, 0);
 	// signal (SIGSEGV, storage_access_handler);
 	signal(SIGTERM, termination_handler);
 
+#ifdef _WIN32
 	_set_invalid_parameter_handler(&invalid_parameter_handler);
 
 	_set_new_mode(1);
@@ -1169,6 +1232,7 @@ void debug_on_thread_spawn()
 	// std::set_new_handler (&std_out_of_memory_handler);
 
 	_set_purecall_handler(&pure_call_handler);
+#endif
 
 #if 0// should be if we use exceptions
     std::set_unexpected(_terminate);
@@ -1179,14 +1243,18 @@ void xrDebug::_initialize(const bool& dedicated)
 {
 	static bool is_dedicated = dedicated;
 
+#ifdef _WIN32
 	*g_bug_report_file = 0;
+#endif
 
 	debug_on_thread_spawn();
 
+#ifdef _WIN32
 #ifdef USE_BUG_TRAP
     SetupExceptionHandler(is_dedicated);
 #endif // USE_BUG_TRAP
 	previous_filter = ::SetUnhandledExceptionFilter(UnhandledFilter); // exception handler to all "unhandled" exceptions
+#endif
 
 #if 0
     struct foo

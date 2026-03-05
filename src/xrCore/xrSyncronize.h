@@ -74,13 +74,21 @@ public:
 	~xrCriticalSectionGuard() { Leave(); }
 };
 
+#ifdef _WIN32
 using ThreadID = HANDLE;
+#else
+using ThreadID = pthread_t;
+#endif
 
 
 class XRCORE_API xrSRWLock
 {
 private:
+#ifdef _WIN32
     SRWLOCK smutex;
+#else
+    void* smutex;
+#endif
 
 public:
     xrSRWLock();

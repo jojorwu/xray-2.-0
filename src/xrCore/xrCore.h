@@ -46,7 +46,7 @@
 #pragma warning(disable:4530)
 #endif
 
-#if !defined(_MT)
+#if !defined(_MT) && defined(_WIN32)
 // multithreading disabled
 #error Please enable multi-threaded library...
 #endif
@@ -108,6 +108,11 @@
 #ifdef _EDITOR
 # define __forceinline inline
 #endif
+
+#ifndef _WIN32
+#define __forceinline __attribute__((always_inline)) inline
+#endif
+
 #define _inline inline
 #define __inline inline
 #define IC inline
@@ -115,7 +120,11 @@
 #ifdef _EDITOR
 # define ICN
 #else
+#ifdef _WIN32
 # define ICN __declspec (noinline)
+#else
+# define ICN __attribute__((noinline))
+#endif
 #endif
 
 #define UNUSED(...) (void)(__VA_ARGS__)
@@ -159,9 +168,15 @@
 #define _RC_NEAR RC_NEAR
 #define _MCW_EM MCW_EM
 #else
+#ifdef _WIN32
 #define ALIGN(a) __declspec(align(a))
 #include <sys\utime.h>
 #define MODULE_NAME "xrCore.dll"
+#else
+#define ALIGN(a) __attribute__((aligned(a)))
+#include <utime.h>
+#define MODULE_NAME "libxrCore.so"
+#endif
 #endif
 
 

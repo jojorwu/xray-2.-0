@@ -3,11 +3,16 @@
 #include "stdafx.h"
 #pragma hdrstop
 
+#ifdef _WIN32
 #include <mmsystem.h>
 #include <objbase.h>
+#endif
+
 #include "xrCore.h"
 
+#ifdef _WIN32
 #pragma comment(lib,"winmm.lib")
+#endif
 
 #ifdef DEBUG
 # include <malloc.h>
@@ -16,6 +21,155 @@
 #include<fstream>
 #include <iostream>
 #include <string>
+
+#ifdef __linux__
+#include <map>
+#include <mutex>
+
+static std::map<const void*, size_t> g_mapping_sizes;
+static xrCriticalSection g_mapping_mutex;
+
+extern "C" {
+    HANDLE CreateFile(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void* lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
+        int flags = 0;
+        if ((dwDesiredAccess & GENERIC_READ) && (dwDesiredAccess & GENERIC_WRITE)) flags = O_RDWR;
+        else if (dwDesiredAccess & GENERIC_WRITE) flags = O_WRONLY;
+        else flags = O_RDONLY;
+
+        if (dwCreationDisposition == CREATE_ALWAYS) flags |= O_CREAT | O_TRUNC;
+        else if (dwCreationDisposition == OPEN_EXISTING) {}
+        else if (dwCreationDisposition == TRUNCATE_EXISTING) flags |= O_TRUNC;
+
+        int fd = open(lpFileName, flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        if (fd == -1) return INVALID_HANDLE_VALUE;
+        return (HANDLE)(intptr_t)fd;
+    }
+
+    BOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, DWORD* lpNumberOfBytesRead, void* lpOverlapped) {
+        ssize_t res = read((int)(intptr_t)hFile, lpBuffer, nNumberOfBytesToRead);
+        if (res == -1) return FALSE;
+        if (lpNumberOfBytesRead) *lpNumberOfBytesRead = (DWORD)res;
+        return TRUE;
+    }
+
+    BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, DWORD* lpNumberOfBytesWritten, void* lpOverlapped) {
+        ssize_t res = write((int)(intptr_t)hFile, lpBuffer, nNumberOfBytesToWrite);
+        if (res == -1) return FALSE;
+        if (lpNumberOfBytesWritten) *lpNumberOfBytesWritten = (DWORD)res;
+        return TRUE;
+    }
+
+    BOOL CloseHandle(HANDLE hObject) {
+        return close((int)(intptr_t)hObject) == 0;
+    }
+
+    DWORD GetFileSize(HANDLE hFile, DWORD* lpFileSizeHigh) {
+        struct stat st;
+        if (fstat((int)(intptr_t)hFile, &st) == -1) return (DWORD)-1;
+        if (lpFileSizeHigh) *lpFileSizeHigh = (DWORD)(st.st_size >> 32);
+        return (DWORD)st.st_size;
+    }
+
+    DWORD SetFilePointer(HANDLE hFile, long lDistanceToMove, long* lpDistanceToMoveHigh, DWORD dwMoveMethod) {
+        off_t offset = lDistanceToMove;
+        if (lpDistanceToMoveHigh) offset |= ((off_t)*lpDistanceToMoveHigh << 32);
+        int whence = SEEK_SET;
+        if (dwMoveMethod == 1) whence = SEEK_CUR;
+        else if (dwMoveMethod == 2) whence = SEEK_END;
+        off_t res = lseek((int)(intptr_t)hFile, offset, whence);
+        if (res == (off_t)-1) return (DWORD)-1;
+        if (lpDistanceToMoveHigh) *lpDistanceToMoveHigh = (long)(res >> 32);
+        return (DWORD)res;
+    }
+
+    HANDLE CreateFileMapping(HANDLE hFile, void* lpFileMappingAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCSTR lpName) {
+        return hFile; // On POSIX we can just use the fd
+    }
+
+    LPVOID MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, size_t dwNumberOfBytesToMap) {
+        int prot = PROT_READ;
+        if (dwDesiredAccess & FILE_MAP_WRITE) prot |= PROT_WRITE;
+        off_t offset = ((off_t)dwFileOffsetHigh << 32) | dwFileOffsetLow;
+        if (dwNumberOfBytesToMap == 0) {
+            struct stat st;
+            fstat((int)(intptr_t)hFileMappingObject, &st);
+            dwNumberOfBytesToMap = st.st_size - offset;
+        }
+        void* addr = mmap(NULL, dwNumberOfBytesToMap, prot, MAP_SHARED, (int)(intptr_t)hFileMappingObject, offset);
+        if (addr == MAP_FAILED) return NULL;
+
+        xrCriticalSectionGuard guard(g_mapping_mutex);
+        g_mapping_sizes[addr] = dwNumberOfBytesToMap;
+
+        return addr;
+    }
+
+    BOOL UnmapViewOfFile(LPCVOID lpBaseAddress) {
+        xrCriticalSectionGuard guard(g_mapping_mutex);
+        auto it = g_mapping_sizes.find(lpBaseAddress);
+        if (it != g_mapping_sizes.end()) {
+            size_t size = it->second;
+            g_mapping_sizes.erase(it);
+            return munmap((void*)lpBaseAddress, size) == 0;
+        }
+        return FALSE;
+    }
+
+    void InitializeCriticalSection(CRITICAL_SECTION* lpCriticalSection) {
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(lpCriticalSection, &attr);
+        pthread_mutexattr_destroy(&attr);
+    }
+
+    void DeleteCriticalSection(CRITICAL_SECTION* lpCriticalSection) {
+        pthread_mutex_destroy(lpCriticalSection);
+    }
+
+    void EnterCriticalSection(CRITICAL_SECTION* lpCriticalSection) {
+        pthread_mutex_lock(lpCriticalSection);
+    }
+
+    void LeaveCriticalSection(CRITICAL_SECTION* lpCriticalSection) {
+        pthread_mutex_unlock(lpCriticalSection);
+    }
+
+    BOOL TryEnterCriticalSection(CRITICAL_SECTION* lpCriticalSection) {
+        return pthread_mutex_trylock(lpCriticalSection) == 0;
+    }
+
+    void InitializeSRWLock(SRWLOCK* SRWLock) {
+        pthread_rwlock_t* lock = (pthread_rwlock_t*)xr_malloc(sizeof(pthread_rwlock_t));
+        pthread_rwlock_init(lock, NULL);
+        *SRWLock = lock;
+    }
+
+    void AcquireSRWLockExclusive(SRWLOCK* SRWLock) {
+        pthread_rwlock_wrlock((pthread_rwlock_t*)*SRWLock);
+    }
+
+    void ReleaseSRWLockExclusive(SRWLOCK* SRWLock) {
+        pthread_rwlock_unlock((pthread_rwlock_t*)*SRWLock);
+    }
+
+    void AcquireSRWLockShared(SRWLOCK* SRWLock) {
+        pthread_rwlock_rdlock((pthread_rwlock_t*)*SRWLock);
+    }
+
+    void ReleaseSRWLockShared(SRWLOCK* SRWLock) {
+        pthread_rwlock_unlock((pthread_rwlock_t*)*SRWLock);
+    }
+
+    BOOL TryAcquireSRWLockExclusive(SRWLOCK* SRWLock) {
+        return pthread_rwlock_trywrlock((pthread_rwlock_t*)*SRWLock) == 0;
+    }
+
+    BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock) {
+        return pthread_rwlock_tryrdlock((pthread_rwlock_t*)*SRWLock) == 0;
+    }
+}
+#endif
 
 XRCORE_API xrCore Core;
 extern XRCORE_API u32 build_id;
@@ -43,7 +197,7 @@ void xrCore::_initialize(LPCSTR _ApplicationName, LogCallback cb, BOOL init_fs, 
 	xr_strcpy(ApplicationName, _ApplicationName);
 	if (0 == init_counter)
 	{
-#ifdef XRCORE_STATIC
+#if defined(XRCORE_STATIC) && defined(_WIN32)
         _clear87();
         _control87(_PC_53, MCW_PC);
         _control87(_RC_CHOP, MCW_RC);
@@ -52,15 +206,44 @@ void xrCore::_initialize(LPCSTR _ApplicationName, LogCallback cb, BOOL init_fs, 
 #endif
 		// Init COM so we can use CoCreateInstance
 		// HRESULT co_res =
+#ifdef _WIN32
 		Params = xr_strdup(GetCommandLine());
+#elif defined(__linux__)
+        int fd = open("/proc/self/cmdline", O_RDONLY);
+        if (fd != -1) {
+            char buf[2048];
+            ssize_t n = read(fd, buf, sizeof(buf) - 1);
+            if (n > 0) {
+                buf[n] = 0;
+                // Command line is null-separated, replace with spaces
+                for (int i = 0; i < n; i++) {
+                    if (buf[i] == 0) buf[i] = ' ';
+                }
+                Params = xr_strdup(buf);
+            } else {
+                Params = xr_strdup("");
+            }
+            close(fd);
+        } else {
+            Params = xr_strdup("");
+        }
+#endif
 		xr_strlwr(Params);
+#ifdef _WIN32
 		if (!strstr(Params, "-editor"))
 			CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+#endif
 
 		string_path fn, dr, di;
 
 		// application path
+#ifdef _WIN32
 		GetModuleFileName(GetModuleHandle(MODULE_NAME), fn, sizeof(fn));
+#elif defined(__linux__)
+        ssize_t len = readlink("/proc/self/exe", fn, sizeof(fn) - 1);
+        if (len != -1) fn[len] = 0;
+        else fn[0] = 0;
+#endif
 		_splitpath(fn, dr, di, 0, 0);
 		strconcat(sizeof(ApplicationPath), ApplicationPath, dr, di);
 
@@ -85,7 +268,11 @@ void xrCore::_initialize(LPCSTR _ApplicationName, LogCallback cb, BOOL init_fs, 
 		GetUserName(UserName, &sz_user);
 
 		DWORD sz_comp = sizeof(CompName);
+#ifdef _WIN32
 		GetComputerName(CompName, &sz_comp);
+#else
+        gethostname(CompName, sz_comp);
+#endif
 
 		// Mathematics & PSI detection
 		CPU::Detect();
@@ -114,14 +301,14 @@ void xrCore::_initialize(LPCSTR _ApplicationName, LogCallback cb, BOOL init_fs, 
 		std::ifstream cmdlineTxt;
 		char path_A[MAX_PATH];
 		strcpy(path_A, Core.ApplicationPath);
-		strcat(path_A, "\\..\\commandline.txt");
+		strcat(path_A, "/../commandline.txt");
 		cmdlineTxt.open(path_A);
 		
 		if (!cmdlineTxt)
 		{
 			cmdlineTxt.close();
 			strcpy(path_A, Core.WorkingPath);
-			strcat(path_A, "\\commandline.txt");
+			strcat(path_A, "/commandline.txt");
 			cmdlineTxt.open(path_A);
 		}
 
@@ -130,7 +317,7 @@ void xrCore::_initialize(LPCSTR _ApplicationName, LogCallback cb, BOOL init_fs, 
 			Msg("Found commandline file!");
 			std::string line;
 			char temp[2048];
-			sprintf(temp, Params);
+			xr_sprintf(temp, sizeof(temp), "%s", Params);
 			strcat(temp, " ");
 			while (std::getline(cmdlineTxt, line))
 			{
@@ -210,8 +397,10 @@ void xrCore::_destroy()
 //. why ???
 #ifdef _EDITOR
 BOOL WINAPI DllEntryPoint(HINSTANCE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvReserved)
-#else
+#elif defined(_WIN32)
 //BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvReserved)
+BOOL DllMainXrCore(HANDLE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvReserved)
+#else
 BOOL DllMainXrCore(HANDLE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvReserved)
 #endif
 {
@@ -219,18 +408,22 @@ BOOL DllMainXrCore(HANDLE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvReserved
 	{
 	case DLL_PROCESS_ATTACH:
 		{
+#ifdef _WIN32
 			_clear87();
 			_control87(_PC_53, MCW_PC);
 			_control87(_RC_CHOP, MCW_RC);
 			_control87(_RC_NEAR, MCW_RC);
 			_control87(_MCW_EM, MCW_EM);
+#endif
 		}
 		//. LogFile.reserve (256);
 		break;
 	case DLL_THREAD_ATTACH:
+#ifdef _WIN32
 		if (!strstr(GetCommandLine(), "-editor"))
 			CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 		timeBeginPeriod(1);
+#endif
 		break;
 	case DLL_THREAD_DETACH:
 		break;

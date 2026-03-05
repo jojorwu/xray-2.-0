@@ -286,7 +286,7 @@ namespace internal {
         tbb::task* next;
 
         //! The task corresponding to this task_prefix.
-        tbb::task& task() {return *reinterpret_cast<tbb::task*>(this+1);}
+        tbb::task& get_task() {return *reinterpret_cast<tbb::task*>(this+1);}
     };
 
 } // namespace internal
@@ -969,7 +969,7 @@ public:
     //! Changes priority of the task group this task belongs to.
     __TBB_DEPRECATED void set_group_priority ( priority_t p ) {  prefix().context->set_priority(p); }
 
-    //! Retrieves current priority of the task group this task belongs to.
+    //! Retrieves current priority of the current task group this task belongs to.
     __TBB_DEPRECATED priority_t group_priority () const { return prefix().context->priority(); }
 
 #endif /* __TBB_TASK_PRIORITY */

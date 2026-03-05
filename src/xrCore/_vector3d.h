@@ -706,29 +706,12 @@ public:
 		}
 	}
 
-	IC SelfRef hud_to_world()
-	{
-		Device.hud_to_world(*this);
-		return *this;
-	}
-
-	IC SelfRef world_to_hud()
-	{
-		Device.world_to_hud(*this);
-		return *this;
-	}
-
-	IC SelfRef hud_to_world_dir()
-	{
-		Device.hud_to_world_dir(*this);
-		return *this;
-	}
-
-	IC SelfRef world_to_hud_dir()
-	{
-		Device.world_to_hud_dir(*this);
-		return *this;
-	}
+#ifdef XRRENDER_API
+	IC SelfRef hud_to_world();
+	IC SelfRef world_to_hud();
+	IC SelfRef hud_to_world_dir();
+	IC SelfRef world_to_hud_dir();
+#endif
 };
 
 typedef _vector3<float> Fvector;
