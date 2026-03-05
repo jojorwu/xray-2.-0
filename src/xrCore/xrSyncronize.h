@@ -92,7 +92,7 @@ private:
 
 public:
     xrSRWLock();
-    ~xrSRWLock() {};
+    ~xrSRWLock();
 
     void AcquireExclusive();
     void ReleaseExclusive();

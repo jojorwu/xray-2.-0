@@ -93,6 +93,13 @@ xrSRWLock::xrSRWLock()
     InitializeSRWLock(&smutex);
 }
 
+xrSRWLock::~xrSRWLock()
+{
+#ifdef __linux__
+    DeleteSRWLock(&smutex);
+#endif
+}
+
 void xrSRWLock::AcquireExclusive()
 {
 	PROF_EVENT("xrSRWLock::AcquireExclusive");

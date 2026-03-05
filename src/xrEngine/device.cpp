@@ -5,6 +5,7 @@
 #include "../xrCore/profiler.h"
 
 #pragma warning(disable:4995)
+#ifdef _WIN32
 // mmsystem.h
 #define MMNOSOUND
 #define MMNOMIDI
@@ -14,6 +15,7 @@
 #include <mmsystem.h>
 // d3dx9.h
 #include <d3dx9.h>
+#endif
 #pragma warning(default:4995)
 
 #include "x_ray.h"
@@ -455,7 +457,11 @@ void CRenderDevice::on_idle()
 
 	//RCache.set_xform_view ( mView );
 	//RCache.set_xform_project ( mProject );
+#ifdef _WIN32
 	D3DXMatrixInverse((D3DXMATRIX*)&mInvFullTransform, 0, (D3DXMATRIX*)&mFullTransform);
+#else
+    mInvFullTransform.invert(mFullTransform);
+#endif
 
 	vCameraPosition_saved = vCameraPosition;
 	mFullTransform_saved = mFullTransform;

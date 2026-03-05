@@ -115,6 +115,14 @@ extern "C" {
         return FALSE;
     }
 
+    void DeleteSRWLock(SRWLOCK* SRWLock) {
+        if (*SRWLock) {
+            pthread_rwlock_destroy((pthread_rwlock_t*)*SRWLock);
+            xr_free(*SRWLock);
+            *SRWLock = NULL;
+        }
+    }
+
     DWORD GetCurrentThreadId() {
         return (DWORD)pthread_self();
     }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../xrEngine/Render.h"
-#include "../../3rd party/vulkan/vulkan/vulkan.h"
 
 class CVulkanRender : public IRender_interface
 {
@@ -21,6 +20,11 @@ private:
     VkInstance m_instance;
     VkPhysicalDevice m_physical_device;
     VkDevice m_device;
+    VkQueue m_graphics_queue;
+    VkQueue m_present_queue;
+    VkSurfaceKHR m_surface;
+    VkSwapchainKHR m_swapchain;
+    xr_vector<VkImage> m_swapchain_images;
     virtual void reset_begin() override;
     virtual void reset_end() override;
 

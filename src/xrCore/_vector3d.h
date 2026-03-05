@@ -706,12 +706,10 @@ public:
 		}
 	}
 
-#ifdef XRRENDER_API
 	IC SelfRef hud_to_world();
 	IC SelfRef world_to_hud();
 	IC SelfRef hud_to_world_dir();
 	IC SelfRef world_to_hud_dir();
-#endif
 };
 
 typedef _vector3<float> Fvector;

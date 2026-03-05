@@ -269,6 +269,7 @@ extern "C" {
     void ReleaseSRWLockShared(SRWLOCK* SRWLock);
     BOOL TryAcquireSRWLockExclusive(SRWLOCK* SRWLock);
     BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock);
+    void DeleteSRWLock(SRWLOCK* SRWLock);
 
 #ifdef __cplusplus
 }

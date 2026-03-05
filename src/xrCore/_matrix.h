@@ -916,10 +916,8 @@ public:
 		xyz.mul(-1.f);
 	}
 
-#ifdef XRRENDER_API
 	IC SelfRef hud_to_world();
 	IC SelfRef world_to_hud();
-#endif
 };
 
 typedef _matrix<float> Fmatrix;

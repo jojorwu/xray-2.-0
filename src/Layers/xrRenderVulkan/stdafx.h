@@ -11,4 +11,5 @@
 #include "../../xrEngine/Render.h"
 #include "../../xrEngine/IGame_Level.h"
 
+#include "../../3rd party/volk/volk.h"
 #include "vulkan_render.h"
