@@ -66,6 +66,7 @@ private:
     VkFormat FindSupportedFormat(const xr_vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
     void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage, VkBuffer& buffer, VmaAllocation& allocation, VmaAllocationCreateFlags flags = 0);
+    void CreateTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImage& image, VmaAllocation& allocation, VkImageView& view);
 
 #ifdef DEBUG
     VkDebugUtilsMessengerEXT m_debug_messenger;

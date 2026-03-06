@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "VulkanRenderDeviceRender.h"
+#include "VulkanResourceManager.h"
 
 CVulkanRenderDeviceRender::CVulkanRenderDeviceRender()
 {
+    Resources = nullptr;
 }
 
 CVulkanRenderDeviceRender::~CVulkanRenderDeviceRender()
@@ -39,6 +41,7 @@ void CVulkanRenderDeviceRender::ValidateHW()
 
 void CVulkanRenderDeviceRender::DestroyHW()
 {
+    xr_delete(Resources);
 }
 
 void CVulkanRenderDeviceRender::Reset(HWND hWnd, u32& dwWidth, u32& dwHeight, float& fWidth_2, float& fHeight_2)
@@ -56,6 +59,7 @@ void CVulkanRenderDeviceRender::OnDeviceCreate(LPCSTR shName)
 void CVulkanRenderDeviceRender::Create(HWND hWnd, u32& dwWidth, u32& dwHeight, float& fWidth_2, float& fHeight_2, bool)
 {
     VulkanRenderImpl.create();
+    Resources = xr_new<CVulkanResourceManager>();
 }
 
 void CVulkanRenderDeviceRender::SetupGPU(BOOL bForceGPU_SW, BOOL bForceGPU_NonPure, BOOL bForceGPU_REF)

@@ -56,4 +56,7 @@ public:
     virtual void SetCacheXform(Fmatrix& mView, Fmatrix& mProject) override;
     virtual void SetCacheXform_prev(Fmatrix& mView, Fmatrix& mProject) override;
     virtual void OnAssetsChanged() override;
+
+private:
+    class CVulkanResourceManager* Resources;
 };
