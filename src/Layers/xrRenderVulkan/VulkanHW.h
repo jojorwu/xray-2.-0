@@ -62,6 +62,11 @@ private:
     void CreateSwapchain();
     void CreateDepthResources();
     VkFormat FindSupportedFormat(const xr_vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+#ifdef DEBUG
+    VkDebugUtilsMessengerEXT m_debug_messenger;
+    void SetupDebugMessenger();
+#endif
 };
 
 extern CVulkanHW VulkanHW;

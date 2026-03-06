@@ -113,6 +113,20 @@ bool CVulkanBackend::Begin()
 
     vkCmdBeginRenderPass(m_command_buffers[m_current_image_index], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float)render_pass_info.renderArea.extent.width;
+    viewport.height = (float)render_pass_info.renderArea.extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(m_command_buffers[m_current_image_index], 0, 1, &viewport);
+
+    VkRect2D scissor = {};
+    scissor.offset = { 0, 0 };
+    scissor.extent = render_pass_info.renderArea.extent;
+    vkCmdSetScissor(m_command_buffers[m_current_image_index], 0, 1, &scissor);
+
     m_is_frame_started = true;
     return true;
 }

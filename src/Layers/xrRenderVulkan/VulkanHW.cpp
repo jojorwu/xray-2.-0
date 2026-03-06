@@ -25,6 +25,9 @@ CVulkanHW::CVulkanHW()
     m_depth_allocation = VK_NULL_HANDLE;
     m_allocator = VK_NULL_HANDLE;
     m_graphics_family = -1;
+#ifdef DEBUG
+    m_debug_messenger = VK_NULL_HANDLE;
+#endif
 }
 
 CVulkanHW::~CVulkanHW()
@@ -43,6 +46,9 @@ void CVulkanHW::Create()
 
     CreateInstance();
     volkLoadInstance(m_instance);
+#ifdef DEBUG
+    SetupDebugMessenger();
+#endif
     CreateSurface();
     SelectPhysicalDevice();
     CreateLogicalDevice();
@@ -115,6 +121,13 @@ void CVulkanHW::Destroy()
 
     if (m_instance != VK_NULL_HANDLE)
     {
+#ifdef DEBUG
+        if (m_debug_messenger != VK_NULL_HANDLE)
+        {
+            vkDestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
+            m_debug_messenger = VK_NULL_HANDLE;
+        }
+#endif
         vkDestroyInstance(m_instance, nullptr);
         m_instance = VK_NULL_HANDLE;
     }
@@ -155,6 +168,18 @@ void CVulkanHW::RecreateSwapchain()
     VulkanBackend.OnDeviceCreate();
 }
 
+#ifdef DEBUG
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData)
+{
+    Msg("! [Vulkan Validation]: %s", pCallbackData->pMessage);
+    return VK_FALSE;
+}
+#endif
+
 void CVulkanHW::CreateInstance()
 {
     VkApplicationInfo app_info = {};
@@ -176,9 +201,19 @@ void CVulkanHW::CreateInstance()
     extensions.push_back("VK_KHR_xcb_surface");
 #endif
     extensions.push_back("VK_KHR_surface");
+#ifdef DEBUG
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
     create_info.enabledExtensionCount = (uint32_t)extensions.size();
     create_info.ppEnabledExtensionNames = extensions.data();
+
+    xr_vector<const char*> layers;
+#ifdef DEBUG
+    layers.push_back("VK_LAYER_KHRONOS_validation");
+#endif
+    create_info.enabledLayerCount = (uint32_t)layers.size();
+    create_info.ppEnabledLayerNames = layers.data();
 
     if (vkCreateInstance(&create_info, nullptr, &m_instance) != VK_SUCCESS)
     {
@@ -236,6 +271,24 @@ void CVulkanHW::SelectPhysicalDevice()
         score += properties.limits.maxImageDimension2D;
 
         if (!features.geometryShader)
+            return 0;
+
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+        xr_vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+        bool swapchainSupported = false;
+        for (const auto& extension : availableExtensions)
+        {
+            if (xr_strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+            {
+                swapchainSupported = true;
+                break;
+            }
+        }
+
+        if (!swapchainSupported)
             return 0;
 
         return score;
@@ -422,3 +475,19 @@ VkFormat CVulkanHW::FindSupportedFormat(const xr_vector<VkFormat>& candidates, V
 
     return VK_FORMAT_UNDEFINED;
 }
+
+#ifdef DEBUG
+void CVulkanHW::SetupDebugMessenger()
+{
+    VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.pfnUserCallback = DebugCallback;
+
+    if (vkCreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debug_messenger) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to set up debug messenger!");
+    }
+}
+#endif
