@@ -31,6 +31,8 @@ public:
     void SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
     void SetTexture(uint32_t binding, VkImageView view, VkSampler sampler);
 
+    void SetConstants(R_constant_table* table);
+
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
     VkCommandPool GetCommandPool() { return m_command_pool; }
     VkRenderPass GetRenderPass() { return m_render_pass; }

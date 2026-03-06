@@ -203,6 +203,24 @@ void CVulkanBackend::SetTexture(uint32_t binding, VkImageView view, VkSampler sa
     m_bindings.dirty = true;
 }
 
+void CVulkanBackend::SetConstants(R_constant_table* table)
+{
+    if (!table) return;
+
+    // For now we just bind all buffers from the table
+#if defined(USE_DX10) || defined(USE_DX11) || defined(USE_VULKAN)
+    for (auto& record : table->m_CBTable)
+    {
+        dx10ConstantBuffer* cb = record.second._get();
+        if (cb)
+        {
+            // Bind to slot based on some mapping logic, for now use index
+            SetUniformBuffer(record.first, cb->GetBuffer(), 0, cb->GetSize());
+        }
+    }
+#endif
+}
+
 void CVulkanBackend::ApplyBindings()
 {
     if (!m_bindings.dirty) return;

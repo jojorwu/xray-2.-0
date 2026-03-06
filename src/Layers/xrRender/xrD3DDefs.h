@@ -22,8 +22,8 @@ typedef VkImageView ID3DRenderTargetView;
 typedef VkImageView ID3DDepthStencilView;
 typedef class CVulkanTexture ID3DBaseTexture;
 typedef VkImageCreateInfo D3D_TEXTURE2D_DESC;
-typedef VkBuffer ID3DVertexBuffer;
-typedef VkBuffer ID3DIndexBuffer;
+typedef class CVulkanBuffer ID3DVertexBuffer;
+typedef class CVulkanBuffer ID3DIndexBuffer;
 typedef VkImage ID3DTexture3D;
 typedef VkPipeline ID3DState;
 

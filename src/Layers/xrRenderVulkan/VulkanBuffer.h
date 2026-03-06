@@ -20,6 +20,9 @@ public:
     VkDeviceSize GetSize() { return m_size; }
     VmaAllocation GetAllocation() { return m_allocation; }
 
+    void AddRef() {}
+    void Release() { /* Managed by engine */ }
+
 protected:
     VkBuffer m_buffer;
     VmaAllocation m_allocation;

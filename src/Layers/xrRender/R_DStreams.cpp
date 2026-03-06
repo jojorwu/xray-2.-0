@@ -18,7 +18,10 @@ void _VertexStream::Create()
 	DEV->Evict();
 
 	mSize = rsDVB_Size * 1024;
-#if defined(USE_DX10) || defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pVB = xr_new<CVulkanVertexBuffer>();
+    pVB->Create(mSize, true);
+#elif defined(USE_DX11) || defined(USE_DX10)
 	D3D_BUFFER_DESC bufferDesc;
 	bufferDesc.ByteWidth = mSize;
 	bufferDesc.Usage = D3D_USAGE_DYNAMIC;
@@ -43,14 +46,18 @@ void _VertexStream::Create()
 
 void _VertexStream::Destroy()
 {
+#ifndef USE_VULKAN
 	HW.stats_manager.decrement_stats_vb(pVB);
+#endif
 	_RELEASE(pVB);
 	_clear();
 }
 
 void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 {
-#ifdef USE_DX11
+#if defined(USE_VULKAN)
+    // Vulkan mapping is always persistent if VMA_ALLOCATION_CREATE_MAPPED_BIT used
+#elif defined(USE_DX11)
 	D3D11_MAPPED_SUBRESOURCE MappedSubRes;
 #endif
 
@@ -78,7 +85,10 @@ void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 		vOffset = 0;
 		mDiscardID ++;
 
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+        pVB->Map((void**)&pData);
+        pData += vOffset;
+#elif defined(USE_DX11)
 		HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_DISCARD, 0, &MappedSubRes);
 		pData = (BYTE*)MappedSubRes.pData;
 		pData += vOffset;
@@ -100,7 +110,10 @@ void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 		mPosition = vl_mPosition * Stride;
 		vOffset = vl_mPosition;
 
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+        pVB->Map((void**)&pData);
+        pData += vOffset * Stride;
+#elif defined(USE_DX11)
 		HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_NO_OVERWRITE, 0, &MappedSubRes);
 		pData = (BYTE*)MappedSubRes.pData;
 		pData += vOffset * Stride;
@@ -132,7 +145,10 @@ void _VertexStream::Unlock(u32 Count, u32 Stride)
 
 	VERIFY(pVB);
 
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pVB->Unmap();
+    pVB->Flush();
+#elif defined(USE_DX11)
 	HW.pContext->Unmap(pVB, 0);
 #elif defined(USE_DX10)
 	pVB->Unmap();
@@ -177,7 +193,10 @@ void _IndexStream::Create()
 
 	mSize = rsDIB_Size * 1024;
 
-#if defined(USE_DX10) || defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pIB = xr_new<CVulkanIndexBuffer>();
+    pIB->Create(mSize, true);
+#elif defined(USE_DX10) || defined(USE_DX11)
 	D3D_BUFFER_DESC bufferDesc;
 	bufferDesc.ByteWidth = mSize;
 	bufferDesc.Usage = D3D_USAGE_DYNAMIC;
@@ -202,14 +221,17 @@ void _IndexStream::Create()
 
 void _IndexStream::Destroy()
 {
+#ifndef USE_VULKAN
 	HW.stats_manager.decrement_stats_ib(pIB);
+#endif
 	_RELEASE(pIB);
 	_clear();
 }
 
 u16* _IndexStream::Lock(u32 Count, u32& vOffset)
 {
-#ifdef USE_DX11
+#if defined(USE_VULKAN)
+#elif defined(USE_DX11)
 	D3D11_MAPPED_SUBRESOURCE MappedSubRes;
 #endif
 	PGO(Msg("PGO:IB_LOCK:%d",Count));
@@ -229,7 +251,10 @@ u16* _IndexStream::Lock(u32 Count, u32& vOffset)
 		dwFlags = LOCKFLAGS_FLUSH; // discard it's contens
 		mDiscardID ++;
 	}
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pIB->Map((void**)&pLockedData);
+    pLockedData += mPosition * 2;
+#elif defined(USE_DX11)
 	D3D_MAP MapMode = (dwFlags == LOCKFLAGS_APPEND) ? D3D_MAP_WRITE_NO_OVERWRITE : D3D_MAP_WRITE_DISCARD;
 	HW.pContext->Map(pIB, 0, MapMode, 0, &MappedSubRes);
 	pLockedData = (BYTE*)MappedSubRes.pData;
@@ -254,7 +279,10 @@ void _IndexStream::Unlock(u32 RealCount)
 	PGO(Msg("PGO:IB_UNLOCK:%d",RealCount));
 	mPosition += RealCount;
 	VERIFY(pIB);
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pIB->Unmap();
+    pIB->Flush();
+#elif defined(USE_DX11)
 	HW.pContext->Unmap(pIB, 0);
 #elif defined(USE_DX10)
 	pIB->Unmap();
