@@ -8,7 +8,8 @@ public:
     CVulkanShader();
     ~CVulkanShader();
 
-    void Create(const xr_vector<uint32_t>& code);
+    void Create(const xr_vector<u32>& code);
+    void Load(LPCSTR name);
     void Destroy();
 
     VkShaderModule GetModule() { return m_module; }

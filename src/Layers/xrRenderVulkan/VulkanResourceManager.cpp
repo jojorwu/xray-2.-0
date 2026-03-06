@@ -22,30 +22,97 @@ void CVulkanResourceManager::OnDeviceDestroy(BOOL bKeepTextures)
 
 CTexture* CVulkanResourceManager::_CreateTexture(LPCSTR Name)
 {
-    // Skeleton implementation
-    return nullptr;
+    if (0 == xr_strcmp(Name, "null")) return nullptr;
+
+    auto it = m_textures.find(Name);
+    if (it != m_textures.end()) return it->second;
+
+    CTexture* T = xr_new<CTexture>();
+    T->dwFlags |= xr_resource_flagged::RF_REGISTERED;
+    m_textures.insert(std::make_pair(xr_strdup(Name), T));
+
+    // T->Preload();
+    // if (RDEVICE.b_is_Ready && !bDeferredLoad) T->Load();
+
+    return T;
 }
 
 void CVulkanResourceManager::_DeleteTexture(const CTexture* T)
 {
+    for (auto it = m_textures.begin(); it != m_textures.end(); ++it)
+    {
+        if (it->second == T)
+        {
+            xr_free(it->first);
+            m_textures.erase(it);
+            xr_delete(T);
+            return;
+        }
+    }
 }
 
 SVS* CVulkanResourceManager::_CreateVS(LPCSTR Name)
 {
-    return nullptr;
+    auto it = m_vs.find(Name);
+    if (it != m_vs.end())
+        return it->second;
+
+    SVS* VS = xr_new<SVS>();
+    CVulkanShader shader;
+    shader.Load(Name);
+    VS->vs = shader.GetModule();
+    // VS->constants = ...; // Need to handle reflection
+    m_vs.insert(std::make_pair(xr_strdup(Name), VS));
+    return VS;
 }
 
 void CVulkanResourceManager::_DeleteVS(const SVS* VS)
 {
+    for (auto it = m_vs.begin(); it != m_vs.end(); ++it)
+    {
+        if (it->second == VS)
+        {
+            if (VS->vs != VK_NULL_HANDLE)
+                vkDestroyShaderModule(VulkanHW.GetDevice(), VS->vs, nullptr);
+
+            xr_free(it->first);
+            m_vs.erase(it);
+            xr_delete(VS);
+            return;
+        }
+    }
 }
 
 SPS* CVulkanResourceManager::_CreatePS(LPCSTR Name)
 {
-    return nullptr;
+    auto it = m_ps.find(Name);
+    if (it != m_ps.end())
+        return it->second;
+
+    SPS* PS = xr_new<SPS>();
+    CVulkanShader shader;
+    shader.Load(Name);
+    PS->ps = shader.GetModule();
+    // PS->constants = ...;
+    m_ps.insert(std::make_pair(xr_strdup(Name), PS));
+    return PS;
 }
 
 void CVulkanResourceManager::_DeletePS(const SPS* PS)
 {
+    for (auto it = m_ps.begin(); it != m_ps.end(); ++it)
+    {
+        if (it->second == PS)
+        {
+            if (PS->ps != VK_NULL_HANDLE)
+                vkDestroyShaderModule(VulkanHW.GetDevice(), PS->ps, nullptr);
+
+            xr_free(it->first);
+            m_ps.erase(it);
+            xr_delete(PS);
+            return;
+        }
+    }
 }
 
 SGeometry* CVulkanResourceManager::CreateGeom(D3DVERTEXELEMENT9* decl, ID3DVertexBuffer* vb, ID3DIndexBuffer* ib)
@@ -69,6 +136,7 @@ SGeometry* CVulkanResourceManager::CreateGeom(D3DVERTEXELEMENT9* decl, ID3DVerte
 SGeometry* CVulkanResourceManager::CreateGeom(u32 FVF, ID3DVertexBuffer* vb, ID3DIndexBuffer* ib)
 {
     D3DVERTEXELEMENT9 dcl[MAX_FVF_DECL_SIZE];
+    ZeroMemory(dcl, sizeof(dcl));
     // Need D3DX replacement for D3DXDeclaratorFromFVF on Linux/Vulkan
     // CHK_DX(D3DXDeclaratorFromFVF(FVF, dcl));
     return CreateGeom(dcl, vb, ib);
@@ -89,17 +157,18 @@ void CVulkanResourceManager::DeleteGeom(const SGeometry* VS)
 
 SDeclaration* CVulkanResourceManager::_CreateDecl(D3DVERTEXELEMENT9* dcl)
 {
+    int count = 0;
+    while (dcl[count].Stream != 0xFF) count++;
+    count++; // Include end marker
+
     for (auto it : v_declarations)
     {
-        // Simple comparison for now
-        if (memcmp(it->dcl_code.data(), dcl, it->dcl_code.size() * sizeof(D3DVERTEXELEMENT9)) == 0)
+        if (it->dcl_code.size() != count) continue;
+        if (memcmp(it->dcl_code.data(), dcl, count * sizeof(D3DVERTEXELEMENT9)) == 0)
             return it;
     }
 
     SDeclaration* D = xr_new<SDeclaration>();
-    int count = 0;
-    while (dcl[count].Stream != 0xFF) count++;
-    count++; // Include end marker
     D->dcl_code.assign(dcl, dcl + count);
     v_declarations.push_back(D);
     return D;
