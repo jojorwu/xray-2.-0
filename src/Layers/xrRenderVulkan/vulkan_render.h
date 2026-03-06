@@ -40,6 +40,8 @@ private:
     VkSemaphore m_render_finished_semaphore;
     VkFence m_in_flight_fence;
 
+    uint32_t m_current_image_index;
+
     VmaAllocator m_allocator;
     virtual void reset_begin() override;
     virtual void reset_end() override;
@@ -116,6 +118,11 @@ private:
     virtual u32 memory_usage() override { return 0; }
     virtual u32 active_phase() override { return 0; }
     virtual void RenderToTarget(RRT target) override {}
+
+    void Begin();
+    void End();
+
+    VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
 
 protected:
     virtual void ScreenshotImpl(ScreenshotMode mode, LPCSTR name, CMemoryWriter* memory_writer) override {}

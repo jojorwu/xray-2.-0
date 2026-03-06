@@ -446,3 +446,106 @@ HRESULT CVulkanRender::shader_compile(
 {
     return E_NOTIMPL;
 }
+
+void CVulkanRender::Begin()
+{
+    if (m_device == VK_NULL_HANDLE || m_swapchain == VK_NULL_HANDLE)
+        return;
+
+    vkWaitForFences(m_device, 1, &m_in_flight_fence, VK_TRUE, UINT64_MAX);
+    vkResetFences(m_device, 1, &m_in_flight_fence);
+
+    VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_image_available_semaphore, VK_NULL_HANDLE, &m_current_image_index);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        Msg("! Vulkan: Swapchain out of date on AcquireNextImageKHR");
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        Msg("! Vulkan: Failed to acquire swapchain image!");
+        return;
+    }
+
+    vkResetCommandBuffer(m_command_buffers[m_current_image_index], 0);
+
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(m_command_buffers[m_current_image_index], &begin_info) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to begin recording command buffer!");
+        return;
+    }
+
+    VkRenderPassBeginInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_info.renderPass = m_render_pass;
+    render_pass_info.framebuffer = m_framebuffers[m_current_image_index];
+    render_pass_info.renderArea.offset = { 0, 0 };
+    render_pass_info.renderArea.extent = m_swapchain_extent;
+
+    VkClearValue clear_color = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+    render_pass_info.clearValueCount = 1;
+    render_pass_info.pClearValues = &clear_color;
+
+    vkCmdBeginRenderPass(m_command_buffers[m_current_image_index], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void CVulkanRender::End()
+{
+    if (m_device == VK_NULL_HANDLE || m_swapchain == VK_NULL_HANDLE)
+        return;
+
+    vkCmdEndRenderPass(m_command_buffers[m_current_image_index]);
+
+    if (vkEndCommandBuffer(m_command_buffers[m_current_image_index]) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to record command buffer!");
+        return;
+    }
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore wait_semaphores[] = { m_image_available_semaphore };
+    VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pWaitDstStageMask = wait_stages;
+
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_command_buffers[m_current_image_index];
+
+    VkSemaphore signal_semaphores[] = { m_render_finished_semaphore };
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = signal_semaphores;
+
+    if (vkQueueSubmit(m_graphics_queue, 1, &submit_info, m_in_flight_fence) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to submit draw command buffer!");
+        return;
+    }
+
+    VkPresentInfoKHR present_info = {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = signal_semaphores;
+
+    VkSwapchainKHR swapchains[] = { m_swapchain };
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = swapchains;
+    present_info.pImageIndices = &m_current_image_index;
+
+    result = vkQueuePresentKHR(m_present_queue, &present_info);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    {
+        Msg("! Vulkan: Swapchain out of date on QueuePresentKHR");
+    }
+    else if (result != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to present swapchain image!");
+    }
+}
