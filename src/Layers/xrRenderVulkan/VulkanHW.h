@@ -29,6 +29,7 @@ public:
     const xr_vector<VkImageView>& GetSwapchainImageViews() { return m_swapchain_image_views; }
     VmaAllocator GetAllocator() { return m_allocator; }
     int GetGraphicsFamily() { return m_graphics_family; }
+    int GetPresentFamily() { return m_present_family; }
 
     VkImage GetDepthImage() { return m_depth_image; }
     VkImageView GetDepthImageView() { return m_depth_image_view; }
@@ -54,6 +55,7 @@ private:
 
     VmaAllocator m_allocator;
     int m_graphics_family;
+    int m_present_family;
 
     void CreateInstance();
     void CreateSurface();

@@ -25,6 +25,7 @@ CVulkanHW::CVulkanHW()
     m_depth_allocation = VK_NULL_HANDLE;
     m_allocator = VK_NULL_HANDLE;
     m_graphics_family = -1;
+    m_present_family = -1;
 #ifdef DEBUG
     m_debug_messenger = VK_NULL_HANDLE;
 #endif
@@ -135,6 +136,15 @@ void CVulkanHW::Destroy()
 
 void CVulkanHW::RecreateSwapchain()
 {
+    // Handle minimization
+    RECT rc;
+    GetClientRect((HWND)Device.m_hWnd, &rc);
+    while (rc.right == 0 || rc.bottom == 0)
+    {
+        GetClientRect((HWND)Device.m_hWnd, &rc);
+        Sleep(1);
+    }
+
     vkDeviceWaitIdle(m_device);
 
     VulkanBackend.OnDeviceDestroy();
@@ -224,6 +234,11 @@ void CVulkanHW::CreateInstance()
 void CVulkanHW::CreateSurface()
 {
 #ifdef _WIN32
+    if (Device.m_hWnd == NULL)
+    {
+        Msg("! Vulkan: Device.m_hWnd is NULL during surface creation!");
+        return;
+    }
     VkWin32SurfaceCreateInfoKHR surface_create_info = {};
     surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surface_create_info.hinstance = GetModuleHandle(nullptr);
@@ -233,6 +248,11 @@ void CVulkanHW::CreateSurface()
         Msg("! Vulkan: Failed to create Win32 surface!");
     }
 #else
+    if (Device.m_hWnd == NULL)
+    {
+        Msg("! Vulkan: Device.m_hWnd is NULL during surface creation!");
+        return;
+    }
     VkXcbSurfaceCreateInfoKHR surface_create_info = {};
     surface_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     surface_create_info.connection = (xcb_connection_t*)Device.m_XWindow;
@@ -291,6 +311,29 @@ void CVulkanHW::SelectPhysicalDevice()
         if (!swapchainSupported)
             return 0;
 
+        // Check for queue support
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+        xr_vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+        bool graphicsSupported = false;
+        bool presentSupported = false;
+
+        for (uint32_t i = 0; i < queueFamilyCount; i++)
+        {
+            if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                graphicsSupported = true;
+
+            VkBool32 presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
+            if (presentSupport)
+                presentSupported = true;
+        }
+
+        if (!graphicsSupported || !presentSupported)
+            return 0;
+
         return score;
     };
 
@@ -325,21 +368,39 @@ void CVulkanHW::CreateLogicalDevice()
     vkGetPhysicalDeviceQueueFamilyProperties(m_physical_device, &queueFamilyCount, queueFamilies.data());
 
     m_graphics_family = -1;
+    m_present_family = -1;
+
     for (uint32_t i = 0; i < queueFamilyCount; i++)
     {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
             m_graphics_family = i;
-            break;
         }
+
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(m_physical_device, i, m_surface, &presentSupport);
+        if (presentSupport)
+        {
+            m_present_family = i;
+        }
+
+        if (m_graphics_family != -1 && m_present_family != -1)
+            break;
     }
 
+    xr_set<uint32_t> uniqueQueueFamilies = { (uint32_t)m_graphics_family, (uint32_t)m_present_family };
+    xr_vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo = {};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = m_graphics_family;
-    queueCreateInfo.queueCount = 1;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
+
+    for (uint32_t queueFamily : uniqueQueueFamilies)
+    {
+        VkDeviceQueueCreateInfo queueCreateInfo = {};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = queueFamily;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
     xr_vector<const char*> deviceExtensions;
@@ -347,8 +408,8 @@ void CVulkanHW::CreateLogicalDevice()
 
     VkDeviceCreateInfo deviceCreateInfo = {};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-    deviceCreateInfo.queueCreateInfoCount = 1;
+    deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
+    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
     deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
@@ -358,28 +419,96 @@ void CVulkanHW::CreateLogicalDevice()
         Msg("! Vulkan: Failed to create logical device!");
     }
 
-    vkGetDeviceQueue(m_device, graphicsFamily, 0, &m_graphics_queue);
-    m_present_queue = m_graphics_queue;
+    vkGetDeviceQueue(m_device, m_graphics_family, 0, &m_graphics_queue);
+    vkGetDeviceQueue(m_device, m_present_family, 0, &m_present_queue);
 }
 
 void CVulkanHW::CreateSwapchain()
 {
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physical_device, m_surface, &capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, m_surface, &formatCount, nullptr);
+    xr_vector<VkSurfaceFormatKHR> formats(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, m_surface, &formatCount, formats.data());
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface, &presentModeCount, nullptr);
+    xr_vector<VkPresentModeKHR> presentModes(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface, &presentModeCount, presentModes.data());
+
+    VkSurfaceFormatKHR surfaceFormat = formats[0];
+    for (const auto& format : formats)
+    {
+        if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            surfaceFormat = format;
+            break;
+        }
+    }
+
+    VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    if (!psDeviceFlags.test(rsVSync))
+    {
+        for (const auto& mode : presentModes)
+        {
+            if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+            {
+                presentMode = mode;
+                break;
+            }
+            if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+            {
+                presentMode = mode;
+            }
+        }
+    }
+
+    VkExtent2D extent = { Device.dwWidth, Device.dwHeight };
+    extent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, extent.width));
+    extent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, extent.height));
+
+    uint32_t imageCount = capabilities.minImageCount + 1;
+    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
+    {
+        imageCount = capabilities.maxImageCount;
+    }
+
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {};
     swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchainCreateInfo.surface = m_surface;
-    swapchainCreateInfo.minImageCount = 2;
-    swapchainCreateInfo.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-    swapchainCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    swapchainCreateInfo.imageExtent = { Device.dwWidth, Device.dwHeight };
+    swapchainCreateInfo.minImageCount = imageCount;
+    swapchainCreateInfo.imageFormat = surfaceFormat.format;
+    swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
+    swapchainCreateInfo.imageExtent = extent;
     swapchainCreateInfo.imageArrayLayers = 1;
     swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    uint32_t queueFamilyIndices[] = { (uint32_t)m_graphics_family, (uint32_t)m_present_family };
+
+    if (m_graphics_family != m_present_family)
+    {
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchainCreateInfo.queueFamilyIndexCount = 2;
+        swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
+    }
+    else
+    {
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    swapchainCreateInfo.preTransform = capabilities.currentTransform;
+    swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchainCreateInfo.presentMode = presentMode;
+    swapchainCreateInfo.clipped = VK_TRUE;
 
     if (vkCreateSwapchainKHR(m_device, &swapchainCreateInfo, nullptr, &m_swapchain) != VK_SUCCESS)
     {
         Msg("! Vulkan: Failed to create swapchain!");
     }
 
-    m_swapchain_format = swapchainCreateInfo.imageFormat;
+    m_swapchain_format = surfaceFormat.format;
     m_swapchain_extent = swapchainCreateInfo.imageExtent;
 
     uint32_t imageCount;
