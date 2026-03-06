@@ -7,9 +7,13 @@ CVulkanBackend::CVulkanBackend()
 {
     m_render_pass = VK_NULL_HANDLE;
     m_command_pool = VK_NULL_HANDLE;
-    m_image_available_semaphore = VK_NULL_HANDLE;
-    m_render_finished_semaphore = VK_NULL_HANDLE;
-    m_in_flight_fence = VK_NULL_HANDLE;
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        m_image_available_semaphores[i] = VK_NULL_HANDLE;
+        m_render_finished_semaphores[i] = VK_NULL_HANDLE;
+        m_in_flight_fences[i] = VK_NULL_HANDLE;
+    }
+    m_current_frame = 0;
     m_current_image_index = 0;
     m_is_frame_started = false;
 }
@@ -31,14 +35,17 @@ void CVulkanBackend::Destroy()
 {
     VkDevice device = VulkanHW.GetDevice();
 
-    if (m_in_flight_fence != VK_NULL_HANDLE)
-        vkDestroyFence(device, m_in_flight_fence, nullptr);
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        if (m_in_flight_fences[i] != VK_NULL_HANDLE)
+            vkDestroyFence(device, m_in_flight_fences[i], nullptr);
 
-    if (m_render_finished_semaphore != VK_NULL_HANDLE)
-        vkDestroySemaphore(device, m_render_finished_semaphore, nullptr);
+        if (m_render_finished_semaphores[i] != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, m_render_finished_semaphores[i], nullptr);
 
-    if (m_image_available_semaphore != VK_NULL_HANDLE)
-        vkDestroySemaphore(device, m_image_available_semaphore, nullptr);
+        if (m_image_available_semaphores[i] != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, m_image_available_semaphores[i], nullptr);
+    }
 
     if (m_command_pool != VK_NULL_HANDLE)
         vkDestroyCommandPool(device, m_command_pool, nullptr);
@@ -69,10 +76,9 @@ bool CVulkanBackend::Begin()
     if (device == VK_NULL_HANDLE || swapchain == VK_NULL_HANDLE)
         return false;
 
-    vkWaitForFences(device, 1, &m_in_flight_fence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &m_in_flight_fence);
+    vkWaitForFences(device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
 
-    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_image_available_semaphore, VK_NULL_HANDLE, &m_current_image_index);
+    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &m_current_image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -85,6 +91,8 @@ bool CVulkanBackend::Begin()
         Msg("! Vulkan: Failed to acquire swapchain image!");
         return false;
     }
+
+    vkResetFences(device, 1, &m_in_flight_fences[m_current_frame]);
 
     vkResetCommandBuffer(m_command_buffers[m_current_image_index], 0);
 
@@ -163,6 +171,63 @@ void CVulkanBackend::SetDescriptorSet(VkDescriptorSet set, VkPipelineLayout layo
     vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], bindPoint, layout, firstSet, 1, &set, 0, nullptr);
 }
 
+void CVulkanBackend::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+{
+    if (!m_is_frame_started)
+        return;
+
+    vkCmdDraw(m_command_buffers[m_current_image_index], vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void CVulkanBackend::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+{
+    if (!m_is_frame_started)
+        return;
+
+    vkCmdDrawIndexed(m_command_buffers[m_current_image_index], indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
+void CVulkanBackend::Clear()
+{
+    if (!m_is_frame_started)
+        return;
+
+    VkClearAttachment attachments[2] = {};
+    attachments[0].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    attachments[0].colorAttachment = 0;
+    attachments[0].clearValue.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+
+    attachments[1].aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    attachments[1].clearValue.depthStencil = { 1.0f, 0 };
+
+    VkClearRect rect = {};
+    rect.rect.offset = { 0, 0 };
+    rect.rect.extent = VulkanHW.GetSwapchainExtent();
+    rect.baseArrayLayer = 0;
+    rect.layerCount = 1;
+
+    vkCmdClearAttachments(m_command_buffers[m_current_image_index], 2, attachments, 1, &rect);
+}
+
+void CVulkanBackend::ClearTarget()
+{
+    if (!m_is_frame_started)
+        return;
+
+    VkClearAttachment attachment = {};
+    attachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    attachment.colorAttachment = 0;
+    attachment.clearValue.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+
+    VkClearRect rect = {};
+    rect.rect.offset = { 0, 0 };
+    rect.rect.extent = VulkanHW.GetSwapchainExtent();
+    rect.baseArrayLayer = 0;
+    rect.layerCount = 1;
+
+    vkCmdClearAttachments(m_command_buffers[m_current_image_index], 1, &attachment, 1, &rect);
+}
+
 void CVulkanBackend::End()
 {
     if (!m_is_frame_started)
@@ -182,7 +247,7 @@ void CVulkanBackend::End()
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore wait_semaphores[] = { m_image_available_semaphore };
+    VkSemaphore wait_semaphores[] = { m_image_available_semaphores[m_current_frame] };
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = wait_semaphores;
@@ -190,11 +255,14 @@ void CVulkanBackend::End()
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_command_buffers[m_current_image_index];
 
-    VkSemaphore signal_semaphores[] = { m_render_finished_semaphore };
+    VkSemaphore signal_semaphores[] = { m_render_finished_semaphores[m_current_frame] };
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 
-    vkQueueSubmit(VulkanHW.GetGraphicsQueue(), 1, &submit_info, m_in_flight_fence);
+    if (vkQueueSubmit(VulkanHW.GetGraphicsQueue(), 1, &submit_info, m_in_flight_fences[m_current_frame]) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to submit graphics queue!");
+    }
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -211,6 +279,8 @@ void CVulkanBackend::End()
         Msg("! Vulkan: Swapchain out of date on QueuePresentKHR");
         VulkanHW.RecreateSwapchain();
     }
+
+    m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void CVulkanBackend::CreateRenderPass()
@@ -313,7 +383,10 @@ void CVulkanBackend::CreateSyncPrimitives()
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VkDevice device = VulkanHW.GetDevice();
-    vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_image_available_semaphore);
-    vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_render_finished_semaphore);
-    vkCreateFence(device, &fenceInfo, nullptr, &m_in_flight_fence);
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_image_available_semaphores[i]);
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_render_finished_semaphores[i]);
+        vkCreateFence(device, &fenceInfo, nullptr, &m_in_flight_fences[i]);
+    }
 }

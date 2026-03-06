@@ -72,6 +72,15 @@ void CVulkanVertexBuffer::Create(uint32_t size, bool dynamic)
     CVulkanBuffer::Create(size, usage, mem_usage, flags);
 }
 
+void CVulkanUniformBuffer::Create(uint32_t size)
+{
+    VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    CVulkanBuffer::Create(size, usage, mem_usage, flags);
+}
+
 void CVulkanIndexBuffer::Create(uint32_t size, bool dynamic)
 {
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;

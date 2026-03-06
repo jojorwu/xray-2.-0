@@ -136,6 +136,7 @@ void CVulkanRenderDeviceRender::Begin()
 
 void CVulkanRenderDeviceRender::Clear()
 {
+    VulkanBackend.Clear();
 }
 
 void CVulkanRenderDeviceRender::End()
@@ -145,6 +146,7 @@ void CVulkanRenderDeviceRender::End()
 
 void CVulkanRenderDeviceRender::ClearTarget()
 {
+    VulkanBackend.ClearTarget();
 }
 
 void CVulkanRenderDeviceRender::SetCacheXform(Fmatrix& mView, Fmatrix& mProject)

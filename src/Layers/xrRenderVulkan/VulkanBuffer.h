@@ -32,6 +32,12 @@ public:
     void Create(uint32_t size, bool dynamic);
 };
 
+class CVulkanUniformBuffer : public CVulkanBuffer
+{
+public:
+    void Create(uint32_t size);
+};
+
 class CVulkanIndexBuffer : public CVulkanBuffer
 {
 public:

@@ -70,6 +70,24 @@ void CVulkanTexture::Load(LPCSTR name)
     Msg("Vulkan: Loading texture %s", name);
 }
 
+void CVulkanTexture::UploadData(void* data, uint32_t size)
+{
+    VkBuffer stagingBuffer;
+    VmaAllocation stagingAllocation;
+    VulkanHW.CreateBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, stagingBuffer, stagingAllocation, VMA_ALLOCATION_CREATE_MAPPED_BIT);
+
+    void* mappedData;
+    vmaMapMemory(VulkanHW.GetAllocator(), stagingAllocation, &mappedData);
+    memcpy(mappedData, data, size);
+    vmaUnmapMemory(VulkanHW.GetAllocator(), stagingAllocation);
+
+    VulkanHW.TransitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VulkanHW.CopyBufferToImage(stagingBuffer, m_image, m_width, m_height);
+    VulkanHW.TransitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vmaDestroyBuffer(VulkanHW.GetAllocator(), stagingBuffer, stagingAllocation);
+}
+
 void CVulkanTexture::CreateImageView()
 {
     VkImageViewCreateInfo viewInfo = {};

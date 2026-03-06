@@ -23,4 +23,7 @@ public:
     virtual SGeometry* CreateGeom(D3DVERTEXELEMENT9* decl, ID3DVertexBuffer* vb, ID3DIndexBuffer* ib) override;
     virtual SGeometry* CreateGeom(u32 FVF, ID3DVertexBuffer* vb, ID3DIndexBuffer* ib) override;
     virtual void DeleteGeom(const SGeometry* VS) override;
+
+    virtual SDeclaration* _CreateDecl(D3DVERTEXELEMENT9* dcl) override;
+    virtual void _DeleteDecl(const SDeclaration* dcl) override;
 };

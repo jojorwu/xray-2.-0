@@ -12,6 +12,7 @@ public:
     void Destroy();
 
     void Load(LPCSTR name);
+    void UploadData(void* data, uint32_t size);
 
     VkImage GetImage() { return m_image; }
     VkImageView GetImageView() { return m_image_view; }
