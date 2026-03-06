@@ -50,3 +50,10 @@ HRESULT CVulkanRender::shader_compile(
 {
     return E_NOTIMPL;
 }
+
+ID3DBaseTexture* CVulkanRender::texture_load(LPCSTR fname, u32& msize)
+{
+    CVulkanTexture* T = xr_new<CVulkanTexture>();
+    T->Load(fname, msize);
+    return T;
+}

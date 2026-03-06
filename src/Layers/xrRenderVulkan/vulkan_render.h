@@ -95,6 +95,8 @@ private:
     virtual u32 active_phase() override { return 0; }
     virtual void RenderToTarget(RRT target) override {}
 
+    ID3DBaseTexture* texture_load(LPCSTR fname, u32& msize);
+
 public:
     bool Begin() { return VulkanBackend.Begin(); }
     void End() { VulkanBackend.End(); }

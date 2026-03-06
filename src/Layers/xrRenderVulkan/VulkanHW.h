@@ -72,8 +72,8 @@ private:
 
     VkCommandBuffer BeginSingleTimeCommands();
     void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
-    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount = 1);
+    void CopyBufferToImage(VkBuffer buffer, VkImage image, const xr_vector<VkBufferImageCopy>& regions);
 
 #ifdef DEBUG
     VkDebugUtilsMessengerEXT m_debug_messenger;

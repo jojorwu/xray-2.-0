@@ -31,8 +31,8 @@ CTexture* CVulkanResourceManager::_CreateTexture(LPCSTR Name)
     T->dwFlags |= xr_resource_flagged::RF_REGISTERED;
     m_textures.insert(std::make_pair(xr_strdup(Name), T));
 
-    // T->Preload();
-    // if (RDEVICE.b_is_Ready && !bDeferredLoad) T->Load();
+    T->Preload();
+    if (Device.b_is_Ready && !bDeferredLoad) T->Load();
 
     return T;
 }

@@ -752,7 +752,7 @@ void CVulkanHW::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkFreeCommandBuffers(m_device, VulkanBackend.GetCommandPool(), 1, &commandBuffer);
 }
 
-void CVulkanHW::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+void CVulkanHW::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount)
 {
     VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -765,7 +765,7 @@ void CVulkanHW::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
     barrier.image = image;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.levelCount = mipCount;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
 
@@ -800,24 +800,11 @@ void CVulkanHW::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
     EndSingleTimeCommands(commandBuffer);
 }
 
-void CVulkanHW::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+void CVulkanHW::CopyBufferToImage(VkBuffer buffer, VkImage image, const xr_vector<VkBufferImageCopy>& regions)
 {
     VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
-    VkBufferImageCopy region = {};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { width, height, 1 };
-
-    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)regions.size(), regions.data());
 
     EndSingleTimeCommands(commandBuffer);
 }
