@@ -26,4 +26,7 @@ public:
 
     virtual SDeclaration* _CreateDecl(D3DVERTEXELEMENT9* dcl) override;
     virtual void _DeleteDecl(const SDeclaration* dcl) override;
+
+    virtual SState* _CreateState(SimulatorStates& Code) override;
+    virtual void _DeleteState(const SState* SB) override;
 };

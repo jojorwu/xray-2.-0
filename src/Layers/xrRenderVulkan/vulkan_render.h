@@ -49,8 +49,8 @@ private:
     virtual void flush() override {}
     virtual void set_Object(IRenderable* O) override {}
     virtual void add_Occluder(Fbox2& bb_screenspace) override {}
-    virtual void add_Visual(IRenderVisual* V) override {}
-    virtual void add_Geometry(IRenderVisual* V) override {}
+    virtual void add_Visual(IRenderVisual* V) override;
+    virtual void add_Geometry(IRenderVisual* V) override;
     virtual void add_StaticWallmark(const wm_shader& S, const Fvector& P, float s, CDB::TRI* T, Fvector* V) override {}
     virtual void add_StaticWallmark(IWallMarkArray* pArray, const Fvector& P, float s, CDB::TRI* T, Fvector* V, float ttl = 0.f, bool ignore_opt = false, bool random_rotation = true) override {}
     virtual void add_StaticWallmark(IWallMarkArray* pArray, const Fvector& P, float s, CDB::TRI* T, Fvector* V, float ttl, bool ignore_opt, float rotation) override {}
@@ -78,8 +78,8 @@ private:
     virtual BOOL occ_visible(Fbox& B) override { return TRUE; }
     virtual BOOL occ_visible(sPoly& P) override { return TRUE; }
 
-    virtual void Calculate() override {}
-    virtual void Render() override {}
+    virtual void Calculate() override;
+    virtual void Render() override;
 
     virtual void Screenshot(ScreenshotMode mode = SM_NORMAL, LPCSTR name = 0) override {}
     virtual void Screenshot(ScreenshotMode mode, CMemoryWriter& memory_writer) override {}

@@ -37,28 +37,27 @@ VkDescriptorSet CVulkanDescriptorManager::GetDescriptorSet(VkDescriptorSetLayout
     set.Create(m_pool.GetPool(), layout);
 
     xr_vector<VkWriteDescriptorSet> writes;
-    for (uint32_t i = 0; i < key.buffers.size(); i++)
+    for (auto const& [binding, info] : key.buffers)
     {
         VkWriteDescriptorSet write = {};
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.dstSet = set.GetSet();
-        write.dstBinding = i;
+        write.dstBinding = binding;
         write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         write.descriptorCount = 1;
-        write.pBufferInfo = &key.buffers[i];
+        write.pBufferInfo = &info;
         writes.push_back(write);
     }
 
-    uint32_t bindingOffset = (uint32_t)key.buffers.size();
-    for (uint32_t i = 0; i < key.images.size(); i++)
+    for (auto const& [binding, info] : key.images)
     {
         VkWriteDescriptorSet write = {};
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.dstSet = set.GetSet();
-        write.dstBinding = bindingOffset + i;
+        write.dstBinding = 4 + binding; // Textures start at binding 4
         write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write.descriptorCount = 1;
-        write.pImageInfo = &key.images[i];
+        write.pImageInfo = &info;
         writes.push_back(write);
     }
 

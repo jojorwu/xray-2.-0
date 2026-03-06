@@ -22,16 +22,18 @@ public:
 
     void SetVB(VkBuffer buffer, VkDeviceSize offset);
     void SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
+    void SetState(SState* state);
     void SetPipeline(VkPipeline pipeline, VkPipelineLayout layout, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
     void SetDescriptorSet(VkDescriptorSet set, VkPipelineLayout layout, uint32_t firstSet = 0, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
 
     void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0);
     void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t firstIndex = 0, int32_t vertexOffset = 0, uint32_t firstInstance = 0);
 
+    void set_RT(ID3DRenderTargetView* RT, u32 ID = 0);
+    void set_ZB(ID3DDepthStencilView* ZB);
+
     void SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
     void SetTexture(uint32_t binding, VkImageView view, VkSampler sampler);
-
-    void SetConstants(R_constant_table* table);
 
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
     VkCommandPool GetCommandPool() { return m_command_pool; }
@@ -58,6 +60,7 @@ private:
     {
         xr_map<uint32_t, VkDescriptorBufferInfo> buffers;
         xr_map<uint32_t, VkDescriptorImageInfo> images;
+        SState* state;
         bool dirty;
     } m_bindings;
 

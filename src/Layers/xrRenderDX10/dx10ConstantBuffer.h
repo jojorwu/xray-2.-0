@@ -13,7 +13,6 @@ public:
 
 	bool Similar(dx10ConstantBuffer& _in);
 	ID3DBuffer* GetBuffer() { return m_pBuffer; }
-	u32 GetSize() const { return m_uiBufferSize; }
 
 	void Flush();
 

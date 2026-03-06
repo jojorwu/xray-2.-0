@@ -57,3 +57,24 @@ ID3DBaseTexture* CVulkanRender::texture_load(LPCSTR fname, u32& msize)
     T->Load(fname, msize);
     return T;
 }
+
+void CVulkanRender::Calculate()
+{
+}
+
+void CVulkanRender::Render()
+{
+    if (!Begin()) return;
+
+    // TODO: Implement render graph processing
+
+    End();
+}
+
+void CVulkanRender::add_Visual(IRenderVisual* V)
+{
+}
+
+void CVulkanRender::add_Geometry(IRenderVisual* V)
+{
+}

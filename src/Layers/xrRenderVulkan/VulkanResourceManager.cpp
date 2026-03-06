@@ -51,6 +51,34 @@ void CVulkanResourceManager::_DeleteTexture(const CTexture* T)
     }
 }
 
+SState* CVulkanResourceManager::_CreateState(SimulatorStates& Code)
+{
+    for (auto it : v_states)
+    {
+        if (it->state_code.equal(Code))
+            return it;
+    }
+
+    SState* S = xr_new<SState>();
+    S->state_code = Code;
+    // S->state = ...; // Not needed for Vulkan if we use dynamic states or PSO keys
+    v_states.push_back(S);
+    return S;
+}
+
+void CVulkanResourceManager::_DeleteState(const SState* SB)
+{
+    for (auto it = v_states.begin(); it != v_states.end(); ++it)
+    {
+        if (*it == SB)
+        {
+            v_states.erase(it);
+            xr_delete(SB);
+            return;
+        }
+    }
+}
+
 SVS* CVulkanResourceManager::_CreateVS(LPCSTR Name)
 {
     auto it = m_vs.find(Name);
@@ -60,7 +88,7 @@ SVS* CVulkanResourceManager::_CreateVS(LPCSTR Name)
     SVS* VS = xr_new<SVS>();
     CVulkanShader shader;
     shader.Load(Name);
-    VS->vs = shader.GetModule();
+    VS->vs = shader.ExtractModule();
     // VS->constants = ...; // Need to handle reflection
     m_vs.insert(std::make_pair(xr_strdup(Name), VS));
     return VS;
@@ -92,7 +120,7 @@ SPS* CVulkanResourceManager::_CreatePS(LPCSTR Name)
     SPS* PS = xr_new<SPS>();
     CVulkanShader shader;
     shader.Load(Name);
-    PS->ps = shader.GetModule();
+    PS->ps = shader.ExtractModule();
     // PS->constants = ...;
     m_ps.insert(std::make_pair(xr_strdup(Name), PS));
     return PS;

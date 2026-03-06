@@ -172,6 +172,15 @@ void CVulkanBackend::SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType ind
     vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], buffer, offset, indexType);
 }
 
+void CVulkanBackend::SetState(SState* state)
+{
+    if (m_bindings.state != state)
+    {
+        m_bindings.state = state;
+        m_bindings.dirty = true;
+    }
+}
+
 void CVulkanBackend::SetPipeline(VkPipeline pipeline, VkPipelineLayout layout, VkPipelineBindPoint bindPoint)
 {
     if (!m_is_frame_started)
@@ -203,22 +212,15 @@ void CVulkanBackend::SetTexture(uint32_t binding, VkImageView view, VkSampler sa
     m_bindings.dirty = true;
 }
 
-void CVulkanBackend::SetConstants(R_constant_table* table)
+void CVulkanBackend::set_RT(ID3DRenderTargetView* RT, u32 ID)
 {
-    if (!table) return;
+    // TODO: Implement RT switching logic
+    // This will likely involve ending current render pass and starting a new one
+}
 
-    // For now we just bind all buffers from the table
-#if defined(USE_DX10) || defined(USE_DX11) || defined(USE_VULKAN)
-    for (auto& record : table->m_CBTable)
-    {
-        dx10ConstantBuffer* cb = record.second._get();
-        if (cb)
-        {
-            // Bind to slot based on some mapping logic, for now use index
-            SetUniformBuffer(record.first, cb->GetBuffer(), 0, cb->GetSize());
-        }
-    }
-#endif
+void CVulkanBackend::set_ZB(ID3DDepthStencilView* ZB)
+{
+    // TODO: Implement ZB switching logic
 }
 
 void CVulkanBackend::ApplyBindings()
@@ -226,8 +228,8 @@ void CVulkanBackend::ApplyBindings()
     if (!m_bindings.dirty) return;
 
     DescriptorSetKey key;
-    for (auto& pair : m_bindings.buffers) key.buffers.push_back(pair.second);
-    for (auto& pair : m_bindings.images) key.images.push_back(pair.second);
+    key.buffers = m_bindings.buffers;
+    key.images = m_bindings.images;
 
     VkDescriptorSet set = VulkanDescriptorManager.GetDescriptorSet(m_descriptor_set_layout, key);
 
@@ -355,10 +357,21 @@ void CVulkanBackend::End()
 
 void CVulkanBackend::CreateDescriptorSetLayout()
 {
-    xr_vector<VkDescriptorSetLayoutBinding> bindings = {
-        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-        { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
-    };
+    xr_vector<VkDescriptorSetLayoutBinding> bindings;
+
+    // Uniform Buffers (Slot 0..3)
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        VkDescriptorSetLayoutBinding b = { i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr };
+        bindings.push_back(b);
+    }
+
+    // Textures (Slot 4..19)
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        VkDescriptorSetLayoutBinding b = { 4 + i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr };
+        bindings.push_back(b);
+    }
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

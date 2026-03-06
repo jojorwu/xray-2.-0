@@ -13,6 +13,7 @@ public:
     void Destroy();
 
     VkShaderModule GetModule() { return m_module; }
+    VkShaderModule ExtractModule() { VkShaderModule m = m_module; m_module = VK_NULL_HANDLE; return m; }
 
 private:
     VkShaderModule m_module;

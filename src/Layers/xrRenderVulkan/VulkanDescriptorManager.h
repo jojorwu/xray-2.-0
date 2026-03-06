@@ -7,20 +7,29 @@
 
 struct DescriptorSetKey
 {
-    xr_vector<VkDescriptorImageInfo> images;
-    xr_vector<VkDescriptorBufferInfo> buffers;
+    xr_map<uint32_t, VkDescriptorImageInfo> images;
+    xr_map<uint32_t, VkDescriptorBufferInfo> buffers;
 
     bool operator<(const DescriptorSetKey& other) const
     {
-        if (images.size() != other.images.size()) return images.size() < other.images.size();
-        if (buffers.size() != other.buffers.size()) return buffers.size() < other.buffers.size();
-
-        int res = memcmp(images.data(), other.images.data(), images.size() * sizeof(VkDescriptorImageInfo));
-        if (res != 0) return res < 0;
-
-        return memcmp(buffers.data(), other.buffers.data(), buffers.size() * sizeof(VkDescriptorBufferInfo)) < 0;
+        if (images != other.images) return images < other.images;
+        return buffers < other.buffers;
     }
 };
+
+inline bool operator<(const VkDescriptorImageInfo& a, const VkDescriptorImageInfo& b)
+{
+    if (a.sampler != b.sampler) return a.sampler < b.sampler;
+    if (a.imageView != b.imageView) return a.imageView < b.imageView;
+    return a.imageLayout < b.imageLayout;
+}
+
+inline bool operator<(const VkDescriptorBufferInfo& a, const VkDescriptorBufferInfo& b)
+{
+    if (a.buffer != b.buffer) return a.buffer < b.buffer;
+    if (a.offset != b.offset) return a.offset < b.offset;
+    return a.range < b.range;
+}
 
 class CVulkanDescriptorManager
 {
