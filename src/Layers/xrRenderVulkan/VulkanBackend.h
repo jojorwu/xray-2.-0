@@ -25,6 +25,7 @@ public:
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
     VkRenderPass GetRenderPass() { return m_render_pass; }
     VkExtent2D GetExtent() { return VulkanHW.GetSwapchainExtent(); }
+    uint32_t GetCurrentImageIndex() { return m_current_image_index; }
 
 private:
     VkRenderPass m_render_pass;

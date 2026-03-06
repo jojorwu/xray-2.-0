@@ -71,7 +71,7 @@ private:
 	xr_vector<SGeometry*> v_geoms;
 	xr_vector<R_constant_table*> v_constant_tables;
 
-#if defined(USE_DX10) || defined(USE_DX11)
+#if defined(USE_DX10) || defined(USE_DX11) || defined(USE_VULKAN)
 	xr_vector<dx10ConstantBuffer*>						v_constant_buffer;
 	xr_vector<SInputSignature*>							v_input_signature;
 #endif	//	USE_DX10

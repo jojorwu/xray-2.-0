@@ -67,6 +67,7 @@ private:
 
     void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage, VkBuffer& buffer, VmaAllocation& allocation, VmaAllocationCreateFlags flags = 0);
     void CreateTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImage& image, VmaAllocation& allocation, VkImageView& view);
+    void CreateShaderModule(const xr_vector<uint32_t>& code, VkShaderModule& module);
 
 #ifdef DEBUG
     VkDebugUtilsMessengerEXT m_debug_messenger;

@@ -666,6 +666,19 @@ void CVulkanHW::CreateTexture(uint32_t width, uint32_t height, VkFormat format, 
     }
 }
 
+void CVulkanHW::CreateShaderModule(const xr_vector<uint32_t>& code, VkShaderModule& module)
+{
+    VkShaderModuleCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size() * sizeof(uint32_t);
+    createInfo.pCode = code.data();
+
+    if (vkCreateShaderModule(m_device, &createInfo, nullptr, &module) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to create shader module!");
+    }
+}
+
 #ifdef DEBUG
 void CVulkanHW::SetupDebugMessenger()
 {

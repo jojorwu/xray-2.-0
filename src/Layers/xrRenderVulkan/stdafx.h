@@ -4,6 +4,7 @@
 
 #define R_VULKAN 5
 #define RENDER R_VULKAN
+#define USE_VULKAN
 
 #include "../../xrParticles/psystem.h"
 
