@@ -25,7 +25,9 @@
 
 #pragma warning(push)
 #pragma warning(disable:4995)
+#ifdef _WIN32
 #include <d3d9.h>
+#endif
 //#include <dplay8.h>
 #pragma warning(pop)
 
@@ -52,17 +54,17 @@
 #define ECORE_API
 
 // Our headers
-#include "engine.h"
+#include "Engine.h"
 #include "defines.h"
 #ifndef NO_XRLOG
-#include "../xrcore/log.h"
+#include "../xrCore/log.h"
 #endif
 #include "device.h"
-#include "../xrcore/fs.h"
+#include "../xrCore/FS.h"
 
-#include "../xrcdb/xrXRC.h"
+#include "../xrCDB/xrXRC.h"
 
-#include "../xrSound/sound.h"
+#include "../xrSound/Sound.h"
 
 extern ENGINE_API CInifile* pGameIni;
 

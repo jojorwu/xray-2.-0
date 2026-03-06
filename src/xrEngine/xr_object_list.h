@@ -97,7 +97,11 @@ public:
 private:
 	IC Objects& get_crows()
 	{
+#ifdef _WIN32
 		if (GetCurrentThreadId() == m_owner_thread_id)
+#else
+        if ((u32)pthread_self() == m_owner_thread_id)
+#endif
 			return (m_crows[0]);
 
 		return (m_crows[1]);

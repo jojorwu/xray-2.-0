@@ -3,10 +3,16 @@
 #pragma once
 
 #include "lzhuf.h"
+#ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
 #include <sys\stat.h>
 #include <share.h>
+#else
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 void* FileDownload(LPCSTR fn, u32* pdwSize = nullptr);
 void FileCompress(const char* fn, const char* sign, void* data, u32 size);
@@ -24,16 +30,27 @@ public:
 		VerifyPath(fName.c_str());
 		if (exclusive)
 		{
+#ifdef _WIN32
 			int handle = _sopen(fName.c_str(),_O_WRONLY | _O_TRUNC | _O_CREAT | _O_BINARY,SH_DENYWR);
             if (handle==-1)
                 Msg("!Can't create file: '%s'. Error: '%s'.", fName.c_str(), _sys_errlist[errno]);
 			hf = _fdopen(handle, "wb");
+#else
+            int handle = open(fName.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
+            if (handle == -1)
+                Msg("!Can't create file: '%s'. Error: '%s'.", fName.c_str(), strerror(errno));
+            hf = fdopen(handle, "wb");
+#endif
 		}
 		else
 		{
 			hf = fopen(fName.c_str(), "wb");
 			if (hf == 0)
+#ifdef _WIN32
 				Msg("!Can't write file: '%s'. Error: '%s'.", fName.c_str(), _sys_errlist[errno]);
+#else
+                Msg("!Can't write file: '%s'. Error: '%s'.", fName.c_str(), strerror(errno));
+#endif
 		}
 	}
 
@@ -43,12 +60,19 @@ public:
 		{
 			fclose(hf);
 			// release RO attrib
+#ifdef _WIN32
 			DWORD dwAttr = GetFileAttributes(fName.c_str());
 			if ((dwAttr != u32(-1)) && (dwAttr & FILE_ATTRIBUTE_READONLY))
 			{
 				dwAttr &= ~FILE_ATTRIBUTE_READONLY;
 				SetFileAttributes(fName.c_str(), dwAttr);
 			}
+#else
+            struct stat st;
+            if (stat(fName.c_str(), &st) == 0) {
+                chmod(fName.c_str(), st.st_mode | S_IWUSR);
+            }
+#endif
 		}
 	}
 
@@ -63,12 +87,20 @@ public:
 			for (req_size = count; req_size > mb_sz; req_size -= mb_sz, ptr += mb_sz)
 			{
 				size_t W = fwrite(ptr, mb_sz, 1, hf);
+#ifdef _WIN32
 				R_ASSERT3(W == 1, "Can't write mem block to file. Disk maybe full.", _sys_errlist[errno]);
+#else
+                R_ASSERT3(W == 1, "Can't write mem block to file. Disk maybe full.", strerror(errno));
+#endif
 			}
 			if (req_size)
 			{
 				size_t W = fwrite(ptr, req_size, 1, hf);
+#ifdef _WIN32
 				R_ASSERT3(W == 1, "Can't write mem block to file. Disk maybe full.", _sys_errlist[errno]);
+#else
+                R_ASSERT3(W == 1, "Can't write mem block to file. Disk maybe full.", strerror(errno));
+#endif
 			}
 		}
 	};

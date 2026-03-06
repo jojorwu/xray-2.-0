@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "iinputreceiver.h"
+#include "IInputReceiver.h"
 #include "xr_object_list.h"
-#include "../xrcdb/xr_area.h"
+#include "../xrCDB/xr_area.h"
 
 // refs
 class ENGINE_API CCameraManager;
@@ -35,8 +35,13 @@ public:
 	u32 Size() { return data.size(); }
 	void ResetData() { data.clear(); }
 
+#ifdef _WIN32
 	void AddItem(LPCSTR name_, LPCSTR value_, u32 color_ = RGB(255, 255, 255));
 	void AddItem(shared_str& name_, LPCSTR value_, u32 color_ = RGB(255, 255, 255));
+#else
+	void AddItem(LPCSTR name_, LPCSTR value_, u32 color_ = 0xffffffff);
+	void AddItem(shared_str& name_, LPCSTR value_, u32 color_ = 0xffffffff);
+#endif
 
 	IC SItem_ServerInfo& operator[](u32 id)
 	{
@@ -138,20 +143,21 @@ extern ENGINE_API IGame_Level* g_pGameLevel;
 template <typename _class_type>
 void relcase_register(_class_type* self, void (xr_stdcall _class_type::* function_to_bind)(CObject*))
 {
+    static int id = -1;
 	g_pGameLevel->Objects.relcase_register(
 		CObjectList::RELCASE_CALLBACK(
 			self,
-			function_to_bind)
+			function_to_bind),
+        &id
 	);
 }
 
 template <typename _class_type>
 void relcase_unregister(_class_type* self, void (xr_stdcall _class_type::* function_to_bind)(CObject*))
 {
+    static int id = -1;
 	g_pGameLevel->Objects.relcase_unregister(
-		CObjectList::RELCASE_CALLBACK(
-			self,
-			function_to_bind)
+        &id
 	);
 }
 #endif

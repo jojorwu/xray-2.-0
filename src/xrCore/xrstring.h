@@ -255,20 +255,21 @@ IC bool IsUTF8(const char* string)
 
 IC xr_string UTF8_to_CP1251(xr_string const& utf8)
 {
+#ifdef _WIN32
 	if (!utf8.empty() && IsUTF8(utf8.data()))
 	{
-		int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), nullptr, 0);
+		int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);
 		if (wchlen > 0 && wchlen != 0xFFFD)
 		{
 			xr_vector<wchar_t> wbuf(wchlen);
-			MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), &wbuf[0], wchlen);
+			MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), &wbuf[0], wchlen);
 			xr_vector<char> buf(wchlen);
 			WideCharToMultiByte(1251, 0, &wbuf[0], wchlen, &buf[0], wchlen, 0, 0);
 
 			return xr_string(&buf[0], wchlen);
 		}
 	}
-
+#endif
 	return utf8;
 }
 

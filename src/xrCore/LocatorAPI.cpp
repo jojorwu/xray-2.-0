@@ -6,13 +6,20 @@
 #pragma hdrstop
 
 #pragma warning(disable:4995)
+#ifdef _WIN32
 #include <direct.h>
+#endif
 #include <fcntl.h>
+#ifdef _WIN32
 #include <sys\stat.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 #include <filesystem>
 #pragma warning(default:4995)
 
-#include "FS_internal.h"
+#include "fs_internal.h"
 #include "stream_reader.h"
 #include "file_stream_reader.h"
 
@@ -193,7 +200,7 @@ XRCORE_API void _dump_open_files(int mode)
 		}
 	}
 	if (bShow)
-		Log("----total count=", g_open_files.size());
+		Log("----total count=", (u32)g_open_files.size());
 }
 
 CLocatorAPI::CLocatorAPI()
@@ -203,9 +210,13 @@ CLocatorAPI::CLocatorAPI()
 {
 	m_Flags.zero();
 	// get page size
+#ifdef _WIN32
 	SYSTEM_INFO sys_inf;
 	GetSystemInfo(&sys_inf);
 	dwAllocGranularity = sys_inf.dwAllocationGranularity;
+#else
+    dwAllocGranularity = sysconf(_SC_PAGESIZE);
+#endif
 	m_iLockRescan = 0;
 	dwOpenCounter = 0;
 }
@@ -288,7 +299,7 @@ IReader* open_chunk(void* ptr, u32 ID)
 	u32 dwType, dwSize;
 	DWORD read_byte;
 	u32 pt = SetFilePointer(ptr, 0, 0, FILE_BEGIN);
-	VERIFY(pt != INVALID_SET_FILE_POINTER);
+	VERIFY(pt != (u32)-1);
 	while (true)
 	{
 		res = ReadFile(ptr, &dwType, 4, &read_byte, 0);
@@ -324,7 +335,7 @@ IReader* open_chunk(void* ptr, u32 ID)
 		else
 		{
 			pt = SetFilePointer(ptr, dwSize, 0, FILE_CURRENT);
-			if (pt == INVALID_SET_FILE_POINTER) return 0;
+			if (pt == (u32)-1) return 0;
 		}
 	}
 	return 0;
@@ -394,7 +405,7 @@ void CLocatorAPI::LoadArchive(archive& A, LPCSTR entrypoint)
 	A.open();
 	IReader* hdr = open_chunk(A.hSrcFile, 1);
 	R_ASSERT(hdr);
-	RStringVec fv;
+	//RStringVec fv;
 	while (!hdr->eof())
 	{
 		string_path name, full;
@@ -465,7 +476,7 @@ void CLocatorAPI::ProcessArchive(LPCSTR _path)
 
 	m_archives.push_back(archive());
 	archive& A = m_archives.back();
-	A.vfs_idx = m_archives.size() - 1;
+	A.vfs_idx = (u32)m_archives.size() - 1;
 	A.path = path;
 
 	A.open();
@@ -532,22 +543,27 @@ bool CLocatorAPI::load_all_unloaded_archives()
 }
 
 
-void CLocatorAPI::ProcessOne(LPCSTR path, const _finddata_t& entry)
+void CLocatorAPI::ProcessOne(LPCSTR path, const _FINDDATA_T& entry)
 {
 	string_path N;
 	xr_strcpy(N, sizeof(N), path);
 	xr_strcat(N, entry.name);
 	xr_strlwr(N);
 
+#ifdef _WIN32
 	if (entry.attrib & _A_HIDDEN) return;
 
 	if (entry.attrib & _A_SUBDIR)
+#else
+    struct stat st;
+    if (stat(N, &st) == 0 && S_ISDIR(st.st_mode))
+#endif
 	{
 		if (bNoRecurse) return;
 		if (0 == xr_strcmp(entry.name, ".")) return;
 		if (0 == xr_strcmp(entry.name, "..")) return;
 		xr_strcat(N, "\\");
-		Register(N, 0xffffffff, 0, 0, entry.size, entry.size, (u32)entry.time_write);
+		Register(N, 0xffffffff, 0, 0, (u32)entry.size, (u32)entry.size, (u32)entry.time_write);
 		Recurse(N);
 	}
 	else
@@ -555,11 +571,11 @@ void CLocatorAPI::ProcessOne(LPCSTR path, const _finddata_t& entry)
 		if (strext(N) && (0 == strncmp(strext(N), ".db", 3) || 0 == strncmp(strext(N), ".xdb", 4)))
 			ProcessArchive(N);
 		else
-			Register(N, 0xffffffff, 0, 0, entry.size, entry.size, (u32)entry.time_write);
+			Register(N, 0xffffffff, 0, 0, (u32)entry.size, (u32)entry.size, (u32)entry.time_write);
 	}
 }
 
-IC bool pred_str_ff(const _finddata_t& x, const _finddata_t& y)
+IC bool pred_str_ff(const _FINDDATA_T& x, const _FINDDATA_T& y)
 {
 	return xr_strcmp(x.name, y.name) < 0;
 }
@@ -582,7 +598,12 @@ bool ignore_name(const char* _name)
 bool ignore_path(const char* _path)
 {
 	HANDLE h = CreateFile(_path, 0, 0, nullptr, OPEN_EXISTING,
-	                      FILE_ATTRIBUTE_READONLY | FILE_FLAG_NO_BUFFERING, nullptr);
+#ifdef _WIN32
+	                      FILE_ATTRIBUTE_READONLY | FILE_FLAG_NO_BUFFERING,
+#else
+                          0,
+#endif
+                          nullptr);
 
 	if (h != INVALID_HANDLE_VALUE)
 	{
@@ -593,6 +614,10 @@ bool ignore_path(const char* _path)
 		return true;
 }
 
+#ifndef _WIN32
+#include <dirent.h>
+#endif
+
 bool CLocatorAPI::Recurse(const char* path)
 {
 	string_path scanPath;
@@ -601,9 +626,11 @@ bool CLocatorAPI::Recurse(const char* path)
 	struct stat buffer;
 	if (!stat(scanPath, &buffer))
 		return true;
+
+#ifdef _WIN32
 	xr_strcpy(scanPath, sizeof(scanPath), path);
 	xr_strcat(scanPath, "*.*");
-	_finddata_t findData;
+	_FINDDATA_T findData;
 	intptr_t handle = _findfirst(scanPath, &findData);
 	if (handle == -1)
 		return false;
@@ -629,6 +656,33 @@ bool CLocatorAPI::Recurse(const char* path)
 		done = _findnext(handle, &findData);
 	}
 	_findclose(handle);
+#else
+    DIR* dir = opendir(path);
+    if (!dir) return false;
+    rec_files.reserve(256);
+    size_t oldSize = rec_files.size();
+    struct dirent* de;
+    while ((de = readdir(dir)) != nullptr) {
+        if (ignore_name(de->d_name)) continue;
+        _FINDDATA_T fd;
+        strncpy(fd.name, de->d_name, 256);
+        string_path full;
+        strconcat(sizeof(full), full, path, de->d_name);
+        struct stat st;
+        if (stat(full, &st) == 0) {
+            fd.size = st.st_size;
+            fd.time_write = st.st_mtime;
+            fd.attrib = S_ISDIR(st.st_mode) ? 0x10 : 0; // _A_SUBDIR
+        } else {
+            fd.size = 0;
+            fd.time_write = 0;
+            fd.attrib = 0;
+        }
+        rec_files.push_back(fd);
+    }
+    closedir(dir);
+#endif
+
 	size_t newSize = rec_files.size();
 	if (newSize > oldSize)
 	{
@@ -852,7 +906,7 @@ void CLocatorAPI::_initialize(u32 flags, LPCSTR target_folder, LPCSTR fs_name)
 
 	Msg("File System Ready...");
 	size_t M2 = Memory.mem_usage();
-	Msg("FS: %d files cached %d archives, %lldKb memory used.", m_files.size(), m_archives.size(), (M2 - M1) / 1024);
+	Msg("FS: %d files cached %d archives, %lldKb memory used.", (u32)m_files.size(), (u32)m_archives.size(), (M2 - M1) / 1024);
 
 	m_Flags.set(flReady, TRUE);
 
@@ -1068,11 +1122,11 @@ int CLocatorAPI::file_list(FS_FileSet& dest, LPCSTR path, u32 flags, LPCSTR mask
 			LPCSTR entry_begin = entry.name + base_len;
 
 			if ((flags & FS_RootOnly) && (strstr(entry_begin, "\\") != end_symbol)) continue; // folder in folder
-			u32 fl = FS_File::flSubDir | (entry.vfs ? FS_File::flVFS : 0);
+			u32 fl = FS_File::flSubDir | (entry.vfs != 0xffffffff ? FS_File::flVFS : 0);
 			dest.insert(FS_File(entry_begin, entry.size_real, entry.modif, fl));
 		}
 	}
-	return dest.size();
+	return (int)dest.size();
 }
 
 void CLocatorAPI::check_cached_files(LPSTR fname, const u32& fname_size, const file& desc, LPCSTR& source_name)
@@ -1195,14 +1249,14 @@ void CLocatorAPI::file_from_archive(IReader*& R, LPCSTR fname, const file& desc)
 	u32 ptr_offs = desc.ptr - start;
 	if (desc.size_real == desc.size_compressed)
 	{
-		R = xr_new<CPackReader>(ptr, ptr + ptr_offs, desc.size_real);
+		R = xr_new<CPackReader>(ptr, ptr + ptr_offs, (int)desc.size_real);
 		return;
 	}
 
 	// Compressed
 	u8* dest = xr_alloc<u8>(desc.size_real);
 	rtc_decompress(dest, desc.size_real, ptr + ptr_offs, desc.size_compressed);
-	R = xr_new<CTempReader>(dest, desc.size_real, 0);
+	R = xr_new<CTempReader>(dest, (int)desc.size_real, 0);
 	UnmapViewOfFile(ptr);
 
 #ifdef FS_DEBUG
@@ -1347,8 +1401,6 @@ bool CLocatorAPI::check_for_file(LPCSTR path, LPCSTR _fname, string_path& fname,
 	return (true);
 }
 
-#include "..\xrGame\Actor_Flags.h"
-
 template <typename T>
 T* CLocatorAPI::r_open_impl(LPCSTR path, LPCSTR _fname)
 {
@@ -1445,9 +1497,9 @@ void CLocatorAPI::w_close(IWriter*& S)
 
 		if (bReg)
 		{
-			struct _stat st;
-			_stat(fname, &st);
-			Register(fname, 0xffffffff, 0, 0, st.st_size, st.st_size, (u32)st.st_mtime);
+			struct stat st;
+			stat(fname, &st);
+			Register(fname, 0xffffffff, 0, 0, (u32)st.st_size, (u32)st.st_size, (u32)st.st_mtime);
 		}
 	}
 }
@@ -1508,7 +1560,11 @@ BOOL CLocatorAPI::dir_delete(LPCSTR path, LPCSTR nm, BOOL remove_files)
 	for (files_set::reverse_iterator r_it = folders.rbegin(); r_it != folders.rend(); ++r_it)
 	{
 		const file& entry = *r_it;
+#ifdef _WIN32
 		_rmdir(entry.name);
+#else
+        rmdir(entry.name);
+#endif
 		files_it it = m_files.find(entry);
 		if (it != m_files.end())
 		{
@@ -1588,7 +1644,7 @@ void CLocatorAPI::file_rename(LPCSTR src, LPCSTR dest, bool bOwerwrite)
 int CLocatorAPI::file_length(LPCSTR src)
 {
 	files_it I = file_find_it(src);
-	return (I != m_files.end()) ? I->size_real : -1;
+	return (I != m_files.end()) ? (int)I->size_real : -1;
 }
 
 bool CLocatorAPI::path_exist(LPCSTR path)
@@ -1648,13 +1704,20 @@ void CLocatorAPI::set_file_age(LPCSTR nm, u32 age)
 	check_pathes();
 
 	// set file
+#ifdef _WIN32
 	_utimbuf tm;
 	tm.actime = age;
 	tm.modtime = age;
 	int res = _utime(nm, &tm);
+#else
+    struct utimbuf tm;
+    tm.actime = age;
+    tm.modtime = age;
+    int res = utime(nm, &tm);
+#endif
 	if (0 != res)
 	{
-		Msg("!Can't set file age: '%s'. Error: '%s'", nm, _sys_errlist[errno]);
+		Msg("!Can't set file age: '%s'. Error: '%s'", nm, strerror(errno));
 	}
 	else
 	{

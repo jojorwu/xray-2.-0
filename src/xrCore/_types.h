@@ -11,8 +11,15 @@ typedef unsigned short u16;
 typedef signed int s32;
 typedef unsigned int u32;
 
+#ifdef _WIN32
 typedef signed __int64 s64;
 typedef unsigned __int64 u64;
+#else
+typedef int64_t s64;
+typedef uint64_t u64;
+#define _MAX_PATH 260
+#define MAX_PATH 260
+#endif
 
 typedef float f32;
 typedef double f64;

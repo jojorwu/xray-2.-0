@@ -65,29 +65,36 @@ public:
 	IC BOOL is(const T mask) const { return mask == (flags & mask); }
 	IC BOOL is_any(const T mask) const { return BOOL(!!(flags & mask)); }
 	IC BOOL test(const T mask) const { return BOOL(!!(flags & mask)); }
-	IC SelfRef or(const T mask)
+	IC SelfRef _or(const T mask)
 	{
 		flags |= mask;
 		return *this;
 	}
 
-	IC SelfRef or(const Self& f, const T mask)
+	IC SelfRef _or(const Self& f, const T mask)
 	{
 		flags = f.flags | mask;
 		return *this;
 	}
 
-	IC SelfRef and(const T mask)
+	IC SelfRef _and(const T mask)
 	{
 		flags &= mask;
 		return *this;
 	}
 
-	IC SelfRef and(const Self& f, const T mask)
+	IC SelfRef _and(const Self& f, const T mask)
 	{
 		flags = f.flags & mask;
 		return *this;
 	}
+
+#ifndef __linux__
+	IC SelfRef or (const T mask) { return _or(mask); }
+	IC SelfRef or (const Self& f, const T mask) { return _or(f, mask); }
+	IC SelfRef and (const T mask) { return _and(mask); }
+	IC SelfRef and (const Self& f, const T mask) { return _and(f, mask); }
+#endif
 
 	IC BOOL equal(const Self& f) const { return flags == f.flags; }
 	IC BOOL equal(const Self& f, const T mask) const { return (flags & mask) == (f.flags & mask); }

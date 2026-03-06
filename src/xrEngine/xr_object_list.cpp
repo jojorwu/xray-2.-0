@@ -25,7 +25,11 @@ BOOL debug_destroy = TRUE;
 #endif
 
 CObjectList::CObjectList() :
+#ifdef _WIN32
 	m_owner_thread_id(GetCurrentThreadId())
+#else
+    m_owner_thread_id((u32)pthread_self())
+#endif
 {
 	ZeroMemory(map_NETID, 0xffff * sizeof(CObject*));
 }

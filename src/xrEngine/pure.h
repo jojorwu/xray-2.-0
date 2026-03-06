@@ -8,11 +8,19 @@
 #define REG_PRIORITY_CAPTURE 0x7ffffffful
 #define REG_PRIORITY_INVALID 0xfffffffful
 
+#ifdef _WIN32
 typedef void __fastcall RP_FUNC(void* obj);
+#else
+typedef void RP_FUNC(void* obj);
+#endif
 #define DECLARE_MESSAGE_CL(name,calling) extern ENGINE_API RP_FUNC rp_##name; class ENGINE_API pure##name { public: virtual void calling On##name(void)=0; }
 
 #define DECLARE_MESSAGE( name ) DECLARE_MESSAGE_CL(name, )
+#ifdef _WIN32
 #define DECLARE_RP(name) void __fastcall rp_##name(void *p) { ((pure##name *)p)->On##name(); }
+#else
+#define DECLARE_RP(name) void rp_##name(void *p) { ((pure##name *)p)->On##name(); }
+#endif
 
 DECLARE_MESSAGE_CL(Frame, _BCL);
 

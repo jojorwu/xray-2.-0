@@ -48,7 +48,7 @@ public:
     {
         if constexpr (Counter == CounterPolicy::Atomic)
         {
-            u32 t = __ref_count.fetch_sub(1, std::memory_order_acq_rel)
+            u32 t = __ref_count.fetch_sub(1, std::memory_order_acq_rel);
             return t - 1;
         }
         else
@@ -90,8 +90,14 @@ struct intrusive_base_marker {};
 struct destructor_virtual { virtual ~destructor_virtual() = default; };
 struct destructor_non_virtual { ~destructor_non_virtual() = default; };
 
+#ifdef _WIN32
+#define NOVTABLE __declspec(novtable)
+#else
+#define NOVTABLE
+#endif
+
 template <DeletionPolicy Policy = DeletionPolicy::Immediate, CounterPolicy Counter = CounterPolicy::Atomic, bool Virtual = true>
-struct __declspec(novtable) intrusive_base_impl : public intrusive_base_marker, ref_count_storage<Counter>, std::conditional_t<Virtual, destructor_virtual, destructor_non_virtual>
+struct NOVTABLE intrusive_base_impl : public intrusive_base_marker, ref_count_storage<Counter>, std::conditional_t<Virtual, destructor_virtual, destructor_non_virtual>
 {
     // This makes the policy visible to the smart pointer
     static constexpr DeletionPolicy deletion_policy = Policy;
@@ -128,7 +134,7 @@ template <bool _is_pm, typename T> struct xr_special_free;
 
 // Strict policy - forbid calling xr_delete<ptr.get()>, must have protected destructor
 template<CounterPolicy Counter>
-struct __declspec(novtable) intrusive_base_impl<DeletionPolicy::Strict, Counter> : public intrusive_base_marker, ref_count_storage<Counter>
+struct NOVTABLE intrusive_base_impl<DeletionPolicy::Strict, Counter> : public intrusive_base_marker, ref_count_storage<Counter>
 {
     // This makes the policy visible to the smart pointer
     static constexpr DeletionPolicy deletion_policy = DeletionPolicy::Strict;
@@ -183,7 +189,7 @@ TEMPLATE_SPECIALIZATION
 class intrusive_ptr
 {
 public:
-    typedef object_type object_type;
+    typedef object_type element_type;
     typedef _intrusive_ptr self_type;
 
 private:
@@ -387,14 +393,14 @@ IC typename _intrusive_ptr::self_type& _intrusive_ptr::operator=(intrusive_ptr<o
 }
 
 TEMPLATE_SPECIALIZATION
-IC typename _intrusive_ptr::object_type& _intrusive_ptr::operator*() const
+IC object_type& _intrusive_ptr::operator*() const
 {
     VERIFY(m_object);
     return (*m_object);
 }
 
 TEMPLATE_SPECIALIZATION
-IC typename _intrusive_ptr::object_type* _intrusive_ptr::operator->() const
+IC object_type* _intrusive_ptr::operator->() const
 {
     VERIFY(m_object);
     return (m_object);
@@ -432,7 +438,7 @@ IC void _intrusive_ptr::set(self_type const& rhs)
 }
 
 TEMPLATE_SPECIALIZATION
-IC typename _intrusive_ptr::object_type* _intrusive_ptr::get() const noexcept
+IC object_type* _intrusive_ptr::get() const noexcept
 {
     return (m_object);
 }

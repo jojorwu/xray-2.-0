@@ -117,6 +117,7 @@ IC float _sin(float x) { return sinf(x); }
 IC float _cos(float x) { return cosf(x); }
 IC BOOL _valid(const float x)
 {
+#ifdef _WIN32
 	// check for: Signaling NaN, Quiet NaN, Negative infinity ( –INF), Positive infinity (+INF), Negative denormalized, Positive denormalized
 	int cls = _fpclass(double(x));
 	if (cls & (_FPCLASS_SNAN + _FPCLASS_QNAN + _FPCLASS_NINF + _FPCLASS_PINF + _FPCLASS_ND + _FPCLASS_PD))
@@ -128,6 +129,9 @@ IC BOOL _valid(const float x)
 	_FPCLASS_PZ Positive 0 (+0)
 	_FPCLASS_PN Positive normalized non-zero
 	*/
+#else
+    return isfinite(x);
+#endif
 	return true;
 }
 
@@ -139,6 +143,7 @@ IC double _sin(double x) { return sin(x); }
 IC double _cos(double x) { return cos(x); }
 IC BOOL _valid(const double x)
 {
+#ifdef _WIN32
 	// check for: Signaling NaN, Quiet NaN, Negative infinity ( –INF), Positive infinity (+INF), Negative denormalized, Positive denormalized
 	int cls = _fpclass(x);
 	if (cls & (_FPCLASS_SNAN + _FPCLASS_QNAN + _FPCLASS_NINF + _FPCLASS_PINF + _FPCLASS_ND + _FPCLASS_PD))
@@ -150,6 +155,9 @@ IC BOOL _valid(const double x)
 	_FPCLASS_PZ Positive 0 (+0)
 	_FPCLASS_PN Positive normalized non-zero
 	*/
+#else
+    return isfinite(x);
+#endif
 	return true;
 }
 
@@ -213,19 +221,34 @@ IC int xr_strcmp(const char* S1, const char* S2)
 
 inline errno_t xr_strcpy(LPSTR destination, size_t const destination_size, LPCSTR source)
 {
+#ifdef _WIN32
     return strcpy_s(destination, destination_size, source);
+#else
+    strncpy(destination, source, destination_size);
+    destination[destination_size - 1] = 0;
+    return 0;
+#endif
 }
 
 inline errno_t xr_strcat(LPSTR destination, size_t const buffer_size, LPCSTR source)
 {
+#ifdef _WIN32
     return strcat_s(destination, buffer_size, source);
+#else
+    strncat(destination, source, buffer_size - strlen(destination) - 1);
+    return 0;
+#endif
 }
 
 inline int __cdecl xr_sprintf(LPSTR destination, size_t const buffer_size, LPCSTR format_string, ...)
 {
     va_list args;
     va_start(args, format_string);
+#ifdef _WIN32
     return vsprintf_s(destination, buffer_size, format_string, args);
+#else
+    return vsnprintf(destination, buffer_size, format_string, args);
+#endif
 }
 
 template <int count>
@@ -233,13 +256,23 @@ inline int __cdecl xr_sprintf(char(&destination)[count], LPCSTR format_string, .
 {
     va_list args;
     va_start(args, format_string);
+#ifdef _WIN32
     return vsprintf_s(destination, count, format_string, args);
+#else
+    return vsnprintf(destination, count, format_string, args);
+#endif
 }
 #else // #ifndef MASTER_GOLD
 
 inline errno_t xr_strcpy(LPSTR destination, size_t const destination_size, LPCSTR source)
 {
+#ifdef _WIN32
 	return strncpy_s(destination, destination_size, source, destination_size);
+#else
+    strncpy(destination, source, destination_size);
+    destination[destination_size - 1] = 0;
+    return 0;
+#endif
 }
 
 inline errno_t xr_strcat(LPSTR destination, size_t const buffer_size, LPCSTR source)
@@ -261,7 +294,11 @@ inline int __cdecl xr_sprintf(LPSTR destination, size_t const buffer_size, LPCST
 {
 	va_list args;
 	va_start(args, format_string);
+#ifdef _WIN32
 	return vsnprintf_s(destination, buffer_size, buffer_size - 1, format_string, args);
+#else
+    return vsnprintf(destination, buffer_size, format_string, args);
+#endif
 }
 
 template <int count>
@@ -269,7 +306,11 @@ inline int __cdecl xr_sprintf(char (&destination)[count], LPCSTR format_string, 
 {
 	va_list args;
 	va_start(args, format_string);
+#ifdef _WIN32
 	return vsnprintf_s(destination, count, count - 1, format_string, args);
+#else
+    return vsnprintf(destination, count, format_string, args);
+#endif
 }
 #endif // #ifndef MASTER_GOLD
 

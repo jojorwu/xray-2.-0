@@ -2,7 +2,7 @@
 #include "igame_level.h"
 
 #include "xr_object.h"
-#include "../xrcdb/xr_area.h"
+#include "../xrCDB/xr_area.h"
 #include "render.h"
 #include "xrLevel.h"
 //#include "fbasicvisual.h"

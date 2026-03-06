@@ -564,8 +564,8 @@ void CInifile::LTXLoad (
 
 			_splitpath_s(m_file_name, split_drive, split_drive.GetSize(), split_dir, split_dir.GetSize(), split_name, split_name.GetSize(), nullptr, 0);
 
-			xr_string FilePath = xr_string(split_drive) + xr_string(split_dir);
-			xr_string FileName = split_name;
+			xr_string FilePath = xr_string(split_drive.GetBuffer()) + xr_string(split_dir.GetBuffer());
+			xr_string FileName = split_name.GetBuffer();
 
 			// Collect all files that could potentially be confused as a root file by our mod files
 			FS_FileSet AmbiguousFiles;
@@ -622,7 +622,7 @@ void CInifile::LTXLoad (
 
 			continue;
 		}
-		xr_string currentLine = str;
+		xr_string currentLine = str.GetBuffer();
 
 		// Parse comment - single pass instead of multiple strchr calls
 		LPSTR comm = strchr(str, ';');
@@ -875,7 +875,8 @@ void CInifile::LTXLoad (
 			}
 			I.second = bIsDelete ? DLTX_DELETE.c_str() : (str2[0] ? str2.GetBuffer() : nullptr);
 
-			auto fname = toLowerCaseCopy(trimCopy(getFilename(std::string(currentFileName))));
+			std::string currentFileNameStr(currentFileName);
+			auto fname = toLowerCaseCopy(trimCopy(getFilename(currentFileNameStr)));
 			I.filename = fname.c_str();
 			I.depth = depth;
 
@@ -1613,7 +1614,7 @@ BOOL CInifile::section_exist(const shared_str& S) const { return section_exist(*
 //--------------------------------------------------------------------------------------
 CInifile::Sect& CInifile::r_section(LPCSTR S) const
 {
-	R_ASSERT(S && strlen(S),
+	R_ASSERT2(S && strlen(S),
 	         "Empty section (null\\'') passed into CInifile::r_section(). See info above ^, check your configs and 'call stack'.")
 	; //--#SM+#--
 
