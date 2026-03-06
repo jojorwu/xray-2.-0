@@ -1,0 +1,42 @@
+#pragma once
+
+#include "VulkanHW.h"
+
+class CVulkanBackend
+{
+public:
+    CVulkanBackend();
+    ~CVulkanBackend();
+
+    void Create();
+    void Destroy();
+
+    void OnDeviceCreate();
+    void OnDeviceDestroy();
+
+    bool Begin();
+    void End();
+
+    VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
+    VkRenderPass GetRenderPass() { return m_render_pass; }
+    VkExtent2D GetExtent() { return VulkanHW.GetSwapchainExtent(); }
+
+private:
+    VkRenderPass m_render_pass;
+    xr_vector<VkFramebuffer> m_framebuffers;
+    VkCommandPool m_command_pool;
+    xr_vector<VkCommandBuffer> m_command_buffers;
+    VkSemaphore m_image_available_semaphore;
+    VkSemaphore m_render_finished_semaphore;
+    VkFence m_in_flight_fence;
+    uint32_t m_current_image_index;
+    bool m_is_frame_started;
+
+    void CreateRenderPass();
+    void CreateFramebuffers();
+    void CreateCommandPool();
+    void AllocateCommandBuffers();
+    void CreateSyncPrimitives();
+};
+
+extern CVulkanBackend VulkanBackend;

@@ -124,7 +124,10 @@ u32 CVulkanRenderDeviceRender::GetCacheStatPolys()
 
 void CVulkanRenderDeviceRender::Begin()
 {
-    VulkanRenderImpl.Begin();
+    if (!VulkanRenderImpl.Begin())
+    {
+        // Handle failure to begin frame
+    }
 }
 
 void CVulkanRenderDeviceRender::Clear()

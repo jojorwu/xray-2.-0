@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../../xrEngine/Render.h"
-#include "../../3rd party/vma/vk_mem_alloc.h"
+#include "VulkanHW.h"
+#include "VulkanBackend.h"
 
 class CVulkanRender : public IRender_interface
 {
@@ -18,31 +19,6 @@ public:
     virtual void destroy() override;
 
 private:
-    VkInstance m_instance;
-    VkPhysicalDevice m_physical_device;
-    VkDevice m_device;
-    VkQueue m_graphics_queue;
-    VkQueue m_present_queue;
-    VkSurfaceKHR m_surface;
-    VkSwapchainKHR m_swapchain;
-    VkFormat m_swapchain_format;
-    VkExtent2D m_swapchain_extent;
-    xr_vector<VkImage> m_swapchain_images;
-    xr_vector<VkImageView> m_swapchain_image_views;
-
-    VkRenderPass m_render_pass;
-    xr_vector<VkFramebuffer> m_framebuffers;
-
-    VkCommandPool m_command_pool;
-    xr_vector<VkCommandBuffer> m_command_buffers;
-
-    VkSemaphore m_image_available_semaphore;
-    VkSemaphore m_render_finished_semaphore;
-    VkFence m_in_flight_fence;
-
-    uint32_t m_current_image_index;
-
-    VmaAllocator m_allocator;
     virtual void reset_begin() override;
     virtual void reset_end() override;
 
@@ -119,10 +95,9 @@ private:
     virtual u32 active_phase() override { return 0; }
     virtual void RenderToTarget(RRT target) override {}
 
-    void Begin();
-    void End();
-
-    VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
+public:
+    bool Begin() { return VulkanBackend.Begin(); }
+    void End() { VulkanBackend.End(); }
 
 protected:
     virtual void ScreenshotImpl(ScreenshotMode mode, LPCSTR name, CMemoryWriter* memory_writer) override {}
