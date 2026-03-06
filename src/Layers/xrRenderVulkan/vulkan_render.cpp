@@ -5,6 +5,7 @@ CVulkanRender VulkanRenderImpl;
 
 CVulkanRender::CVulkanRender()
 {
+    Target = nullptr;
 }
 
 CVulkanRender::~CVulkanRender()
@@ -15,10 +16,12 @@ void CVulkanRender::create()
 {
     VulkanHW.Create();
     VulkanBackend.Create();
+    Target = xr_new<CVulkanRenderTarget>();
 }
 
 void CVulkanRender::destroy()
 {
+    xr_delete(Target);
     VulkanBackend.Destroy();
     VulkanHW.Destroy();
 }
@@ -66,7 +69,20 @@ void CVulkanRender::Render()
 {
     if (!Begin()) return;
 
-    // TODO: Implement render graph processing
+    // G-Buffer pass
+    Target->phase_scene_begin();
+    // Render static and dynamic objects here
+    Target->phase_scene_end();
+
+    // Lighting pass
+    Target->phase_accumulator();
+    // Render lights here
+    Target->phase_scene_end();
+
+    // Final combine
+    Target->phase_combine();
+    // Render fullscreen quad here
+    Target->phase_scene_end();
 
     End();
 }

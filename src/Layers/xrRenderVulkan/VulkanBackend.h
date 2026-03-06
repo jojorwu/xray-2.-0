@@ -32,6 +32,9 @@ public:
     void set_RT(ID3DRenderTargetView* RT, u32 ID = 0);
     void set_ZB(ID3DDepthStencilView* ZB);
 
+    void EnsureRenderPass();
+    void EndRenderPass();
+
     void SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
     void SetTexture(uint32_t binding, VkImageView view, VkSampler sampler);
 
@@ -44,6 +47,43 @@ public:
 private:
     VkRenderPass m_render_pass;
     xr_vector<VkFramebuffer> m_framebuffers;
+
+    struct RenderPassKey
+    {
+        xr_array<VkFormat, 4> color_formats;
+        VkFormat depth_format;
+        bool operator<(const RenderPassKey& other) const
+        {
+            if (color_formats != other.color_formats) return color_formats < other.color_formats;
+            return depth_format < other.depth_format;
+        }
+    };
+    xr_map<RenderPassKey, VkRenderPass> m_render_pass_cache;
+
+    struct FramebufferKey
+    {
+        VkRenderPass render_pass;
+        xr_array<CVulkanRTView*, 4> color_views;
+        CVulkanRTView* depth_view;
+        VkExtent2D extent;
+        bool operator<(const FramebufferKey& other) const
+        {
+            if (render_pass != other.render_pass) return render_pass < other.render_pass;
+            if (color_views != other.color_views) return color_views < other.color_views;
+            if (depth_view != other.depth_view) return depth_view < other.depth_view;
+            if (extent.width != other.extent.width) return extent.width < other.extent.width;
+            return extent.height < other.extent.height;
+        }
+    };
+    xr_map<FramebufferKey, VkFramebuffer> m_framebuffer_cache;
+
+    xr_array<ID3DRenderTargetView*, 4> m_pRT;
+    ID3DDepthStencilView* m_pZB;
+
+    VkRenderPass m_active_render_pass;
+    VkFramebuffer m_active_framebuffer;
+    bool m_is_render_pass_active;
+
     VkCommandPool m_command_pool;
     xr_vector<VkCommandBuffer> m_command_buffers;
 
@@ -73,6 +113,9 @@ private:
     VkPipelineLayout m_current_pipeline_layout;
     VkPipelineLayout m_default_pipeline_layout;
     VkDescriptorSetLayout m_descriptor_set_layout; // Global for now
+
+    VkRenderPass GetRenderPass(const RenderPassKey& key);
+    VkFramebuffer GetFramebuffer(const FramebufferKey& key);
 
     void CreateDescriptorSetLayout();
     void CreatePipelineLayout();

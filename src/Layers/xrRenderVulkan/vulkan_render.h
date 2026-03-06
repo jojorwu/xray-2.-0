@@ -3,6 +3,7 @@
 #include "../../xrEngine/Render.h"
 #include "VulkanHW.h"
 #include "VulkanBackend.h"
+#include "VulkanRenderTarget.h"
 
 class CVulkanRender : public IRender_interface
 {
@@ -96,6 +97,8 @@ private:
     virtual void RenderToTarget(RRT target) override {}
 
     ID3DBaseTexture* texture_load(LPCSTR fname, u32& msize);
+
+    CVulkanRenderTarget* Target;
 
 public:
     bool Begin() { return VulkanBackend.Begin(); }

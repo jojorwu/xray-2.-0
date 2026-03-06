@@ -11,6 +11,7 @@ CVulkanTexture::CVulkanTexture()
     m_format = VK_FORMAT_UNDEFINED;
     m_width = 0;
     m_height = 0;
+    m_mips = 0;
 }
 
 CVulkanTexture::~CVulkanTexture()
@@ -22,6 +23,7 @@ void CVulkanTexture::Create(uint32_t width, uint32_t height, uint32_t mips, VkFo
 {
     m_width = width;
     m_height = height;
+    m_mips = mips;
     m_format = format;
 
     VkImageCreateInfo imageInfo = {};
@@ -278,9 +280,16 @@ void CVulkanTexture::CreateImageView()
     viewInfo.image = m_image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = m_format;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    if (m_format == VK_FORMAT_D32_SFLOAT || m_format == VK_FORMAT_D16_UNORM)
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    else if (m_format == VK_FORMAT_D32_SFLOAT_S8_UINT || m_format == VK_FORMAT_D24_UNORM_S8_UINT)
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    else
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
     viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.levelCount = m_mips > 0 ? m_mips : 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
@@ -288,4 +297,10 @@ void CVulkanTexture::CreateImageView()
     {
         Msg("! Vulkan: Failed to create image view!");
     }
+
+    m_rt_view.image = m_image;
+    m_rt_view.view = m_image_view;
+    m_rt_view.format = m_format;
+    m_rt_view.extent = { m_width, m_height };
+    m_rt_view.current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }

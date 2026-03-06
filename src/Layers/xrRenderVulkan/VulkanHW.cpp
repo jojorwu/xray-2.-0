@@ -550,6 +550,16 @@ void CVulkanHW::CreateSwapchain()
             Msg("! Vulkan: Failed to create image view!");
         }
     }
+
+    m_swapchain_rt_views.resize(m_swapchain_images.size());
+    for (size_t i = 0; i < m_swapchain_images.size(); i++)
+    {
+        m_swapchain_rt_views[i].image = m_swapchain_images[i];
+        m_swapchain_rt_views[i].view = m_swapchain_image_views[i];
+        m_swapchain_rt_views[i].format = m_swapchain_format;
+        m_swapchain_rt_views[i].extent = m_swapchain_extent;
+        m_swapchain_rt_views[i].current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
 }
 
 void CVulkanHW::CreateDepthResources()
@@ -598,6 +608,12 @@ void CVulkanHW::CreateDepthResources()
     {
         Msg("! Vulkan: Failed to create depth image view!");
     }
+
+    m_depth_rt_view.image = m_depth_image;
+    m_depth_rt_view.view = m_depth_image_view;
+    m_depth_rt_view.format = m_depth_format;
+    m_depth_rt_view.extent = m_swapchain_extent;
+    m_depth_rt_view.current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 VkFormat CVulkanHW::FindSupportedFormat(const xr_vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
