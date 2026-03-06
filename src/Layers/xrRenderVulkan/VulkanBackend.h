@@ -17,6 +17,9 @@ public:
     bool Begin();
     void End();
 
+    void SetVB(VkBuffer buffer, VkDeviceSize offset);
+    void SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
+
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
     VkRenderPass GetRenderPass() { return m_render_pass; }
     VkExtent2D GetExtent() { return VulkanHW.GetSwapchainExtent(); }

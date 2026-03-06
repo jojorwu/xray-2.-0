@@ -605,6 +605,24 @@ VkFormat CVulkanHW::FindSupportedFormat(const xr_vector<VkFormat>& candidates, V
     return VK_FORMAT_UNDEFINED;
 }
 
+void CVulkanHW::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage, VkBuffer& buffer, VmaAllocation& allocation, VmaAllocationCreateFlags flags)
+{
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = mem_usage;
+    allocInfo.flags = flags;
+
+    if (vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to create buffer!");
+    }
+}
+
 #ifdef DEBUG
 void CVulkanHW::SetupDebugMessenger()
 {

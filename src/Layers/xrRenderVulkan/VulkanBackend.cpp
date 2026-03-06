@@ -131,6 +131,22 @@ bool CVulkanBackend::Begin()
     return true;
 }
 
+void CVulkanBackend::SetVB(VkBuffer buffer, VkDeviceSize offset)
+{
+    if (!m_is_frame_started)
+        return;
+
+    vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], 0, 1, &buffer, &offset);
+}
+
+void CVulkanBackend::SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+{
+    if (!m_is_frame_started)
+        return;
+
+    vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], buffer, offset, indexType);
+}
+
 void CVulkanBackend::End()
 {
     if (!m_is_frame_started)

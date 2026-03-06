@@ -65,6 +65,8 @@ private:
     void CreateDepthResources();
     VkFormat FindSupportedFormat(const xr_vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
+    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage, VkBuffer& buffer, VmaAllocation& allocation, VmaAllocationCreateFlags flags = 0);
+
 #ifdef DEBUG
     VkDebugUtilsMessengerEXT m_debug_messenger;
     void SetupDebugMessenger();
