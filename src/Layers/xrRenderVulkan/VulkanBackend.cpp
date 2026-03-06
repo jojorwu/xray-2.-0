@@ -77,6 +77,7 @@ bool CVulkanBackend::Begin()
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         Msg("! Vulkan: Swapchain out of date on AcquireNextImageKHR");
+        VulkanHW.RecreateSwapchain();
         return false;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -103,9 +104,12 @@ bool CVulkanBackend::Begin()
     render_pass_info.renderArea.offset = { 0, 0 };
     render_pass_info.renderArea.extent = VulkanHW.GetSwapchainExtent();
 
-    VkClearValue clear_color = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
-    render_pass_info.clearValueCount = 1;
-    render_pass_info.pClearValues = &clear_color;
+    xr_array<VkClearValue, 2> clear_values;
+    clear_values[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clear_values[1].depthStencil = { 1.0f, 0 };
+
+    render_pass_info.clearValueCount = (uint32_t)clear_values.size();
+    render_pass_info.pClearValues = clear_values.data();
 
     vkCmdBeginRenderPass(m_command_buffers[m_current_image_index], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -159,6 +163,7 @@ void CVulkanBackend::End()
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
         Msg("! Vulkan: Swapchain out of date on QueuePresentKHR");
+        VulkanHW.RecreateSwapchain();
     }
 }
 
@@ -178,15 +183,32 @@ void CVulkanBackend::CreateRenderPass()
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentDescription depthAttachment = {};
+    depthAttachment.format = VulkanHW.GetDepthFormat();
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef = {};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    xr_array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.attachmentCount = (uint32_t)attachments.size();
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
 
@@ -200,12 +222,12 @@ void CVulkanBackend::CreateFramebuffers()
 
     for (size_t i = 0; i < imageViews.size(); i++)
     {
-        VkImageView attachments[] = { imageViews[i] };
+        xr_array<VkImageView, 2> attachments = { imageViews[i], VulkanHW.GetDepthImageView() };
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = m_render_pass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.attachmentCount = (uint32_t)attachments.size();
+        framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = VulkanHW.GetSwapchainExtent().width;
         framebufferInfo.height = VulkanHW.GetSwapchainExtent().height;
         framebufferInfo.layers = 1;

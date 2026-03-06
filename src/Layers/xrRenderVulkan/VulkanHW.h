@@ -14,6 +14,7 @@ public:
 
     void Create();
     void Destroy();
+    void RecreateSwapchain();
 
     VkInstance GetInstance() { return m_instance; }
     VkPhysicalDevice GetPhysicalDevice() { return m_physical_device; }
@@ -29,6 +30,10 @@ public:
     VmaAllocator GetAllocator() { return m_allocator; }
     int GetGraphicsFamily() { return m_graphics_family; }
 
+    VkImage GetDepthImage() { return m_depth_image; }
+    VkImageView GetDepthImageView() { return m_depth_image_view; }
+    VkFormat GetDepthFormat() { return m_depth_format; }
+
 private:
     VkInstance m_instance;
     VkPhysicalDevice m_physical_device;
@@ -41,6 +46,12 @@ private:
     VkExtent2D m_swapchain_extent;
     xr_vector<VkImage> m_swapchain_images;
     xr_vector<VkImageView> m_swapchain_image_views;
+
+    VkImage m_depth_image;
+    VmaAllocation m_depth_allocation;
+    VkImageView m_depth_image_view;
+    VkFormat m_depth_format;
+
     VmaAllocator m_allocator;
     int m_graphics_family;
 
@@ -49,6 +60,8 @@ private:
     void SelectPhysicalDevice();
     void CreateLogicalDevice();
     void CreateSwapchain();
+    void CreateDepthResources();
+    VkFormat FindSupportedFormat(const xr_vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 };
 
 extern CVulkanHW VulkanHW;
