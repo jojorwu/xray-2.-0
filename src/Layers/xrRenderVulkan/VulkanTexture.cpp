@@ -7,6 +7,7 @@ CVulkanTexture::CVulkanTexture()
     m_image = VK_NULL_HANDLE;
     m_allocation = VK_NULL_HANDLE;
     m_image_view = VK_NULL_HANDLE;
+    m_sampler = VK_NULL_HANDLE;
     m_format = VK_FORMAT_UNDEFINED;
     m_width = 0;
     m_height = 0;
@@ -47,10 +48,17 @@ void CVulkanTexture::Create(uint32_t width, uint32_t height, uint32_t mips, VkFo
     }
 
     CreateImageView();
+    VulkanHW.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_sampler);
 }
 
 void CVulkanTexture::Destroy()
 {
+    if (m_sampler != VK_NULL_HANDLE)
+    {
+        vkDestroySampler(VulkanHW.GetDevice(), m_sampler, nullptr);
+        m_sampler = VK_NULL_HANDLE;
+    }
+
     if (m_image_view != VK_NULL_HANDLE)
     {
         vkDestroyImageView(VulkanHW.GetDevice(), m_image_view, nullptr);

@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "VulkanBackend.h"
+#include "VulkanPipelineCache.h"
+#include "VulkanDescriptorManager.h"
 
 CVulkanBackend VulkanBackend;
 
@@ -16,6 +18,7 @@ CVulkanBackend::CVulkanBackend()
     m_current_frame = 0;
     m_current_image_index = 0;
     m_is_frame_started = false;
+    m_bindings.dirty = false;
 }
 
 CVulkanBackend::~CVulkanBackend()
@@ -24,16 +27,28 @@ CVulkanBackend::~CVulkanBackend()
 
 void CVulkanBackend::Create()
 {
+    CreateDescriptorSetLayout();
+    CreatePipelineLayout();
     CreateRenderPass();
     CreateFramebuffers();
     CreateCommandPool();
     AllocateCommandBuffers();
     CreateSyncPrimitives();
+    VulkanPipelineCache.Create();
+    VulkanDescriptorManager.Create();
 }
 
 void CVulkanBackend::Destroy()
 {
+    VulkanDescriptorManager.Destroy();
+    VulkanPipelineCache.Destroy();
     VkDevice device = VulkanHW.GetDevice();
+
+    if (m_default_pipeline_layout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(device, m_default_pipeline_layout, nullptr);
+
+    if (m_descriptor_set_layout != VK_NULL_HANDLE)
+        vkDestroyDescriptorSetLayout(device, m_descriptor_set_layout, nullptr);
 
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -75,6 +90,8 @@ bool CVulkanBackend::Begin()
 
     if (device == VK_NULL_HANDLE || swapchain == VK_NULL_HANDLE)
         return false;
+
+    m_current_pipeline_layout = m_default_pipeline_layout;
 
     vkWaitForFences(device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
 
@@ -160,6 +177,7 @@ void CVulkanBackend::SetPipeline(VkPipeline pipeline, VkPipelineLayout layout, V
     if (!m_is_frame_started)
         return;
 
+    m_current_pipeline_layout = layout;
     vkCmdBindPipeline(m_command_buffers[m_current_image_index], bindPoint, pipeline);
 }
 
@@ -171,11 +189,44 @@ void CVulkanBackend::SetDescriptorSet(VkDescriptorSet set, VkPipelineLayout layo
     vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], bindPoint, layout, firstSet, 1, &set, 0, nullptr);
 }
 
+void CVulkanBackend::SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range)
+{
+    VkDescriptorBufferInfo info = { buffer, offset, range };
+    m_bindings.buffers[binding] = info;
+    m_bindings.dirty = true;
+}
+
+void CVulkanBackend::SetTexture(uint32_t binding, VkImageView view, VkSampler sampler)
+{
+    VkDescriptorImageInfo info = { sampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    m_bindings.images[binding] = info;
+    m_bindings.dirty = true;
+}
+
+void CVulkanBackend::ApplyBindings()
+{
+    if (!m_bindings.dirty) return;
+
+    DescriptorSetKey key;
+    for (auto& pair : m_bindings.buffers) key.buffers.push_back(pair.second);
+    for (auto& pair : m_bindings.images) key.images.push_back(pair.second);
+
+    VkDescriptorSet set = VulkanDescriptorManager.GetDescriptorSet(m_descriptor_set_layout, key);
+
+    if (set != VK_NULL_HANDLE)
+    {
+        vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_current_pipeline_layout, 0, 1, &set, 0, nullptr);
+    }
+
+    m_bindings.dirty = false;
+}
+
 void CVulkanBackend::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     if (!m_is_frame_started)
         return;
 
+    ApplyBindings();
     vkCmdDraw(m_command_buffers[m_current_image_index], vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -184,6 +235,7 @@ void CVulkanBackend::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, ui
     if (!m_is_frame_started)
         return;
 
+    ApplyBindings();
     vkCmdDrawIndexed(m_command_buffers[m_current_image_index], indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
@@ -281,6 +333,37 @@ void CVulkanBackend::End()
     }
 
     m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void CVulkanBackend::CreateDescriptorSetLayout()
+{
+    xr_vector<VkDescriptorSetLayoutBinding> bindings = {
+        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
+    };
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = (uint32_t)bindings.size();
+    layoutInfo.pBindings = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(VulkanHW.GetDevice(), &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to create descriptor set layout!");
+    }
+}
+
+void CVulkanBackend::CreatePipelineLayout()
+{
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &m_descriptor_set_layout;
+
+    if (vkCreatePipelineLayout(VulkanHW.GetDevice(), &pipelineLayoutInfo, nullptr, &m_default_pipeline_layout) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to create pipeline layout!");
+    }
 }
 
 void CVulkanBackend::CreateRenderPass()

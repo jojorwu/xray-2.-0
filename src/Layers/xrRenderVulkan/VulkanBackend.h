@@ -28,6 +28,9 @@ public:
     void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0);
     void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t firstIndex = 0, int32_t vertexOffset = 0, uint32_t firstInstance = 0);
 
+    void SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
+    void SetTexture(uint32_t binding, VkImageView view, VkSampler sampler);
+
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
     VkCommandPool GetCommandPool() { return m_command_pool; }
     VkRenderPass GetRenderPass() { return m_render_pass; }
@@ -49,6 +52,25 @@ private:
     uint32_t m_current_image_index;
     bool m_is_frame_started;
 
+    struct BindingState
+    {
+        xr_map<uint32_t, VkDescriptorBufferInfo> buffers;
+        xr_map<uint32_t, VkDescriptorImageInfo> images;
+        bool dirty;
+    } m_bindings;
+
+    void ApplyBindings();
+
+    VkPipelineLayout GetDefaultPipelineLayout() { return m_default_pipeline_layout; }
+    VkDescriptorSetLayout GetDefaultDescriptorSetLayout() { return m_descriptor_set_layout; }
+
+private:
+    VkPipelineLayout m_current_pipeline_layout;
+    VkPipelineLayout m_default_pipeline_layout;
+    VkDescriptorSetLayout m_descriptor_set_layout; // Global for now
+
+    void CreateDescriptorSetLayout();
+    void CreatePipelineLayout();
     void CreateRenderPass();
     void CreateFramebuffers();
     void CreateCommandPool();

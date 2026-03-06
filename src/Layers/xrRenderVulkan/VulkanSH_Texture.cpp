@@ -89,8 +89,8 @@ void CTexture::apply_normal(u32 dwStage)
 {
     if (pSurface)
     {
-        // Here we should bind the texture to the backend
-        // VulkanBackend.SetTexture(dwStage, (CVulkanTexture*)pSurface);
+        CVulkanTexture* T = (CVulkanTexture*)pSurface;
+        VulkanBackend.SetTexture(dwStage, T->GetImageView(), T->GetSampler());
     }
 }
 

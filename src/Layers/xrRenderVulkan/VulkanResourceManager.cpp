@@ -133,12 +133,61 @@ SGeometry* CVulkanResourceManager::CreateGeom(D3DVERTEXELEMENT9* decl, ID3DVerte
     return geom;
 }
 
+void FVF_To_Decl(u32 FVF, D3DVERTEXELEMENT9 dcl[MAX_FVF_DECL_SIZE])
+{
+    int i = 0;
+    WORD offset = 0;
+
+    // Position
+    if (FVF & D3DFVF_XYZRHW)
+    {
+        dcl[i++] = { 0, offset, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITIONT, 0 };
+        offset += 16;
+    }
+    else if (FVF & D3DFVF_XYZ)
+    {
+        dcl[i++] = { 0, offset, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 };
+        offset += 12;
+    }
+
+    // Normal
+    if (FVF & D3DFVF_NORMAL)
+    {
+        dcl[i++] = { 0, offset, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0 };
+        offset += 12;
+    }
+
+    // Diffuse
+    if (FVF & D3DFVF_DIFFUSE)
+    {
+        dcl[i++] = { 0, offset, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0 };
+        offset += 4;
+    }
+
+    // Specular
+    if (FVF & D3DFVF_SPECULAR)
+    {
+        dcl[i++] = { 0, offset, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 1 };
+        offset += 4;
+    }
+
+    // Textures
+    u32 texCount = (FVF & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT;
+    for (u32 t = 0; t < texCount; t++)
+    {
+        dcl[i++] = { 0, offset, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, (BYTE)t };
+        offset += 8;
+    }
+
+    // End
+    dcl[i] = { 0xFF, 0, D3DDECLTYPE_UNUSED, 0, 0, 0 };
+}
+
 SGeometry* CVulkanResourceManager::CreateGeom(u32 FVF, ID3DVertexBuffer* vb, ID3DIndexBuffer* ib)
 {
     D3DVERTEXELEMENT9 dcl[MAX_FVF_DECL_SIZE];
     ZeroMemory(dcl, sizeof(dcl));
-    // Need D3DX replacement for D3DXDeclaratorFromFVF on Linux/Vulkan
-    // CHK_DX(D3DXDeclaratorFromFVF(FVF, dcl));
+    FVF_To_Decl(FVF, dcl);
     return CreateGeom(dcl, vb, ib);
 }
 
