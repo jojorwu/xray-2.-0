@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../xrEngine/Render.h"
+#include "../../3rd party/vma/vk_mem_alloc.h"
 
 class CVulkanRender : public IRender_interface
 {
@@ -24,7 +25,22 @@ private:
     VkQueue m_present_queue;
     VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapchain;
+    VkFormat m_swapchain_format;
+    VkExtent2D m_swapchain_extent;
     xr_vector<VkImage> m_swapchain_images;
+    xr_vector<VkImageView> m_swapchain_image_views;
+
+    VkRenderPass m_render_pass;
+    xr_vector<VkFramebuffer> m_framebuffers;
+
+    VkCommandPool m_command_pool;
+    xr_vector<VkCommandBuffer> m_command_buffers;
+
+    VkSemaphore m_image_available_semaphore;
+    VkSemaphore m_render_finished_semaphore;
+    VkFence m_in_flight_fence;
+
+    VmaAllocator m_allocator;
     virtual void reset_begin() override;
     virtual void reset_end() override;
 

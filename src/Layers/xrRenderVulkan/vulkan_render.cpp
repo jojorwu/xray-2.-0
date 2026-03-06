@@ -2,13 +2,14 @@
 #include "vulkan_render.h"
 
 #ifndef _WIN32
-#define VK_USE_PLATFORM_XCB_KHR
 #include <xcb/xcb.h>
-#include "../../3rd party/vulkan/vulkan/vulkan_xcb.h"
 #endif
 
 #define VOLK_IMPLEMENTATION
 #include "../../3rd party/volk/volk.h"
+
+#define VMA_IMPLEMENTATION
+#include "../../3rd party/vma/vk_mem_alloc.h"
 
 CVulkanRender VulkanRenderImpl;
 
@@ -19,6 +20,11 @@ CVulkanRender::CVulkanRender()
     m_device = VK_NULL_HANDLE;
     m_surface = VK_NULL_HANDLE;
     m_swapchain = VK_NULL_HANDLE;
+    m_render_pass = VK_NULL_HANDLE;
+    m_command_pool = VK_NULL_HANDLE;
+    m_image_available_semaphore = VK_NULL_HANDLE;
+    m_render_finished_semaphore = VK_NULL_HANDLE;
+    m_in_flight_fence = VK_NULL_HANDLE;
 }
 
 CVulkanRender::~CVulkanRender()
@@ -159,6 +165,26 @@ void CVulkanRender::create()
 
     Msg("Vulkan: Logical device created.");
 
+    // Initialize VMA
+    VmaVulkanFunctions vma_vulkan_func = {};
+    vma_vulkan_func.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    vma_vulkan_func.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_0;
+    allocatorInfo.physicalDevice = m_physical_device;
+    allocatorInfo.device = m_device;
+    allocatorInfo.instance = m_instance;
+    allocatorInfo.pVulkanFunctions = &vma_vulkan_func;
+
+    result = vmaCreateAllocator(&allocatorInfo, &m_allocator);
+    if (result != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to create VMA allocator! Error code: %d", result);
+        return;
+    }
+    Msg("Vulkan: VMA Allocator created.");
+
     // Swapchain creation (skeleton)
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {};
     swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -172,20 +198,196 @@ void CVulkanRender::create()
 
     if (m_surface != VK_NULL_HANDLE)
     {
-        /*
         result = vkCreateSwapchainKHR(m_device, &swapchainCreateInfo, nullptr, &m_swapchain);
         if (result != VK_SUCCESS)
         {
             Msg("! Vulkan: Failed to create swapchain! Error code: %d", result);
             return;
         }
-        */
-        Msg("Vulkan: Swapchain created (stub).");
+
+        m_swapchain_format = swapchainCreateInfo.imageFormat;
+        m_swapchain_extent = swapchainCreateInfo.imageExtent;
+
+        uint32_t imageCount;
+        vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, nullptr);
+        m_swapchain_images.resize(imageCount);
+        vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, m_swapchain_images.data());
+
+        m_swapchain_image_views.resize(imageCount);
+        for (uint32_t i = 0; i < imageCount; i++)
+        {
+            VkImageViewCreateInfo viewInfo = {};
+            viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            viewInfo.image = m_swapchain_images[i];
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.format = m_swapchain_format;
+            viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewInfo.subresourceRange.baseMipLevel = 0;
+            viewInfo.subresourceRange.levelCount = 1;
+            viewInfo.subresourceRange.baseArrayLayer = 0;
+            viewInfo.subresourceRange.layerCount = 1;
+
+            result = vkCreateImageView(m_device, &viewInfo, nullptr, &m_swapchain_image_views[i]);
+            if (result != VK_SUCCESS)
+            {
+                Msg("! Vulkan: Failed to create image view for swapchain! Error code: %d", result);
+                return;
+            }
+        }
+
+        Msg("Vulkan: Swapchain and Image Views created.");
+
+        // Render Pass creation
+        VkAttachmentDescription colorAttachment = {};
+        colorAttachment.format = m_swapchain_format;
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentReference colorAttachmentRef = {};
+        colorAttachmentRef.attachment = 0;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass = {};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+
+        VkRenderPassCreateInfo renderPassInfo = {};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+
+        result = vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_render_pass);
+        if (result != VK_SUCCESS)
+        {
+            Msg("! Vulkan: Failed to create render pass! Error code: %d", result);
+            return;
+        }
+
+        // Framebuffer creation
+        m_framebuffers.resize(m_swapchain_image_views.size());
+        for (size_t i = 0; i < m_swapchain_image_views.size(); i++)
+        {
+            VkImageView attachments[] = { m_swapchain_image_views[i] };
+
+            VkFramebufferCreateInfo framebufferInfo = {};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = m_render_pass;
+            framebufferInfo.attachmentCount = 1;
+            framebufferInfo.pAttachments = attachments;
+            framebufferInfo.width = m_swapchain_extent.width;
+            framebufferInfo.height = m_swapchain_extent.height;
+            framebufferInfo.layers = 1;
+
+            result = vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_framebuffers[i]);
+            if (result != VK_SUCCESS)
+            {
+                Msg("! Vulkan: Failed to create framebuffer! Error code: %d", result);
+                return;
+            }
+        }
+        Msg("Vulkan: Render Pass and Framebuffers created.");
+
+        // Command Pool creation
+        VkCommandPoolCreateInfo poolInfo = {};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = graphicsFamily;
+        poolInfo.flags = 0; // Optional
+
+        result = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_command_pool);
+        if (result != VK_SUCCESS)
+        {
+            Msg("! Vulkan: Failed to create command pool! Error code: %d", result);
+            return;
+        }
+
+        // Command Buffer allocation
+        m_command_buffers.resize(m_framebuffers.size());
+
+        VkCommandBufferAllocateInfo allocInfo = {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = m_command_pool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = (uint32_t)m_command_buffers.size();
+
+        result = vkAllocateCommandBuffers(m_device, &allocInfo, m_command_buffers.data());
+        if (result != VK_SUCCESS)
+        {
+            Msg("! Vulkan: Failed to allocate command buffers! Error code: %d", result);
+            return;
+        }
+        Msg("Vulkan: Command Pool and Buffers created.");
+
+        // Synchronization primitives
+        VkSemaphoreCreateInfo semaphoreInfo = {};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fenceInfo = {};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_image_available_semaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_render_finished_semaphore) != VK_SUCCESS ||
+            vkCreateFence(m_device, &fenceInfo, nullptr, &m_in_flight_fence) != VK_SUCCESS)
+        {
+            Msg("! Vulkan: Failed to create synchronization primitives!");
+            return;
+        }
+        Msg("Vulkan: Synchronization primitives created.");
     }
 }
 
 void CVulkanRender::destroy()
 {
+    if (m_in_flight_fence != VK_NULL_HANDLE)
+    {
+        vkDestroyFence(m_device, m_in_flight_fence, nullptr);
+        m_in_flight_fence = VK_NULL_HANDLE;
+    }
+
+    if (m_render_finished_semaphore != VK_NULL_HANDLE)
+    {
+        vkDestroySemaphore(m_device, m_render_finished_semaphore, nullptr);
+        m_render_finished_semaphore = VK_NULL_HANDLE;
+    }
+
+    if (m_image_available_semaphore != VK_NULL_HANDLE)
+    {
+        vkDestroySemaphore(m_device, m_image_available_semaphore, nullptr);
+        m_image_available_semaphore = VK_NULL_HANDLE;
+    }
+
+    if (m_command_pool != VK_NULL_HANDLE)
+    {
+        vkDestroyCommandPool(m_device, m_command_pool, nullptr);
+        m_command_pool = VK_NULL_HANDLE;
+    }
+
+    for (auto framebuffer : m_framebuffers)
+    {
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+    }
+    m_framebuffers.clear();
+
+    if (m_render_pass != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+        m_render_pass = VK_NULL_HANDLE;
+    }
+
+    for (auto imageView : m_swapchain_image_views)
+    {
+        vkDestroyImageView(m_device, imageView, nullptr);
+    }
+    m_swapchain_image_views.clear();
+
     if (m_swapchain != VK_NULL_HANDLE)
     {
         vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
@@ -196,6 +398,12 @@ void CVulkanRender::destroy()
     {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         m_surface = VK_NULL_HANDLE;
+    }
+
+    if (m_allocator != VK_NULL_HANDLE)
+    {
+        vmaDestroyAllocator(m_allocator);
+        m_allocator = VK_NULL_HANDLE;
     }
 
     if (m_device != VK_NULL_HANDLE)
