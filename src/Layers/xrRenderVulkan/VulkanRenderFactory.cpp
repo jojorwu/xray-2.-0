@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "VulkanRenderFactory.h"
 #include "VulkanRenderDeviceRender.h"
+#include "VulkanEnvironmentRender.h"
+#include "VulkanUIShader.h"
 
 CVulkanRenderFactory VulkanRenderFactoryImpl;
 
@@ -14,7 +16,17 @@ CVulkanRenderFactory VulkanRenderFactoryImpl;
 }
 
 RENDER_FACTORY_IMPLEMENT(UISequenceVideoItem)
-RENDER_FACTORY_IMPLEMENT(UIShader)
+
+IUIShader* CVulkanRenderFactory::CreateUIShader()
+{
+	return xr_new<CVulkanUIShader>();
+}
+
+void CVulkanRenderFactory::DestroyUIShader(IUIShader* pObject)
+{
+	xr_delete((CVulkanUIShader*&)pObject);
+}
+
 RENDER_FACTORY_IMPLEMENT(StatGraphRender)
 RENDER_FACTORY_IMPLEMENT(ConsoleRender)
 
@@ -36,13 +48,47 @@ RENDER_FACTORY_IMPLEMENT(ApplicationRender)
 RENDER_FACTORY_IMPLEMENT(WallMarkArray)
 RENDER_FACTORY_IMPLEMENT(StatsRender)
 
-RENDER_FACTORY_IMPLEMENT(FlareRender)
+IFlareRender* CVulkanRenderFactory::CreateFlareRender()
+{
+	return nullptr;
+}
+
+void CVulkanRenderFactory::DestroyFlareRender(IFlareRender* pObject)
+{
+}
+
 RENDER_FACTORY_IMPLEMENT(ThunderboltRender)
 RENDER_FACTORY_IMPLEMENT(ThunderboltDescRender)
 RENDER_FACTORY_IMPLEMENT(RainRender)
 RENDER_FACTORY_IMPLEMENT(LensFlareRender)
 RENDER_FACTORY_IMPLEMENT(ImGuiRender)
-RENDER_FACTORY_IMPLEMENT(EnvironmentRender)
-RENDER_FACTORY_IMPLEMENT(EnvDescriptorMixerRender)
-RENDER_FACTORY_IMPLEMENT(EnvDescriptorRender)
+IEnvironmentRender* CVulkanRenderFactory::CreateEnvironmentRender()
+{
+	return xr_new<CVulkanEnvironmentRender>();
+}
+
+void CVulkanRenderFactory::DestroyEnvironmentRender(IEnvironmentRender* pObject)
+{
+	xr_delete((CVulkanEnvironmentRender*&)pObject);
+}
+
+IEnvDescriptorMixerRender* CVulkanRenderFactory::CreateEnvDescriptorMixerRender()
+{
+	return xr_new<CVulkanEnvDescriptorMixerRender>();
+}
+
+void CVulkanRenderFactory::DestroyEnvDescriptorMixerRender(IEnvDescriptorMixerRender* pObject)
+{
+	xr_delete((CVulkanEnvDescriptorMixerRender*&)pObject);
+}
+
+IEnvDescriptorRender* CVulkanRenderFactory::CreateEnvDescriptorRender()
+{
+	return xr_new<CVulkanEnvDescriptorRender>();
+}
+
+void CVulkanRenderFactory::DestroyEnvDescriptorRender(IEnvDescriptorRender* pObject)
+{
+	xr_delete((CVulkanEnvDescriptorRender*&)pObject);
+}
 RENDER_FACTORY_IMPLEMENT(FontRender)
