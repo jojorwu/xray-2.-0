@@ -19,6 +19,8 @@ public:
 
     void SetVB(VkBuffer buffer, VkDeviceSize offset);
     void SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
+    void SetPipeline(VkPipeline pipeline, VkPipelineLayout layout, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
+    void SetDescriptorSet(VkDescriptorSet set, VkPipelineLayout layout, uint32_t firstSet = 0, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
 
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }
     VkRenderPass GetRenderPass() { return m_render_pass; }

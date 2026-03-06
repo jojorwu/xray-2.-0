@@ -147,6 +147,22 @@ void CVulkanBackend::SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType ind
     vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], buffer, offset, indexType);
 }
 
+void CVulkanBackend::SetPipeline(VkPipeline pipeline, VkPipelineLayout layout, VkPipelineBindPoint bindPoint)
+{
+    if (!m_is_frame_started)
+        return;
+
+    vkCmdBindPipeline(m_command_buffers[m_current_image_index], bindPoint, pipeline);
+}
+
+void CVulkanBackend::SetDescriptorSet(VkDescriptorSet set, VkPipelineLayout layout, uint32_t firstSet, VkPipelineBindPoint bindPoint)
+{
+    if (!m_is_frame_started)
+        return;
+
+    vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], bindPoint, layout, firstSet, 1, &set, 0, nullptr);
+}
+
 void CVulkanBackend::End()
 {
     if (!m_is_frame_started)
