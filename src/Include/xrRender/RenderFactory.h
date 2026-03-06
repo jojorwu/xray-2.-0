@@ -26,7 +26,7 @@ class IConsoleRender;
 class IUIShader;
 class IUISequenceVideoItem;
 
-/*
+
 #define RENDER_FACTORY_INTERFACE(Class) \
 virtual I##Class* Create##Class() = 0; \
 virtual void Destroy##Class(I##Class *pObject) = 0;
@@ -67,6 +67,6 @@ protected:
 	//virtual IEnvDescriptorRender *CreateEnvDescriptorRender() = 0;
 	//virtual void DestroyEnvDescriptorRender(IEnvDescriptorRender *pObject) = 0;
 };
-*/
+
 
 #endif	//	RenderFactory_included

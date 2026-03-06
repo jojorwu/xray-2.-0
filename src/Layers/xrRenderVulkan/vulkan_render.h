@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../../xrEngine/Render.h"
-#include "../../3rd party/vma/vk_mem_alloc.h"
+#include "VulkanHW.h"
+#include "VulkanBackend.h"
 
 class CVulkanRender : public IRender_interface
 {
@@ -18,29 +19,6 @@ public:
     virtual void destroy() override;
 
 private:
-    VkInstance m_instance;
-    VkPhysicalDevice m_physical_device;
-    VkDevice m_device;
-    VkQueue m_graphics_queue;
-    VkQueue m_present_queue;
-    VkSurfaceKHR m_surface;
-    VkSwapchainKHR m_swapchain;
-    VkFormat m_swapchain_format;
-    VkExtent2D m_swapchain_extent;
-    xr_vector<VkImage> m_swapchain_images;
-    xr_vector<VkImageView> m_swapchain_image_views;
-
-    VkRenderPass m_render_pass;
-    xr_vector<VkFramebuffer> m_framebuffers;
-
-    VkCommandPool m_command_pool;
-    xr_vector<VkCommandBuffer> m_command_buffers;
-
-    VkSemaphore m_image_available_semaphore;
-    VkSemaphore m_render_finished_semaphore;
-    VkFence m_in_flight_fence;
-
-    VmaAllocator m_allocator;
     virtual void reset_begin() override;
     virtual void reset_end() override;
 
@@ -71,8 +49,8 @@ private:
     virtual void flush() override {}
     virtual void set_Object(IRenderable* O) override {}
     virtual void add_Occluder(Fbox2& bb_screenspace) override {}
-    virtual void add_Visual(IRenderVisual* V) override {}
-    virtual void add_Geometry(IRenderVisual* V) override {}
+    virtual void add_Visual(IRenderVisual* V) override;
+    virtual void add_Geometry(IRenderVisual* V) override;
     virtual void add_StaticWallmark(const wm_shader& S, const Fvector& P, float s, CDB::TRI* T, Fvector* V) override {}
     virtual void add_StaticWallmark(IWallMarkArray* pArray, const Fvector& P, float s, CDB::TRI* T, Fvector* V, float ttl = 0.f, bool ignore_opt = false, bool random_rotation = true) override {}
     virtual void add_StaticWallmark(IWallMarkArray* pArray, const Fvector& P, float s, CDB::TRI* T, Fvector* V, float ttl, bool ignore_opt, float rotation) override {}
@@ -100,8 +78,8 @@ private:
     virtual BOOL occ_visible(Fbox& B) override { return TRUE; }
     virtual BOOL occ_visible(sPoly& P) override { return TRUE; }
 
-    virtual void Calculate() override {}
-    virtual void Render() override {}
+    virtual void Calculate() override;
+    virtual void Render() override;
 
     virtual void Screenshot(ScreenshotMode mode = SM_NORMAL, LPCSTR name = 0) override {}
     virtual void Screenshot(ScreenshotMode mode, CMemoryWriter& memory_writer) override {}
@@ -116,6 +94,12 @@ private:
     virtual u32 memory_usage() override { return 0; }
     virtual u32 active_phase() override { return 0; }
     virtual void RenderToTarget(RRT target) override {}
+
+    ID3DBaseTexture* texture_load(LPCSTR fname, u32& msize);
+
+public:
+    bool Begin() { return VulkanBackend.Begin(); }
+    void End() { VulkanBackend.End(); }
 
 protected:
     virtual void ScreenshotImpl(ScreenshotMode mode, LPCSTR name, CMemoryWriter* memory_writer) override {}

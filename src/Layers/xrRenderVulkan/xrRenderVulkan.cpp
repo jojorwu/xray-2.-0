@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "../../Include/xrAPI/xrAPI.h"
+#include "VulkanRenderFactory.h"
+#include "VulkanUIRender.h"
+#include "VulkanDebugRender.h"
 
 BOOL DllMainXrRenderVulkan(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
@@ -7,10 +10,10 @@ BOOL DllMainXrRenderVulkan(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpRe
 	{
 	case DLL_PROCESS_ATTACH:
 		::Render = &VulkanRenderImpl;
-		// ::RenderFactory = &VulkanRenderFactoryImpl; // Needs implementation
+		::RenderFactory = (dxRenderFactory*)(IRenderFactory*)&VulkanRenderFactoryImpl;
 		// ::DU = &VulkanDUImpl; // Needs implementation
-		// ::UIRender = &VulkanUIRenderImpl; // Needs implementation
-		// ::DRender = &VulkanDebugRenderImpl; // Needs implementation
+		::UIRender = &VulkanUIRenderImpl;
+		::DRender = &VulkanDebugRenderImpl;
 		Msg("Vulkan: Renderer DLL attached");
 		break ;
 	case DLL_THREAD_ATTACH:

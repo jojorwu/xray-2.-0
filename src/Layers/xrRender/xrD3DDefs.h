@@ -6,6 +6,29 @@
 
 #	include "..\xrRenderDX10\DXCommonTypes.h"
 
+#elif defined(USE_VULKAN)
+
+#include <vulkan/vulkan.h>
+
+typedef VkShaderModule ID3DVertexShader;
+typedef VkShaderModule ID3DPixelShader;
+typedef void ID3DBlob;
+typedef void D3D_SHADER_MACRO;
+typedef void ID3DQuery;
+typedef VkViewport D3D_VIEWPORT;
+typedef void ID3DInclude;
+typedef class CVulkanTexture ID3DTexture2D;
+typedef VkImageView ID3DRenderTargetView;
+typedef VkImageView ID3DDepthStencilView;
+typedef class CVulkanTexture ID3DBaseTexture;
+typedef VkImageCreateInfo D3D_TEXTURE2D_DESC;
+typedef class CVulkanBuffer ID3DVertexBuffer;
+typedef class CVulkanBuffer ID3DIndexBuffer;
+typedef VkImage ID3DTexture3D;
+typedef VkPipeline ID3DState;
+
+#define DX10_ONLY(expr)			do {} while (0)
+
 #else	//	USE_DX10
 
 typedef IDirect3DVertexShader9 ID3DVertexShader;
