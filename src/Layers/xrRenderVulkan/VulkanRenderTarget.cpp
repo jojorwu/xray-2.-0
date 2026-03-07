@@ -27,6 +27,10 @@ CVulkanRenderTarget::CVulkanRenderTarget()
     // Create shadow targets
     rt_smap_depth.create("$user$smap_depth", 2048, 2048, D3DFMT_D24S8);
     rt_smap_surf.create("$user$smap_surf", 2048, 2048, D3DFMT_R32F);
+
+    accum_point_geom_create();
+    accum_omnip_geom_create();
+    accum_spot_geom_create();
 }
 
 CVulkanRenderTarget::~CVulkanRenderTarget()
@@ -52,6 +56,61 @@ void CVulkanRenderTarget::phase_scene_prepare()
     VulkanBackend.set_RT(nullptr, 1);
     VulkanBackend.set_RT(nullptr, 2);
     VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
+}
+
+void CVulkanRenderTarget::u_stencil_optimize(BOOL common_stencil)
+{
+    // Implementation for Vulkan stencil optimization
+    // This typically involves a fullscreen pass to mark pixels affected by light
+    // or culling pixels using light volume geometry and stencil tests.
+}
+
+#include "../xrRender/du_sphere.h"
+#include "../xrRender/du_cone.h"
+#include "VulkanResourceManager.h"
+
+void CVulkanRenderTarget::accum_point_geom_create()
+{
+    CVulkanBuffer* vb = xr_new<CVulkanVertexBuffer>();
+    vb->Create(DU_SPHERE_NUMVERTEX * sizeof(Fvector), false);
+    void* mapped_vb;
+    vb->Map(&mapped_vb);
+    memcpy(mapped_vb, du_sphere_vertices, DU_SPHERE_NUMVERTEX * sizeof(Fvector));
+    vb->Unmap();
+
+    CVulkanBuffer* ib = xr_new<CVulkanIndexBuffer>();
+    ib->Create(DU_SPHERE_NUMFACES * 3 * sizeof(WORD), false);
+    void* mapped_ib;
+    ib->Map(&mapped_ib);
+    memcpy(mapped_ib, du_sphere_faces, DU_SPHERE_NUMFACES * 3 * sizeof(u16));
+    ib->Unmap();
+
+    g_accum_point.create(D3DFVF_XYZ, vb, ib);
+}
+
+void CVulkanRenderTarget::accum_omnip_geom_create()
+{
+    // Reuse sphere for omniparts too or create dedicated
+    g_accum_omnipart = g_accum_point;
+}
+
+void CVulkanRenderTarget::accum_spot_geom_create()
+{
+    CVulkanBuffer* vb = xr_new<CVulkanVertexBuffer>();
+    vb->Create(DU_CONE_NUMVERTEX * sizeof(Fvector), false);
+    void* mapped_vb;
+    vb->Map(&mapped_vb);
+    memcpy(mapped_vb, du_cone_vertices, DU_CONE_NUMVERTEX * sizeof(Fvector));
+    vb->Unmap();
+
+    CVulkanBuffer* ib = xr_new<CVulkanIndexBuffer>();
+    ib->Create(DU_CONE_NUMFACES * 3 * sizeof(WORD), false);
+    void* mapped_ib;
+    ib->Map(&mapped_ib);
+    memcpy(mapped_ib, du_cone_faces, DU_CONE_NUMFACES * 3 * sizeof(u16));
+    ib->Unmap();
+
+    g_accum_spot.create(D3DFVF_XYZ, vb, ib);
 }
 
 void CVulkanRenderTarget::phase_bloom()

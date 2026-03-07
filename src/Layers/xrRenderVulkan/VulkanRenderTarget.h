@@ -17,11 +17,15 @@ public:
     void phase_accumulator();
     void phase_combine();
     void phase_wallmarks();
+    void accum_point_geom_create();
+    void accum_omnip_geom_create();
+    void accum_spot_geom_create();
     void phase_bloom();
     void phase_dof();
     void phase_sunshafts();
     void phase_smap_direct();
     void phase_smap_spot();
+    void u_stencil_optimize(BOOL common_stencil = TRUE);
 
     // G-Buffer targets
     ref_rt rt_Position; // fat (x,y,z,?)
@@ -39,6 +43,11 @@ public:
     ref_rt rt_Sunshafts_1;
     ref_rt rt_Generic_0;
     ref_rt rt_Generic_1;
+
+    // Light volumes
+    ref_geom g_accum_point;
+    ref_geom g_accum_spot;
+    ref_geom g_accum_omnipart;
 
     // Shadow mapping
     ref_rt rt_smap_depth;

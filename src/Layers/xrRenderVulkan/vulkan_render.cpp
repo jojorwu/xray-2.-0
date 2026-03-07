@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "vulkan_render.h"
+#include "../xrRender/du_sphere.h"
+#include "../xrRender/du_cone.h"
 
 CVulkanRender VulkanRenderImpl;
 
@@ -63,7 +65,26 @@ ID3DBaseTexture* CVulkanRender::texture_load(LPCSTR fname, u32& msize)
 
 void CVulkanRender::Calculate()
 {
+    Device.Statistic->RenderCALC.Begin();
+
+    // traverse sector/portal structure
+    PortalTraverser.traverse
+    (
+        detectSector(Device.vCameraPosition),
+        ViewBase,
+        Device.vCameraPosition,
+        Device.mFullTransform,
+        CPortalTraverser::VQ_HOM + CPortalTraverser::VQ_FADE
+    );
+
+    // build render-graph
+    Device.Statistic->RenderDUMP_RT_W.Begin();
+    r_dsgraph_build();
+    Device.Statistic->RenderDUMP_RT_W.End();
+
     Lights.Update();
+
+    Device.Statistic->RenderCALC.End();
 }
 
 void CVulkanRender::Render()
@@ -88,20 +109,38 @@ void CVulkanRender::Render()
     Target->phase_accumulator();
     for (light* L : Lights.package.v_point)
     {
-        // TODO: Render point light volume
+        L->xform_calc();
+        VulkanBackend.set_Geometry(Target->g_accum_point._get());
+        VulkanBackend.DrawIndexed(DU_SPHERE_NUMFACES * 3);
     }
     for (light* L : Lights.package.v_spot)
     {
-        // TODO: Render spot light volume
+        L->xform_calc();
+        VulkanBackend.set_Geometry(Target->g_accum_spot._get());
+        VulkanBackend.DrawIndexed(DU_CONE_NUMFACES * 3);
     }
     for (light* L : Lights.package.v_shadowed)
     {
-        // TODO: Render shadowed light volume
+        L->xform_calc();
+        if (L->flags.type == IRender_Light::POINT)
+        {
+            VulkanBackend.set_Geometry(Target->g_accum_point._get());
+            VulkanBackend.DrawIndexed(DU_SPHERE_NUMFACES * 3);
+        }
+        else
+        {
+            VulkanBackend.set_Geometry(Target->g_accum_spot._get());
+            VulkanBackend.DrawIndexed(DU_CONE_NUMFACES * 3);
+        }
     }
     Target->phase_scene_end();
 
     // Final combine
     Target->phase_combine();
+    // Render environment (sky, clouds)
+    g_pGamePersistent->Environment().RenderSky();
+    g_pGamePersistent->Environment().RenderClouds();
+
     // Render glows
     Glows.Render();
     // Render fullscreen quad here
@@ -122,10 +161,12 @@ void CVulkanRender::Render()
 
 void CVulkanRender::add_Visual(IRenderVisual* V)
 {
+    add_leafs_Dynamic((dxRender_Visual*)V);
 }
 
 void CVulkanRender::add_Geometry(IRenderVisual* V)
 {
+    add_Static((dxRender_Visual*)V, View->getMask());
 }
 
 IRender_Glow* CVulkanRender::glow_create()
