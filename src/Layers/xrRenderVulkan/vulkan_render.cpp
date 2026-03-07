@@ -63,6 +63,7 @@ ID3DBaseTexture* CVulkanRender::texture_load(LPCSTR fname, u32& msize)
 
 void CVulkanRender::Calculate()
 {
+    Lights.Update();
 }
 
 void CVulkanRender::Render()
@@ -76,11 +77,24 @@ void CVulkanRender::Render()
 
     // Lighting pass
     Target->phase_accumulator();
-    // Render lights here
+    for (light* L : Lights.package.v_point)
+    {
+        // TODO: Render point light volume
+    }
+    for (light* L : Lights.package.v_spot)
+    {
+        // TODO: Render spot light volume
+    }
+    for (light* L : Lights.package.v_shadowed)
+    {
+        // TODO: Render shadowed light volume
+    }
     Target->phase_scene_end();
 
     // Final combine
     Target->phase_combine();
+    // Render glows
+    Glows.Render();
     // Render fullscreen quad here
     Target->phase_scene_end();
 
@@ -93,4 +107,9 @@ void CVulkanRender::add_Visual(IRenderVisual* V)
 
 void CVulkanRender::add_Geometry(IRenderVisual* V)
 {
+}
+
+IRender_Glow* CVulkanRender::glow_create()
+{
+    return (IRender_Glow*)xr_new<CVulkanGlow>();
 }

@@ -4,6 +4,8 @@
 #include "VulkanHW.h"
 #include "VulkanBackend.h"
 #include "VulkanRenderTarget.h"
+#include "../xrRender/Light_DB.h"
+#include "VulkanGlowManager.h"
 
 class CVulkanRender : public IRender_interface
 {
@@ -61,8 +63,8 @@ private:
     virtual IRender_ObjectSpecific* ros_create(IRenderable* parent) override { return nullptr; }
     virtual void ros_destroy(IRender_ObjectSpecific*&) override {}
 
-    virtual IRender_Light* light_create() override { return nullptr; }
-    virtual IRender_Glow* glow_create() override { return nullptr; }
+    virtual IRender_Light* light_create() override { return Lights.Create(); }
+    virtual IRender_Glow* glow_create() override;
 
     virtual IRenderVisual* model_CreateParticles(LPCSTR name) override { return nullptr; }
     virtual IRenderVisual* model_Create(LPCSTR name, IReader* data = 0) override { return nullptr; }
@@ -99,6 +101,8 @@ private:
     ID3DBaseTexture* texture_load(LPCSTR fname, u32& msize);
 
     CVulkanRenderTarget* Target;
+    CLight_DB Lights;
+    CGlowManager Glows;
 
 public:
     bool Begin() { return VulkanBackend.Begin(); }
