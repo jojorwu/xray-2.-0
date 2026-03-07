@@ -20,6 +20,8 @@ public:
     void phase_bloom();
     void phase_dof();
     void phase_sunshafts();
+    void phase_smap_direct();
+    void phase_smap_spot();
 
     // G-Buffer targets
     ref_rt rt_Position; // fat (x,y,z,?)
@@ -37,6 +39,10 @@ public:
     ref_rt rt_Sunshafts_1;
     ref_rt rt_Generic_0;
     ref_rt rt_Generic_1;
+
+    // Shadow mapping
+    ref_rt rt_smap_depth;
+    ref_rt rt_smap_surf;
 
 private:
     u32 dwWidth;

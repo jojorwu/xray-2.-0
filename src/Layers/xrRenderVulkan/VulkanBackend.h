@@ -20,8 +20,8 @@ public:
     void Clear();
     void ClearTarget();
 
-    void SetVB(VkBuffer buffer, VkDeviceSize offset);
-    void SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
+    void SetVB(VkBuffer buffer, VkDeviceSize offset, uint32_t slot = 0);
+    void SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType = VK_INDEX_TYPE_UINT16);
     void SetState(SState* state);
     void SetPipeline(VkPipeline pipeline, VkPipelineLayout layout, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
     void SetDescriptorSet(VkDescriptorSet set, VkPipelineLayout layout, uint32_t firstSet = 0, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -35,6 +35,9 @@ public:
     void set_VS(SVS* vs);
     void set_PS(SPS* ps);
     void set_Geometry(SGeometry* geom);
+    void set_Viewport(const VkViewport& vp);
+    void set_Scissor(const VkRect2D& scissor);
+    void set_Topology(VkPrimitiveTopology topology);
 
     void EnsureRenderPass();
     void EndRenderPass();
@@ -93,13 +96,42 @@ private:
     VkRenderPass m_active_render_pass;
     VkFramebuffer m_active_framebuffer;
     VkPipeline m_active_pipeline;
-    VkBuffer m_active_vb;
+    xr_array<VkBuffer, 4> m_active_vbs;
+    xr_array<VkDeviceSize, 4> m_active_offsets;
     VkBuffer m_active_ib;
     VkPrimitiveTopology m_topology;
+
+    xr_array<VkBuffer, 4> m_pVB;
+    xr_array<VkDeviceSize, 4> m_pVB_offsets;
+    VkBuffer m_pIB;
+    VkDeviceSize m_pIB_offset;
+    VkIndexType m_pIB_type;
+
+    VkBuffer m_active_ib;
+    VkDeviceSize m_active_ib_offset;
+
     bool m_is_render_pass_active;
+
+    VkViewport m_viewport;
+    VkRect2D m_scissor;
+    bool m_viewport_dirty;
+    bool m_scissor_dirty;
 
     VkCommandPool m_command_pool;
     xr_vector<VkCommandBuffer> m_command_buffers;
+
+    struct UniformBufferRing
+    {
+        VkBuffer buffer;
+        VmaAllocation allocation;
+        uint8_t* mapped_data;
+        VkDeviceSize size;
+        VkDeviceSize offset;
+    } m_ub_ring;
+
+    void CreateUniformBufferRing();
+    void DestroyUniformBufferRing();
+    VkDescriptorBufferInfo AllocateUniform(uint32_t size, const void* data);
 
     static const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
     xr_array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_image_available_semaphores;

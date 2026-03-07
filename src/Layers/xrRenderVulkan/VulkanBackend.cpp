@@ -28,10 +28,22 @@ CVulkanBackend::CVulkanBackend()
     m_active_render_pass = VK_NULL_HANDLE;
     m_active_framebuffer = VK_NULL_HANDLE;
     m_active_pipeline = VK_NULL_HANDLE;
-    m_active_vb = VK_NULL_HANDLE;
+    m_active_vbs.fill(VK_NULL_HANDLE);
+    m_active_offsets.fill(0);
     m_active_ib = VK_NULL_HANDLE;
     m_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_is_render_pass_active = false;
+    m_viewport_dirty = false;
+    m_scissor_dirty = false;
+
+    m_pVB.fill(VK_NULL_HANDLE);
+    m_pVB_offsets.fill(0);
+    m_pIB = VK_NULL_HANDLE;
+    m_pIB_offset = 0;
+    m_pIB_type = VK_INDEX_TYPE_UINT16;
+
+    m_active_ib = VK_NULL_HANDLE;
+    m_active_ib_offset = 0;
 }
 
 CVulkanBackend::~CVulkanBackend()
@@ -47,6 +59,7 @@ void CVulkanBackend::Create()
     CreateCommandPool();
     AllocateCommandBuffers();
     CreateSyncPrimitives();
+    CreateUniformBufferRing();
     VulkanPipelineCache.Create();
     VulkanDescriptorManager.Create();
 }
@@ -84,6 +97,8 @@ void CVulkanBackend::Destroy()
 
     if (m_render_pass != VK_NULL_HANDLE)
         vkDestroyRenderPass(device, m_render_pass, nullptr);
+
+    DestroyUniformBufferRing();
 
     for (auto& it : m_render_pass_cache)
         vkDestroyRenderPass(device, it.second, nullptr);
@@ -153,20 +168,23 @@ bool CVulkanBackend::Begin()
     return true;
 }
 
-void CVulkanBackend::SetVB(VkBuffer buffer, VkDeviceSize offset)
+void CVulkanBackend::SetVB(VkBuffer buffer, VkDeviceSize offset, uint32_t slot)
 {
-    if (!m_is_frame_started)
-        return;
-    EnsureRenderPass();
-    vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], 0, 1, &buffer, &offset);
+    if (m_pVB[slot] != buffer || m_pVB_offsets[slot] != offset)
+    {
+        m_pVB[slot] = buffer;
+        m_pVB_offsets[slot] = offset;
+    }
 }
 
 void CVulkanBackend::SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
-    if (!m_is_frame_started)
-        return;
-    EnsureRenderPass();
-    vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], buffer, offset, indexType);
+    if (m_pIB != buffer || m_pIB_offset != offset || m_pIB_type != indexType)
+    {
+        m_pIB = buffer;
+        m_pIB_offset = offset;
+        m_pIB_type = indexType;
+    }
 }
 
 void CVulkanBackend::SetState(SState* state)
@@ -245,6 +263,23 @@ void CVulkanBackend::set_PS(SPS* ps)
 void CVulkanBackend::set_Geometry(SGeometry* geom)
 {
     m_pGeom = geom;
+}
+
+void CVulkanBackend::set_Viewport(const VkViewport& vp)
+{
+    m_viewport = vp;
+    m_viewport_dirty = true;
+}
+
+void CVulkanBackend::set_Scissor(const VkRect2D& scissor)
+{
+    m_scissor = scissor;
+    m_scissor_dirty = true;
+}
+
+void CVulkanBackend::set_Topology(VkPrimitiveTopology topology)
+{
+    m_topology = topology;
 }
 
 VkRenderPass CVulkanBackend::GetRenderPass(const RenderPassKey& key)
@@ -428,19 +463,17 @@ void CVulkanBackend::EnsureRenderPass()
 
     vkCmdBeginRenderPass(m_command_buffers[m_current_image_index], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float)render_pass_info.renderArea.extent.width;
-    viewport.height = (float)render_pass_info.renderArea.extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(m_command_buffers[m_current_image_index], 0, 1, &viewport);
+    m_viewport.x = 0.0f;
+    m_viewport.y = 0.0f;
+    m_viewport.width = (float)render_pass_info.renderArea.extent.width;
+    m_viewport.height = (float)render_pass_info.renderArea.extent.height;
+    m_viewport.minDepth = 0.0f;
+    m_viewport.maxDepth = 1.0f;
+    m_viewport_dirty = true;
 
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = render_pass_info.renderArea.extent;
-    vkCmdSetScissor(m_command_buffers[m_current_image_index], 0, 1, &scissor);
+    m_scissor.offset = { 0, 0 };
+    m_scissor.extent = render_pass_info.renderArea.extent;
+    m_scissor_dirty = true;
 
     m_is_render_pass_active = true;
 }
@@ -473,6 +506,18 @@ void CVulkanBackend::ApplyBindings()
 void CVulkanBackend::CommitState()
 {
     EnsureRenderPass();
+
+    if (m_viewport_dirty)
+    {
+        vkCmdSetViewport(m_command_buffers[m_current_image_index], 0, 1, &m_viewport);
+        m_viewport_dirty = false;
+    }
+    if (m_scissor_dirty)
+    {
+        vkCmdSetScissor(m_command_buffers[m_current_image_index], 0, 1, &m_scissor);
+        m_scissor_dirty = false;
+    }
+
     ApplyBindings();
 
     PipelineStateKey key = {};
@@ -517,17 +562,32 @@ void CVulkanBackend::CommitState()
 
     if (m_pGeom)
     {
-        if (m_pGeom->vb->m_buffer != m_active_vb)
+        SetVB(m_pGeom->vb->m_buffer, 0, 0);
+        if (m_pGeom->ib)
+            SetIB(m_pGeom->ib->m_buffer, 0, VK_INDEX_TYPE_UINT16);
+    }
+
+    for (u32 i = 0; i < 4; i++)
+    {
+        if (m_pVB[i] != m_active_vbs[i] || m_pVB_offsets[i] != m_active_offsets[i])
         {
-            VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], 0, 1, &m_pGeom->vb->m_buffer, &offset);
-            m_active_vb = m_pGeom->vb->m_buffer;
+            if (m_pVB[i])
+                vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], i, 1, &m_pVB[i], &m_pVB_offsets[i]);
+            else
+            {
+                // Unbind? Vulkan doesn't really have "unbind" for VBs, usually just bind a dummy or null
+            }
+            m_active_vbs[i] = m_pVB[i];
+            m_active_offsets[i] = m_pVB_offsets[i];
         }
-        if (m_pGeom->ib && m_pGeom->ib->m_buffer != m_active_ib)
-        {
-            vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], m_pGeom->ib->m_buffer, 0, VK_INDEX_TYPE_UINT16);
-            m_active_ib = m_pGeom->ib->m_buffer;
-        }
+    }
+
+    if (m_pIB != m_active_ib || m_pIB_offset != m_active_ib_offset)
+    {
+        if (m_pIB)
+            vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], m_pIB, m_pIB_offset, m_pIB_type);
+        m_active_ib = m_pIB;
+        m_active_ib_offset = m_pIB_offset;
     }
 }
 
@@ -681,6 +741,7 @@ void CVulkanBackend::End()
     }
 
     m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+    m_ub_ring.offset = 0; // Reset for next frame, assuming per-frame buffers
 }
 
 void CVulkanBackend::CreateDescriptorSetLayout()
@@ -814,6 +875,48 @@ void CVulkanBackend::AllocateCommandBuffers()
     allocInfo.commandBufferCount = (uint32_t)m_command_buffers.size();
 
     vkAllocateCommandBuffers(VulkanHW.GetDevice(), &allocInfo, m_command_buffers.data());
+}
+
+void CVulkanBackend::CreateUniformBufferRing()
+{
+    m_ub_ring.size = 1024 * 1024 * 4; // 4MB
+    m_ub_ring.offset = 0;
+
+    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferInfo.size = m_ub_ring.size;
+    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    vmaCreateBuffer(VulkanHW.GetAllocator(), &bufferInfo, &allocInfo, &m_ub_ring.buffer, &m_ub_ring.allocation, nullptr);
+    vmaMapMemory(VulkanHW.GetAllocator(), m_ub_ring.allocation, (void**)&m_ub_ring.mapped_data);
+}
+
+void CVulkanBackend::DestroyUniformBufferRing()
+{
+    vmaUnmapMemory(VulkanHW.GetAllocator(), m_ub_ring.allocation);
+    vmaDestroyBuffer(VulkanHW.GetAllocator(), m_ub_ring.buffer, m_ub_ring.allocation);
+}
+
+VkDescriptorBufferInfo CVulkanBackend::AllocateUniform(uint32_t size, const void* data)
+{
+    // Alignment
+    VkDeviceSize alignment = 256; // Standard
+    m_ub_ring.offset = (m_ub_ring.offset + alignment - 1) & ~(alignment - 1);
+
+    if (m_ub_ring.offset + size > m_ub_ring.size)
+    {
+        Msg("! Vulkan: Uniform buffer ring overflow!");
+        return { VK_NULL_HANDLE, 0, 0 };
+    }
+
+    memcpy(m_ub_ring.mapped_data + m_ub_ring.offset, data, size);
+
+    VkDescriptorBufferInfo info = { m_ub_ring.buffer, m_ub_ring.offset, size };
+    m_ub_ring.offset += size;
+    return info;
 }
 
 void CVulkanBackend::CreateSyncPrimitives()

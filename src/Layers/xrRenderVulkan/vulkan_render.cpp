@@ -70,9 +70,18 @@ void CVulkanRender::Render()
 {
     if (!Begin()) return;
 
+    // Shadow passes
+    // Lights.package.sort();
+    for (light* L : Lights.package.v_shadowed)
+    {
+        Target->phase_smap_direct();
+        r_dsgraph_render_graph(0);
+        Target->phase_scene_end();
+    }
+
     // G-Buffer pass
     Target->phase_scene_begin();
-    // Render static and dynamic objects here
+    r_dsgraph_render_graph(0);
     Target->phase_scene_end();
 
     // Lighting pass

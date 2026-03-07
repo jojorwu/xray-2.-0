@@ -23,10 +23,16 @@ CVulkanRenderTarget::CVulkanRenderTarget()
     rt_Sunshafts_1.create("$user$sunshafts1", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
     rt_Generic_0.create("$user$generic0", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
     rt_Generic_1.create("$user$generic1", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
+
+    // Create shadow targets
+    rt_smap_depth.create("$user$smap_depth", 2048, 2048, D3DFMT_D24S8);
+    rt_smap_surf.create("$user$smap_surf", 2048, 2048, D3DFMT_R32F);
 }
 
 CVulkanRenderTarget::~CVulkanRenderTarget()
 {
+    rt_smap_surf.destroy();
+    rt_smap_depth.destroy();
     rt_Generic_1.destroy();
     rt_Generic_0.destroy();
     rt_Sunshafts_1.destroy();
@@ -77,6 +83,24 @@ void CVulkanRenderTarget::phase_dof()
     VulkanBackend.set_ZB(nullptr);
     VulkanBackend.ClearTarget();
     // Render DOF here
+}
+
+void CVulkanRenderTarget::phase_smap_direct()
+{
+    VulkanBackend.set_RT(rt_smap_surf->pRT, 0);
+    VulkanBackend.set_RT(nullptr, 1);
+    VulkanBackend.set_RT(nullptr, 2);
+    VulkanBackend.set_ZB(rt_smap_depth->pRT); // depth RT is CVulkanRTView
+    VulkanBackend.Clear();
+}
+
+void CVulkanRenderTarget::phase_smap_spot()
+{
+    VulkanBackend.set_RT(rt_smap_surf->pRT, 0);
+    VulkanBackend.set_RT(nullptr, 1);
+    VulkanBackend.set_RT(nullptr, 2);
+    VulkanBackend.set_ZB(rt_smap_depth->pRT);
+    VulkanBackend.Clear();
 }
 
 void CVulkanRenderTarget::phase_sunshafts()
