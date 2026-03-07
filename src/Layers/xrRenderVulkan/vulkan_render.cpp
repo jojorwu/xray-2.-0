@@ -100,6 +100,11 @@ void CVulkanRender::Render()
         Target->phase_scene_end();
     }
 
+    // Depth pre-pass
+    Target->phase_depth_prepass();
+    r_dsgraph_render_graph(0);
+    Target->phase_scene_end();
+
     // G-Buffer pass
     Target->phase_scene_begin();
     r_dsgraph_render_graph(0);

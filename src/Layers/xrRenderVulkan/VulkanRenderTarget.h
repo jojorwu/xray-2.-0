@@ -12,6 +12,7 @@ public:
     virtual u32 get_height() override { return dwHeight; }
 
     void phase_scene_prepare();
+    void phase_depth_prepass();
     void phase_scene_begin();
     void phase_scene_end();
     void phase_accumulator();

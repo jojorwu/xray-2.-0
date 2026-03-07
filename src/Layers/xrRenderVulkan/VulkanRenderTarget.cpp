@@ -58,6 +58,15 @@ void CVulkanRenderTarget::phase_scene_prepare()
     VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
 }
 
+void CVulkanRenderTarget::phase_depth_prepass()
+{
+    VulkanBackend.set_RT(nullptr, 0);
+    VulkanBackend.set_RT(nullptr, 1);
+    VulkanBackend.set_RT(nullptr, 2);
+    VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
+    VulkanBackend.Clear(); // Only depth since no RTs
+}
+
 void CVulkanRenderTarget::u_stencil_optimize(BOOL common_stencil)
 {
     // Implementation for Vulkan stencil optimization

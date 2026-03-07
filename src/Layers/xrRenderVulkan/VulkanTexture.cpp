@@ -1,8 +1,12 @@
 #include "stdafx.h"
 #include "VulkanTexture.h"
+#include "VulkanDescriptorManager.h"
+
+static uint32_t g_bindless_index_counter = 0;
 
 CVulkanTexture::CVulkanTexture()
 {
+    m_bindless_index = g_bindless_index_counter++;
     m_ref_count = 0;
     m_image = VK_NULL_HANDLE;
     m_allocation = VK_NULL_HANDLE;
@@ -51,6 +55,7 @@ void CVulkanTexture::Create(uint32_t width, uint32_t height, uint32_t mips, VkFo
 
     CreateImageView();
     VulkanHW.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_sampler);
+    VulkanDescriptorManager.UpdateBindless(m_bindless_index, m_image_view, m_sampler);
 }
 
 void CVulkanTexture::Destroy()
@@ -301,6 +306,9 @@ void CVulkanTexture::CreateImageView()
     {
         Msg("! Vulkan: Failed to create image view!");
     }
+
+    if (m_sampler != VK_NULL_HANDLE)
+        VulkanDescriptorManager.UpdateBindless(m_bindless_index, m_image_view, m_sampler);
 
     m_rt_view.image = m_image;
     m_rt_view.view = m_image_view;

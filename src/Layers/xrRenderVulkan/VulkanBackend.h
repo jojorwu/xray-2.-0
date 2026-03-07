@@ -39,8 +39,12 @@ public:
     void set_Scissor(const VkRect2D& scissor);
     void set_Topology(VkPrimitiveTopology topology);
 
+    uint32_t AllocateVB(uint32_t size, void** ptr);
+    uint32_t AllocateIB(uint32_t size, void** ptr);
+
     void BeginQuery(uint32_t index);
     void EndQuery(uint32_t index);
+    uint64_t GetQueryResult(uint32_t index);
 
     void EnsureRenderPass();
     void EndRenderPass();
@@ -102,6 +106,7 @@ private:
     xr_array<VkBuffer, 4> m_active_vbs;
     xr_array<VkDeviceSize, 4> m_active_offsets;
     VkBuffer m_active_ib;
+    VkDeviceSize m_active_ib_offset;
     VkPrimitiveTopology m_topology;
 
     xr_array<VkBuffer, 4> m_pVB;
@@ -110,15 +115,15 @@ private:
     VkDeviceSize m_pIB_offset;
     VkIndexType m_pIB_type;
 
-    VkBuffer m_active_ib;
-    VkDeviceSize m_active_ib_offset;
-
     bool m_is_render_pass_active;
 
     VkViewport m_viewport;
     VkRect2D m_scissor;
     bool m_viewport_dirty;
     bool m_scissor_dirty;
+    bool m_pipeline_dirty;
+    bool m_vbs_dirty;
+    bool m_ib_dirty;
 
     VkCommandPool m_command_pool;
     xr_vector<VkCommandBuffer> m_command_buffers;
@@ -158,6 +163,7 @@ private:
 private:
     VkPipelineLayout m_current_pipeline_layout;
     VkPipelineLayout m_default_pipeline_layout;
+    VkPipelineLayout m_bindless_pipeline_layout;
     VkDescriptorSetLayout m_descriptor_set_layout; // Global for now
 
     VkRenderPass GetRenderPass(const RenderPassKey& key);
@@ -165,6 +171,7 @@ private:
 
     void CreateDescriptorSetLayout();
     void CreatePipelineLayout();
+    void CreateBindlessPipelineLayout();
     void CreateRenderPass();
     void CreateFramebuffers();
     void CreateCommandPool();

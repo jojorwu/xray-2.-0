@@ -32,6 +32,7 @@ CVulkanBackend::CVulkanBackend()
     m_active_vbs.fill(VK_NULL_HANDLE);
     m_active_offsets.fill(0);
     m_active_ib = VK_NULL_HANDLE;
+    m_active_ib_offset = 0;
     m_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_is_render_pass_active = false;
     m_viewport_dirty = false;
@@ -43,9 +44,6 @@ CVulkanBackend::CVulkanBackend()
     m_pIB = VK_NULL_HANDLE;
     m_pIB_offset = 0;
     m_pIB_type = VK_INDEX_TYPE_UINT16;
-
-    m_active_ib = VK_NULL_HANDLE;
-    m_active_ib_offset = 0;
 }
 
 CVulkanBackend::~CVulkanBackend()
@@ -64,6 +62,7 @@ void CVulkanBackend::Create()
     CreateDynamicBuffers();
     VulkanPipelineCache.Create();
     VulkanDescriptorManager.Create();
+    CreateBindlessPipelineLayout();
 }
 
 void CVulkanBackend::Destroy()
@@ -77,6 +76,9 @@ void CVulkanBackend::Destroy()
 
     if (m_descriptor_set_layout != VK_NULL_HANDLE)
         vkDestroyDescriptorSetLayout(device, m_descriptor_set_layout, nullptr);
+
+    if (m_bindless_pipeline_layout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(device, m_bindless_pipeline_layout, nullptr);
 
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -131,7 +133,7 @@ bool CVulkanBackend::Begin()
     if (device == VK_NULL_HANDLE || swapchain == VK_NULL_HANDLE)
         return false;
 
-    m_current_pipeline_layout = m_default_pipeline_layout;
+    m_current_pipeline_layout = m_bindless_pipeline_layout ? m_bindless_pipeline_layout : m_default_pipeline_layout;
 
     vkWaitForFences(device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
 
@@ -164,8 +166,11 @@ bool CVulkanBackend::Begin()
 
     m_is_frame_started = true;
     m_active_pipeline = VK_NULL_HANDLE;
-    m_active_vb = VK_NULL_HANDLE;
+    m_active_vbs.fill(VK_NULL_HANDLE);
     m_active_ib = VK_NULL_HANDLE;
+    m_pipeline_dirty = true;
+    m_vbs_dirty = true;
+    m_ib_dirty = true;
     m_pRT.fill(nullptr);
     m_pRT[0] = VulkanHW.GetSwapchainRTView(m_current_image_index);
     m_pZB = VulkanHW.GetDepthRTView();
@@ -178,6 +183,7 @@ void CVulkanBackend::SetVB(VkBuffer buffer, VkDeviceSize offset, uint32_t slot)
     {
         m_pVB[slot] = buffer;
         m_pVB_offsets[slot] = offset;
+        m_vbs_dirty = true;
     }
 }
 
@@ -188,6 +194,7 @@ void CVulkanBackend::SetIB(VkBuffer buffer, VkDeviceSize offset, VkIndexType ind
         m_pIB = buffer;
         m_pIB_offset = offset;
         m_pIB_type = indexType;
+        m_ib_dirty = true;
     }
 }
 
@@ -300,6 +307,12 @@ void CVulkanBackend::BeginQuery(uint32_t index)
 void CVulkanBackend::EndQuery(uint32_t index)
 {
     if (m_occq) m_occq->End(index);
+}
+
+uint64_t CVulkanBackend::GetQueryResult(uint32_t index)
+{
+    if (m_occq) return m_occq->GetResult(index);
+    return 1; // Assume visible if no query system
 }
 
 VkRenderPass CVulkanBackend::GetRenderPass(const RenderPassKey& key)
@@ -521,6 +534,9 @@ void CVulkanBackend::ApplyBindings()
         vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_current_pipeline_layout, 0, 1, &set, 0, nullptr);
     }
 
+    VkDescriptorSet bindless_set = VulkanDescriptorManager.GetBindlessSet();
+    vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_bindless_pipeline_layout, 1, 1, &bindless_set, 0, nullptr);
+
     m_bindings.dirty = false;
 }
 
@@ -542,12 +558,12 @@ void CVulkanBackend::CommitState()
     ApplyBindings();
 
     PipelineStateKey key = {};
-    key.vs = m_pVS->vs;
-    key.ps = m_pPS->ps;
+    key.vs = m_pVS ? m_pVS->vs : VK_NULL_HANDLE;
+    key.ps = m_pPS ? m_pPS->ps : VK_NULL_HANDLE;
     key.renderPass = m_active_render_pass;
     key.layout = m_current_pipeline_layout;
     key.topology = m_topology;
-    key.inputLayoutHash = (uint32_t)(intptr_t)m_pGeom->dcl;
+    key.inputLayoutHash = m_pGeom ? (uint32_t)(intptr_t)m_pGeom->dcl : 0;
 
     key.colorAttachmentCount = 0;
     for (u32 i = 0; i < 4; i++)
@@ -582,40 +598,46 @@ void CVulkanBackend::CommitState()
     }
 
     VkPipeline pipeline = VulkanPipelineCache.GetPipeline(key);
-    if (pipeline != VK_NULL_HANDLE && pipeline != m_active_pipeline)
+    if (pipeline != VK_NULL_HANDLE && (pipeline != m_active_pipeline || m_pipeline_dirty))
     {
         vkCmdBindPipeline(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         m_active_pipeline = pipeline;
+        m_pipeline_dirty = false;
     }
 
     if (m_pGeom)
     {
-        SetVB(m_pGeom->vb->m_buffer, 0, 0);
+        if (m_pGeom->vb)
+            SetVB(m_pGeom->vb->m_buffer, 0, 0);
         if (m_pGeom->ib)
             SetIB(m_pGeom->ib->m_buffer, 0, VK_INDEX_TYPE_UINT16);
     }
 
-    for (u32 i = 0; i < 4; i++)
+    if (m_vbs_dirty)
     {
-        if (m_pVB[i] != m_active_vbs[i] || m_pVB_offsets[i] != m_active_offsets[i])
+        for (u32 i = 0; i < 4; i++)
         {
-            if (m_pVB[i])
-                vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], i, 1, &m_pVB[i], &m_pVB_offsets[i]);
-            else
+            if (m_pVB[i] != m_active_vbs[i] || m_pVB_offsets[i] != m_active_offsets[i])
             {
-                // Unbind? Vulkan doesn't really have "unbind" for VBs, usually just bind a dummy or null
+                if (m_pVB[i])
+                    vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], i, 1, &m_pVB[i], &m_pVB_offsets[i]);
+                m_active_vbs[i] = m_pVB[i];
+                m_active_offsets[i] = m_pVB_offsets[i];
             }
-            m_active_vbs[i] = m_pVB[i];
-            m_active_offsets[i] = m_pVB_offsets[i];
         }
+        m_vbs_dirty = false;
     }
 
-    if (m_pIB != m_active_ib || m_pIB_offset != m_active_ib_offset)
+    if (m_ib_dirty)
     {
-        if (m_pIB)
-            vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], m_pIB, m_pIB_offset, m_pIB_type);
-        m_active_ib = m_pIB;
-        m_active_ib_offset = m_pIB_offset;
+        if (m_pIB != m_active_ib || m_pIB_offset != m_active_ib_offset)
+        {
+            if (m_pIB)
+                vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], m_pIB, m_pIB_offset, m_pIB_type);
+            m_active_ib = m_pIB;
+            m_active_ib_offset = m_pIB_offset;
+        }
+        m_ib_dirty = false;
     }
 
     if (m_pVB_stream.m_buffer != m_active_vbs[1]) // Bind dynamic stream to slot 1 for now
@@ -643,6 +665,15 @@ void CVulkanBackend::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, ui
 
     CommitState();
     vkCmdDrawIndexed(m_command_buffers[m_current_image_index], indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
+void CVulkanBackend::DrawIndexedIndirect(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+{
+    if (!m_is_frame_started)
+        return;
+
+    CommitState();
+    vkCmdDrawIndexedIndirect(m_command_buffers[m_current_image_index], buffer, offset, drawCount, stride);
 }
 
 void CVulkanBackend::Clear()
@@ -824,6 +855,20 @@ void CVulkanBackend::CreatePipelineLayout()
     }
 }
 
+void CVulkanBackend::CreateBindlessPipelineLayout()
+{
+    xr_array<VkDescriptorSetLayout, 2> layouts = { m_descriptor_set_layout, VulkanDescriptorManager.GetBindlessLayout() };
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = (uint32_t)layouts.size();
+    pipelineLayoutInfo.pSetLayouts = layouts.data();
+
+    if (vkCreatePipelineLayout(VulkanHW.GetDevice(), &pipelineLayoutInfo, nullptr, &m_bindless_pipeline_layout) != VK_SUCCESS)
+    {
+        Msg("! Vulkan: Failed to create bindless pipeline layout!");
+    }
+}
+
 void CVulkanBackend::CreateRenderPass()
 {
     VkAttachmentDescription colorAttachment = {};
@@ -939,6 +984,16 @@ VkDescriptorBufferInfo CVulkanBackend::AllocateUniform(uint32_t size, const void
         return { m_ub_ring.m_buffer, offset, size };
     }
     return { VK_NULL_HANDLE, 0, 0 };
+}
+
+uint32_t CVulkanBackend::AllocateVB(uint32_t size, void** ptr)
+{
+    return m_pVB_stream.Alloc(size, ptr);
+}
+
+uint32_t CVulkanBackend::AllocateIB(uint32_t size, void** ptr)
+{
+    return m_pIB_stream.Alloc(size, ptr);
 }
 
 void CVulkanBackend::CreateSyncPrimitives()

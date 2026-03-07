@@ -46,9 +46,17 @@ public:
 
     VkDescriptorSet GetDescriptorSet(VkDescriptorSetLayout layout, const DescriptorSetKey& key);
 
+    void UpdateBindless(uint32_t index, VkImageView view, VkSampler sampler);
+    VkDescriptorSet GetBindlessSet() const { return m_bindless_set; }
+    VkDescriptorSetLayout GetBindlessLayout() const { return m_bindless_layout; }
+
 private:
     CVulkanDescriptorPool m_pool;
     xr_map<DescriptorSetKey, VkDescriptorSet> m_cache;
+
+    VkDescriptorSetLayout m_bindless_layout;
+    VkDescriptorPool m_bindless_pool;
+    VkDescriptorSet m_bindless_set;
 };
 
 extern CVulkanDescriptorManager VulkanDescriptorManager;
