@@ -251,9 +251,9 @@ void CVulkanHW::CreateSurface()
         Msg("! Vulkan: Failed to create Win32 surface!");
     }
 #else
-    if (Device.m_hWnd == NULL)
+    if (Device.m_hWnd == NULL || Device.m_XWindow == NULL)
     {
-        Msg("! Vulkan: Device.m_hWnd is NULL during surface creation!");
+        Msg("! Vulkan: Device.m_hWnd or Device.m_XWindow is NULL during surface creation!");
         return;
     }
     VkXcbSurfaceCreateInfoKHR surface_create_info = {};

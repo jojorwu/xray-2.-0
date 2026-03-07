@@ -80,14 +80,18 @@ void CVulkanTexture::Load(LPCSTR name, uint32_t& out_size)
     Msg("Vulkan: Loading texture %s", name);
     out_size = 0;
 
+    string_path lowercase_name;
+    xr_strcpy(lowercase_name, name);
+    strlwr(lowercase_name);
+
     string_path fn;
-    if (!FS.exist(fn, "$game_textures$", name, ".dds"))
+    if (!FS.exist(fn, "$game_textures$", lowercase_name, ".dds"))
     {
-        if (!FS.exist(fn, "$level$", name, ".dds"))
+        if (!FS.exist(fn, "$level$", lowercase_name, ".dds"))
         {
-            if (!FS.exist(fn, "$game_saves$", name, ".dds"))
+            if (!FS.exist(fn, "$game_saves$", lowercase_name, ".dds"))
             {
-                Msg("! Vulkan: Can't find texture %s", name);
+                Msg("! Vulkan: Can't find texture %s", lowercase_name);
                 return;
             }
         }

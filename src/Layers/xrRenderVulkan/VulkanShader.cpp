@@ -27,8 +27,8 @@ void CVulkanShader::Create(const xr_vector<u32>& code)
 void CVulkanShader::Load(LPCSTR name)
 {
     string_path path;
-    FS.update_path(path, "$game_shaders$", name);
-    strcat(path, ".spv");
+    strconcat(sizeof(path), path, "vulkan", FS.sep, name, ".spv");
+    FS.update_path(path, "$game_shaders$", path);
 
     IReader* r = FS.r_open(path);
     if (!r)
