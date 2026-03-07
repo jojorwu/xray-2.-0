@@ -110,13 +110,32 @@ static VkCompareOp ConvertCmpFunc(D3DCMPFUNC func)
     }
 }
 
-void CVulkanState::ConvertDepthStencil(const SimulatorStates& states, VkPipelineDepthStencilStateCreateInfo& info)
+static VkStencilOp ConvertStencilOp(D3DSTENCILOP op)
+{
+    switch (op)
+    {
+    case D3DSTENCILOP_KEEP: return VK_STENCIL_OP_KEEP;
+    case D3DSTENCILOP_ZERO: return VK_STENCIL_OP_ZERO;
+    case D3DSTENCILOP_REPLACE: return VK_STENCIL_OP_REPLACE;
+    case D3DSTENCILOP_INCRSAT: return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+    case D3DSTENCILOP_DECRSAT: return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+    case D3DSTENCILOP_INVERT: return VK_STENCIL_OP_INVERT;
+    case D3DSTENCILOP_INCR: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+    case D3DSTENCILOP_DECR: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+    default: return VK_STENCIL_OP_KEEP;
+    }
+}
+
+void CVulkanState::ConvertDepthStencil(const SimulatorStates& states, VkPipelineDepthStencilStateCreateInfo& info, VkStencilOpState& front, VkStencilOpState& back)
 {
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     info.depthTestEnable = VK_TRUE;
     info.depthWriteEnable = VK_TRUE;
     info.depthCompareOp = VK_COMPARE_OP_LESS;
     info.stencilTestEnable = VK_FALSE;
+
+    front = { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0xff, 0xff, 0 };
+    back = front;
 
     for (const auto& S : states.States)
     {
@@ -127,6 +146,13 @@ void CVulkanState::ConvertDepthStencil(const SimulatorStates& states, VkPipeline
         case D3DRS_ZWRITEENABLE: info.depthWriteEnable = S.v2 ? VK_TRUE : VK_FALSE; break;
         case D3DRS_ZFUNC: info.depthCompareOp = ConvertCmpFunc((D3DCMPFUNC)S.v2); break;
         case D3DRS_STENCILENABLE: info.stencilTestEnable = S.v2 ? VK_TRUE : VK_FALSE; break;
+        case D3DRS_STENCILFUNC: front.compareOp = back.compareOp = ConvertCmpFunc((D3DCMPFUNC)S.v2); break;
+        case D3DRS_STENCILREF: front.reference = back.reference = S.v2; break;
+        case D3DRS_STENCILMASK: front.compareMask = back.compareMask = S.v2; break;
+        case D3DRS_STENCILWRITEMASK: front.writeMask = back.writeMask = S.v2; break;
+        case D3DRS_STENCILFAIL: front.failOp = back.failOp = ConvertStencilOp((D3DSTENCILOP)S.v2); break;
+        case D3DRS_STENCILZFAIL: front.depthFailOp = back.depthFailOp = ConvertStencilOp((D3DSTENCILOP)S.v2); break;
+        case D3DRS_STENCILPASS: front.passOp = back.passOp = ConvertStencilOp((D3DSTENCILOP)S.v2); break;
         }
     }
 }

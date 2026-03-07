@@ -92,6 +92,10 @@ VkPipeline CVulkanPipelineCache::GetPipeline(const PipelineStateKey& key)
     SDeclaration* dcl = (SDeclaration*)(intptr_t)key.inputLayoutHash;
     VkPipelineVertexInputStateCreateInfo* vertexInputInfo = VulkanVertexInputCache.GetState(dcl->dcl_code.data());
 
+    VkPipelineDepthStencilStateCreateInfo depthStencil = key.depthStencil;
+    depthStencil.front = key.front;
+    depthStencil.back = key.back;
+
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
@@ -101,7 +105,7 @@ VkPipeline CVulkanPipelineCache::GetPipeline(const PipelineStateKey& key)
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &key.rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pDepthStencilState = &key.depthStencil;
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = key.layout;

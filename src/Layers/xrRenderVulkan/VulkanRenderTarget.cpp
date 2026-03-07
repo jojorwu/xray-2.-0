@@ -70,8 +70,20 @@ void CVulkanRenderTarget::phase_depth_prepass()
 void CVulkanRenderTarget::u_stencil_optimize(BOOL common_stencil)
 {
     // Implementation for Vulkan stencil optimization
-    // This typically involves a fullscreen pass to mark pixels affected by light
-    // or culling pixels using light volume geometry and stencil tests.
+    VkClearRect rect = {};
+    rect.rect.offset = { 0, 0 };
+    rect.rect.extent = VulkanHW.GetSwapchainExtent();
+    rect.baseArrayLayer = 0;
+    rect.layerCount = 1;
+
+    VkClearAttachment clear = {};
+    clear.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+    clear.clearValue.depthStencil.stencil = 0;
+
+    vkCmdClearAttachments(VulkanBackend.GetCurrentCommandBuffer(), 1, &clear, 1, &rect);
+
+    // In a full implementation, we'd render the geometry of light volumes here
+    // to mark the stencil buffer where lights are active.
 }
 
 #include "../xrRender/du_sphere.h"
@@ -220,11 +232,22 @@ void CVulkanRenderTarget::phase_accumulator()
 
 void CVulkanRenderTarget::phase_combine()
 {
+    // Transition G-buffer for sampling
+    VulkanBackend.TransitionRT(rt_Position->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.TransitionRT(rt_Normal->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.TransitionRT(rt_Color->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.TransitionRT(rt_Accumulator->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     VulkanBackend.set_RT(VulkanHW.GetSwapchainRTView(VulkanBackend.GetCurrentImageIndex()), 0);
     VulkanBackend.set_RT(nullptr, 1);
     VulkanBackend.set_RT(nullptr, 2);
     VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
-    // In actual implementation, we'd bind rt_Position, rt_Normal, rt_Color, rt_Accumulator as textures here
+
+    // Bind G-buffer textures
+    VulkanBackend.SetTexture(0, rt_Position->pRT->view, VulkanHW.GetSampler());
+    VulkanBackend.SetTexture(1, rt_Normal->pRT->view, VulkanHW.GetSampler());
+    VulkanBackend.SetTexture(2, rt_Color->pRT->view, VulkanHW.GetSampler());
+    VulkanBackend.SetTexture(3, rt_Accumulator->pRT->view, VulkanHW.GetSampler());
 }
 
 void CVulkanRenderTarget::phase_wallmarks()

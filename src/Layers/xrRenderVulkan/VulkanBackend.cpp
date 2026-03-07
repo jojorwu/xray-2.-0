@@ -574,14 +574,23 @@ void CVulkanBackend::CommitState()
     // Handle uniform updates
     if (m_bindings.dirty)
     {
-        // For now, assume we just want to update the descriptors.
-        // Actually, we should check if any constants have changed and allocate a new segment from the ring.
+        // Update shader constants
+        if (m_pVS && m_pVS->constants)
+        {
+            VkDescriptorBufferInfo info = AllocateUniform(m_pVS->constants->size, m_pVS->constants->data);
+            if (info.buffer != VK_NULL_HANDLE) SetUniformBuffer(0, info.buffer, info.offset, info.range);
+        }
+        if (m_pPS && m_pPS->constants)
+        {
+            VkDescriptorBufferInfo info = AllocateUniform(m_pPS->constants->size, m_pPS->constants->data);
+            if (info.buffer != VK_NULL_HANDLE) SetUniformBuffer(1, info.buffer, info.offset, info.range);
+        }
     }
 
     if (m_bindings.state)
     {
         CVulkanState::ConvertRasterizer(m_bindings.state->state_code, key.rasterizer);
-        CVulkanState::ConvertDepthStencil(m_bindings.state->state_code, key.depthStencil);
+        CVulkanState::ConvertDepthStencil(m_bindings.state->state_code, key.depthStencil, key.front, key.back);
         xr_vector<VkPipelineColorBlendAttachmentState> blendAttachments;
         VkPipelineColorBlendStateCreateInfo blendInfo = {};
         CVulkanState::ConvertBlend(m_bindings.state->state_code, blendInfo, blendAttachments);

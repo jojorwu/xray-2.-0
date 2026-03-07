@@ -16,6 +16,8 @@ struct PipelineStateKey
     // Fixed function states
     VkPipelineRasterizationStateCreateInfo rasterizer;
     VkPipelineDepthStencilStateCreateInfo depthStencil;
+    VkStencilOpState front;
+    VkStencilOpState back;
     xr_array<VkPipelineColorBlendAttachmentState, 4> blendAttachments;
     uint32_t colorAttachmentCount;
 
@@ -33,6 +35,10 @@ struct PipelineStateKey
         res = memcmp(&rasterizer, &other.rasterizer, sizeof(rasterizer));
         if (res != 0) return res < 0;
         res = memcmp(&depthStencil, &other.depthStencil, sizeof(depthStencil));
+        if (res != 0) return res < 0;
+        res = memcmp(&front, &other.front, sizeof(front));
+        if (res != 0) return res < 0;
+        res = memcmp(&back, &other.back, sizeof(back));
         if (res != 0) return res < 0;
 
         for (u32 i = 0; i < colorAttachmentCount; i++)
