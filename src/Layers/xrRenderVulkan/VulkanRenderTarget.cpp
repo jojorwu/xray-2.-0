@@ -14,10 +14,26 @@ CVulkanRenderTarget::CVulkanRenderTarget()
 
     // Create Accumulator target
     rt_Accumulator.create("$user$accumulator", dwWidth, dwHeight, D3DFMT_A16B16G16R16F);
+
+    // Create Post-process targets
+    rt_Bloom_1.create("$user$bloom1", dwWidth / 4, dwHeight / 4, D3DFMT_A8R8G8B8);
+    rt_Bloom_2.create("$user$bloom2", dwWidth / 4, dwHeight / 4, D3DFMT_A8R8G8B8);
+    rt_DOF.create("$user$dof", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
+    rt_Sunshafts_0.create("$user$sunshafts0", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
+    rt_Sunshafts_1.create("$user$sunshafts1", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
+    rt_Generic_0.create("$user$generic0", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
+    rt_Generic_1.create("$user$generic1", dwWidth, dwHeight, D3DFMT_A8R8G8B8);
 }
 
 CVulkanRenderTarget::~CVulkanRenderTarget()
 {
+    rt_Generic_1.destroy();
+    rt_Generic_0.destroy();
+    rt_Sunshafts_1.destroy();
+    rt_Sunshafts_0.destroy();
+    rt_DOF.destroy();
+    rt_Bloom_2.destroy();
+    rt_Bloom_1.destroy();
     rt_Accumulator.destroy();
     rt_Color.destroy();
     rt_Normal.destroy();
@@ -30,6 +46,61 @@ void CVulkanRenderTarget::phase_scene_prepare()
     VulkanBackend.set_RT(nullptr, 1);
     VulkanBackend.set_RT(nullptr, 2);
     VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
+}
+
+void CVulkanRenderTarget::phase_bloom()
+{
+    // Bloom build pass
+    VulkanBackend.set_RT(rt_Bloom_1->pRT, 0);
+    VulkanBackend.set_RT(nullptr, 1);
+    VulkanBackend.set_RT(nullptr, 2);
+    VulkanBackend.set_ZB(nullptr);
+    VulkanBackend.ClearTarget();
+    // Render downsampled scene here
+
+    // Horizontal blur
+    VulkanBackend.set_RT(rt_Bloom_2->pRT, 0);
+    VulkanBackend.ClearTarget();
+    // Render blur here
+
+    // Vertical blur
+    VulkanBackend.set_RT(rt_Bloom_1->pRT, 0);
+    VulkanBackend.ClearTarget();
+    // Render blur here
+}
+
+void CVulkanRenderTarget::phase_dof()
+{
+    VulkanBackend.set_RT(rt_DOF->pRT, 0);
+    VulkanBackend.set_RT(nullptr, 1);
+    VulkanBackend.set_RT(nullptr, 2);
+    VulkanBackend.set_ZB(nullptr);
+    VulkanBackend.ClearTarget();
+    // Render DOF here
+}
+
+void CVulkanRenderTarget::phase_sunshafts()
+{
+    // Sunshafts mask generation
+    VulkanBackend.set_RT(rt_Sunshafts_0->pRT, 0);
+    VulkanBackend.set_RT(nullptr, 1);
+    VulkanBackend.set_RT(nullptr, 2);
+    VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
+    VulkanBackend.ClearTarget();
+    // Render mask
+
+    // Sunshafts blur passes
+    VulkanBackend.set_RT(rt_Sunshafts_1->pRT, 0);
+    VulkanBackend.ClearTarget();
+    // Pass 1
+
+    VulkanBackend.set_RT(rt_Sunshafts_0->pRT, 0);
+    VulkanBackend.ClearTarget();
+    // Pass 2
+
+    VulkanBackend.set_RT(rt_Sunshafts_1->pRT, 0);
+    VulkanBackend.ClearTarget();
+    // Pass 3
 }
 
 void CVulkanRenderTarget::phase_scene_begin()

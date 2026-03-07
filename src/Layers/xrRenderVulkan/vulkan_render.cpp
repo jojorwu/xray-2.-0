@@ -98,6 +98,16 @@ void CVulkanRender::Render()
     // Render fullscreen quad here
     Target->phase_scene_end();
 
+    // Post-processing graph
+    Target->phase_bloom();
+    Target->phase_scene_end();
+
+    Target->phase_sunshafts();
+    Target->phase_scene_end();
+
+    Target->phase_dof();
+    Target->phase_scene_end();
+
     End();
 }
 

@@ -17,6 +17,9 @@ public:
     void phase_accumulator();
     void phase_combine();
     void phase_wallmarks();
+    void phase_bloom();
+    void phase_dof();
+    void phase_sunshafts();
 
     // G-Buffer targets
     ref_rt rt_Position; // fat (x,y,z,?)
@@ -25,6 +28,15 @@ public:
 
     // Accumulator target
     ref_rt rt_Accumulator; // (r,g,b,specular)
+
+    // Post-process targets
+    ref_rt rt_Bloom_1;
+    ref_rt rt_Bloom_2;
+    ref_rt rt_DOF;
+    ref_rt rt_Sunshafts_0;
+    ref_rt rt_Sunshafts_1;
+    ref_rt rt_Generic_0;
+    ref_rt rt_Generic_1;
 
 private:
     u32 dwWidth;
