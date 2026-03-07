@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VulkanPipelineCache.h"
+#include "VulkanVertexInputState.h"
 
 CVulkanPipelineCache VulkanPipelineCache;
 
@@ -88,26 +89,14 @@ VkPipeline CVulkanPipelineCache::GetPipeline(const PipelineStateKey& key)
     dynamicState.dynamicStateCount = 2;
     dynamicState.pDynamicStates = dynamicStates;
 
-    xr_vector<VkVertexInputBindingDescription> bindings;
-    xr_vector<VkVertexInputAttributeDescription> attributes;
     SDeclaration* dcl = (SDeclaration*)(intptr_t)key.inputLayoutHash;
-    if (dcl)
-    {
-        CVulkanInputLayout::Convert(dcl->dcl_code.data(), bindings, attributes);
-    }
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = (uint32_t)bindings.size();
-    vertexInputInfo.pVertexBindingDescriptions = bindings.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = (uint32_t)attributes.size();
-    vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+    VkPipelineVertexInputStateCreateInfo* vertexInputInfo = VulkanVertexInputCache.GetState(dcl->dcl_code.data());
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
     pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pVertexInputState = vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &key.rasterizer;

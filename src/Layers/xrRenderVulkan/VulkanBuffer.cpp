@@ -43,7 +43,7 @@ void CVulkanBuffer::Destroy()
     }
 }
 
-void CVulkanBuffer::Map(void** data)
+void CVulkanBuffer::Map(void** data, VkDeviceSize offset, VkDeviceSize size)
 {
     vmaMapMemory(VulkanHW.GetAllocator(), m_allocation, data);
 }
@@ -53,14 +53,14 @@ void CVulkanBuffer::Unmap()
     vmaUnmapMemory(VulkanHW.GetAllocator(), m_allocation);
 }
 
-void CVulkanBuffer::Flush()
+void CVulkanBuffer::Flush(VkDeviceSize offset, VkDeviceSize size)
 {
-    vmaFlushAllocation(VulkanHW.GetAllocator(), m_allocation, 0, VK_WHOLE_SIZE);
+    vmaFlushAllocation(VulkanHW.GetAllocator(), m_allocation, offset, size);
 }
 
-void CVulkanBuffer::Invalidate()
+void CVulkanBuffer::Invalidate(VkDeviceSize offset, VkDeviceSize size)
 {
-    vmaInvalidateAllocation(VulkanHW.GetAllocator(), m_allocation, 0, VK_WHOLE_SIZE);
+    vmaInvalidateAllocation(VulkanHW.GetAllocator(), m_allocation, offset, size);
 }
 
 void CVulkanVertexBuffer::Create(uint32_t size, bool dynamic)
@@ -70,6 +70,58 @@ void CVulkanVertexBuffer::Create(uint32_t size, bool dynamic)
     VmaAllocationCreateFlags flags = dynamic ? VMA_ALLOCATION_CREATE_MAPPED_BIT : 0;
 
     CVulkanBuffer::Create(size, usage, mem_usage, flags);
+}
+
+CVulkanDynamicBuffer::CVulkanDynamicBuffer()
+{
+    m_mapped_data = nullptr;
+    m_current_offset = 0;
+}
+
+CVulkanDynamicBuffer::~CVulkanDynamicBuffer()
+{
+    if (m_mapped_data) vmaUnmapMemory(VulkanHW.GetAllocator(), m_allocation);
+}
+
+void CVulkanDynamicBuffer::Create(VkDeviceSize size, VkBufferUsageFlags usage)
+{
+    CVulkanBuffer::Create(size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU, VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    vmaMapMemory(VulkanHW.GetAllocator(), m_allocation, (void**)&m_mapped_data);
+}
+
+void CVulkanDynamicBuffer::Destroy()
+{
+    if (m_mapped_data) vmaUnmapMemory(VulkanHW.GetAllocator(), m_allocation);
+    m_mapped_data = nullptr;
+    CVulkanBuffer::Destroy();
+}
+
+uint32_t CVulkanDynamicBuffer::Alloc(uint32_t size, void** data)
+{
+    // Alignment
+    uint32_t alignment = 256; // Standard for UBO, good for others too
+    m_current_offset = (m_current_offset + alignment - 1) & ~(alignment - 1);
+
+    if (m_current_offset + size > m_size)
+    {
+        Msg("! Vulkan: Dynamic buffer overflow!");
+        return 0xFFFFFFFF;
+    }
+
+    *data = m_mapped_data + m_current_offset;
+    uint32_t res = m_current_offset;
+    m_current_offset += size;
+    return res;
+}
+
+void CVulkanDynamicBuffer::FlushAlloc(uint32_t offset, uint32_t size)
+{
+    Flush(offset, size);
+}
+
+void CVulkanDynamicBuffer::Reset()
+{
+    m_current_offset = 0;
 }
 
 void CVulkanUniformBuffer::Create(uint32_t size)

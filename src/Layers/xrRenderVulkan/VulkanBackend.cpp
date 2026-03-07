@@ -61,7 +61,7 @@ void CVulkanBackend::Create()
     CreateCommandPool();
     AllocateCommandBuffers();
     CreateSyncPrimitives();
-    CreateUniformBufferRing();
+    CreateDynamicBuffers();
     VulkanPipelineCache.Create();
     VulkanDescriptorManager.Create();
 }
@@ -100,7 +100,7 @@ void CVulkanBackend::Destroy()
     if (m_render_pass != VK_NULL_HANDLE)
         vkDestroyRenderPass(device, m_render_pass, nullptr);
 
-    DestroyUniformBufferRing();
+    DestroyDynamicBuffers();
 
     for (auto& it : m_render_pass_cache)
         vkDestroyRenderPass(device, it.second, nullptr);
@@ -555,6 +555,13 @@ void CVulkanBackend::CommitState()
         if (m_pRT[i]) key.colorAttachmentCount = i + 1;
     }
 
+    // Handle uniform updates
+    if (m_bindings.dirty)
+    {
+        // For now, assume we just want to update the descriptors.
+        // Actually, we should check if any constants have changed and allocate a new segment from the ring.
+    }
+
     if (m_bindings.state)
     {
         CVulkanState::ConvertRasterizer(m_bindings.state->state_code, key.rasterizer);
@@ -609,6 +616,14 @@ void CVulkanBackend::CommitState()
             vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], m_pIB, m_pIB_offset, m_pIB_type);
         m_active_ib = m_pIB;
         m_active_ib_offset = m_pIB_offset;
+    }
+
+    if (m_pVB_stream.m_buffer != m_active_vbs[1]) // Bind dynamic stream to slot 1 for now
+    {
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], 1, 1, &m_pVB_stream.m_buffer, &offset);
+        m_active_vbs[1] = m_pVB_stream.m_buffer;
+        m_active_offsets[1] = offset;
     }
 }
 
@@ -762,7 +777,9 @@ void CVulkanBackend::End()
     }
 
     m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-    m_ub_ring.offset = 0; // Reset for next frame, assuming per-frame buffers
+    m_ub_ring.Reset();
+    m_pVB_stream.Reset();
+    m_pIB_stream.Reset();
 }
 
 void CVulkanBackend::CreateDescriptorSetLayout()
@@ -898,46 +915,30 @@ void CVulkanBackend::AllocateCommandBuffers()
     vkAllocateCommandBuffers(VulkanHW.GetDevice(), &allocInfo, m_command_buffers.data());
 }
 
-void CVulkanBackend::CreateUniformBufferRing()
+void CVulkanBackend::CreateDynamicBuffers()
 {
-    m_ub_ring.size = 1024 * 1024 * 4; // 4MB
-    m_ub_ring.offset = 0;
-
-    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferInfo.size = m_ub_ring.size;
-    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-    VmaAllocationCreateInfo allocInfo = {};
-    allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-    allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-    vmaCreateBuffer(VulkanHW.GetAllocator(), &bufferInfo, &allocInfo, &m_ub_ring.buffer, &m_ub_ring.allocation, nullptr);
-    vmaMapMemory(VulkanHW.GetAllocator(), m_ub_ring.allocation, (void**)&m_ub_ring.mapped_data);
+    m_ub_ring.Create(1024 * 1024 * 4, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    m_pVB_stream.Create(1024 * 1024 * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    m_pIB_stream.Create(1024 * 1024 * 1, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }
 
-void CVulkanBackend::DestroyUniformBufferRing()
+void CVulkanBackend::DestroyDynamicBuffers()
 {
-    vmaUnmapMemory(VulkanHW.GetAllocator(), m_ub_ring.allocation);
-    vmaDestroyBuffer(VulkanHW.GetAllocator(), m_ub_ring.buffer, m_ub_ring.allocation);
+    m_pIB_stream.Destroy();
+    m_pVB_stream.Destroy();
+    m_ub_ring.Destroy();
 }
 
 VkDescriptorBufferInfo CVulkanBackend::AllocateUniform(uint32_t size, const void* data)
 {
-    // Alignment
-    VkDeviceSize alignment = 256; // Standard
-    m_ub_ring.offset = (m_ub_ring.offset + alignment - 1) & ~(alignment - 1);
-
-    if (m_ub_ring.offset + size > m_ub_ring.size)
+    void* ptr;
+    uint32_t offset = m_ub_ring.Alloc(size, &ptr);
+    if (offset != 0xFFFFFFFF)
     {
-        Msg("! Vulkan: Uniform buffer ring overflow!");
-        return { VK_NULL_HANDLE, 0, 0 };
+        memcpy(ptr, data, size);
+        return { m_ub_ring.m_buffer, offset, size };
     }
-
-    memcpy(m_ub_ring.mapped_data + m_ub_ring.offset, data, size);
-
-    VkDescriptorBufferInfo info = { m_ub_ring.buffer, m_ub_ring.offset, size };
-    m_ub_ring.offset += size;
-    return info;
+    return { VK_NULL_HANDLE, 0, 0 };
 }
 
 void CVulkanBackend::CreateSyncPrimitives()

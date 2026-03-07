@@ -78,7 +78,12 @@ void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 		vOffset = 0;
 		mDiscardID ++;
 
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+        void* ptr;
+		uint32_t offset = VulkanBackend.m_pVB_stream.Alloc(vl_Count * Stride, &ptr);
+        pData = (BYTE*)ptr;
+		vOffset = offset / Stride;
+#elif defined(USE_DX11)
 		HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_DISCARD, 0, &MappedSubRes);
 		pData = (BYTE*)MappedSubRes.pData;
 		pData += vOffset;
@@ -104,9 +109,18 @@ void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 		HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_NO_OVERWRITE, 0, &MappedSubRes);
 		pData = (BYTE*)MappedSubRes.pData;
 		pData += vOffset * Stride;
+#if defined(USE_VULKAN)
+    void* ptr;
+	uint32_t offset = VulkanBackend.m_pVB_stream.Alloc(vl_Count * Stride, &ptr);
+    pData = (BYTE*)ptr;
+	vOffset = offset / Stride;
+#elif defined(USE_DX11)
+	HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_NO_OVERWRITE, 0, &MappedSubRes);
+	pData = (BYTE*)MappedSubRes.pData;
+	pData += vOffset * Stride;
 #elif defined(USE_DX10)
-		pVB->Map(D3D_MAP_WRITE_NO_OVERWRITE, 0, (void**)&pData);
-		pData += vOffset * Stride;
+	pVB->Map(D3D_MAP_WRITE_NO_OVERWRITE, 0, (void**)&pData);
+	pData += vOffset * Stride;
 #else	//	USE_DX10
 		HRESULT res = pVB->Lock(mPosition, bytes_need, (void**)&pData, LOCKFLAGS_APPEND);
 
@@ -229,7 +243,12 @@ u16* _IndexStream::Lock(u32 Count, u32& vOffset)
 		dwFlags = LOCKFLAGS_FLUSH; // discard it's contens
 		mDiscardID ++;
 	}
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+    void* ptr;
+	uint32_t offset = VulkanBackend.m_pIB_stream.Alloc(Count * 2, &ptr);
+	vOffset = offset / 2;
+	return (u16*)ptr;
+#elif defined(USE_DX11)
 	D3D_MAP MapMode = (dwFlags == LOCKFLAGS_APPEND) ? D3D_MAP_WRITE_NO_OVERWRITE : D3D_MAP_WRITE_DISCARD;
 	HW.pContext->Map(pIB, 0, MapMode, 0, &MappedSubRes);
 	pLockedData = (BYTE*)MappedSubRes.pData;

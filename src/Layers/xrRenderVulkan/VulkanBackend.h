@@ -123,17 +123,12 @@ private:
     VkCommandPool m_command_pool;
     xr_vector<VkCommandBuffer> m_command_buffers;
 
-    struct UniformBufferRing
-    {
-        VkBuffer buffer;
-        VmaAllocation allocation;
-        uint8_t* mapped_data;
-        VkDeviceSize size;
-        VkDeviceSize offset;
-    } m_ub_ring;
+    CVulkanDynamicBuffer m_ub_ring;
+    CVulkanDynamicBuffer m_pVB_stream;
+    CVulkanDynamicBuffer m_pIB_stream;
 
-    void CreateUniformBufferRing();
-    void DestroyUniformBufferRing();
+    void CreateDynamicBuffers();
+    void DestroyDynamicBuffers();
     VkDescriptorBufferInfo AllocateUniform(uint32_t size, const void* data);
 
     static const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
