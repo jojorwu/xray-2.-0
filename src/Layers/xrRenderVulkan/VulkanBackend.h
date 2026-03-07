@@ -32,8 +32,14 @@ public:
     void set_RT(ID3DRenderTargetView* RT, u32 ID = 0);
     void set_ZB(ID3DDepthStencilView* ZB);
 
+    void set_VS(SVS* vs);
+    void set_PS(SPS* ps);
+    void set_Geometry(SGeometry* geom);
+
     void EnsureRenderPass();
     void EndRenderPass();
+
+    void CommitState();
 
     void SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
     void SetTexture(uint32_t binding, VkImageView view, VkSampler sampler);
@@ -80,8 +86,16 @@ private:
     xr_array<ID3DRenderTargetView*, 4> m_pRT;
     ID3DDepthStencilView* m_pZB;
 
+    SVS* m_pVS;
+    SPS* m_pPS;
+    SGeometry* m_pGeom;
+
     VkRenderPass m_active_render_pass;
     VkFramebuffer m_active_framebuffer;
+    VkPipeline m_active_pipeline;
+    VkBuffer m_active_vb;
+    VkBuffer m_active_ib;
+    VkPrimitiveTopology m_topology;
     bool m_is_render_pass_active;
 
     VkCommandPool m_command_pool;

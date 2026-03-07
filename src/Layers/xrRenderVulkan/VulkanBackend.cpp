@@ -22,8 +22,15 @@ CVulkanBackend::CVulkanBackend()
 
     m_pRT.fill(nullptr);
     m_pZB = nullptr;
+    m_pVS = nullptr;
+    m_pPS = nullptr;
+    m_pGeom = nullptr;
     m_active_render_pass = VK_NULL_HANDLE;
     m_active_framebuffer = VK_NULL_HANDLE;
+    m_active_pipeline = VK_NULL_HANDLE;
+    m_active_vb = VK_NULL_HANDLE;
+    m_active_ib = VK_NULL_HANDLE;
+    m_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_is_render_pass_active = false;
 }
 
@@ -137,6 +144,9 @@ bool CVulkanBackend::Begin()
     }
 
     m_is_frame_started = true;
+    m_active_pipeline = VK_NULL_HANDLE;
+    m_active_vb = VK_NULL_HANDLE;
+    m_active_ib = VK_NULL_HANDLE;
     m_pRT.fill(nullptr);
     m_pRT[0] = VulkanHW.GetSwapchainRTView(m_current_image_index);
     m_pZB = VulkanHW.GetDepthRTView();
@@ -194,6 +204,11 @@ void CVulkanBackend::SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDevic
 
 void CVulkanBackend::SetTexture(uint32_t binding, VkImageView view, VkSampler sampler)
 {
+    if (m_bindings.images.count(binding) &&
+        m_bindings.images[binding].imageView == view &&
+        m_bindings.images[binding].sampler == sampler)
+        return;
+
     VkDescriptorImageInfo info = { sampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
     m_bindings.images[binding] = info;
     m_bindings.dirty = true;
@@ -215,6 +230,21 @@ void CVulkanBackend::set_ZB(ID3DDepthStencilView* ZB)
         EndRenderPass();
         m_pZB = ZB;
     }
+}
+
+void CVulkanBackend::set_VS(SVS* vs)
+{
+    m_pVS = vs;
+}
+
+void CVulkanBackend::set_PS(SPS* ps)
+{
+    m_pPS = ps;
+}
+
+void CVulkanBackend::set_Geometry(SGeometry* geom)
+{
+    m_pGeom = geom;
 }
 
 VkRenderPass CVulkanBackend::GetRenderPass(const RenderPassKey& key)
@@ -440,13 +470,73 @@ void CVulkanBackend::ApplyBindings()
     m_bindings.dirty = false;
 }
 
+void CVulkanBackend::CommitState()
+{
+    EnsureRenderPass();
+    ApplyBindings();
+
+    PipelineStateKey key = {};
+    key.vs = m_pVS->vs;
+    key.ps = m_pPS->ps;
+    key.renderPass = m_active_render_pass;
+    key.layout = m_current_pipeline_layout;
+    key.topology = m_topology;
+    key.inputLayoutHash = (uint32_t)(intptr_t)m_pGeom->dcl;
+
+    key.colorAttachmentCount = 0;
+    for (u32 i = 0; i < 4; i++)
+    {
+        if (m_pRT[i]) key.colorAttachmentCount = i + 1;
+    }
+
+    if (m_bindings.state)
+    {
+        CVulkanState::ConvertRasterizer(m_bindings.state->state_code, key.rasterizer);
+        CVulkanState::ConvertDepthStencil(m_bindings.state->state_code, key.depthStencil);
+        xr_vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+        VkPipelineColorBlendStateCreateInfo blendInfo = {};
+        CVulkanState::ConvertBlend(m_bindings.state->state_code, blendInfo, blendAttachments);
+        for (u32 i = 0; i < 4; i++)
+        {
+            if (i < blendAttachments.size())
+                key.blendAttachments[i] = blendAttachments[i];
+            else
+            {
+                key.blendAttachments[i] = {};
+                key.blendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            }
+        }
+    }
+
+    VkPipeline pipeline = VulkanPipelineCache.GetPipeline(key);
+    if (pipeline != VK_NULL_HANDLE && pipeline != m_active_pipeline)
+    {
+        vkCmdBindPipeline(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        m_active_pipeline = pipeline;
+    }
+
+    if (m_pGeom)
+    {
+        if (m_pGeom->vb->m_buffer != m_active_vb)
+        {
+            VkDeviceSize offset = 0;
+            vkCmdBindVertexBuffers(m_command_buffers[m_current_image_index], 0, 1, &m_pGeom->vb->m_buffer, &offset);
+            m_active_vb = m_pGeom->vb->m_buffer;
+        }
+        if (m_pGeom->ib && m_pGeom->ib->m_buffer != m_active_ib)
+        {
+            vkCmdBindIndexBuffer(m_command_buffers[m_current_image_index], m_pGeom->ib->m_buffer, 0, VK_INDEX_TYPE_UINT16);
+            m_active_ib = m_pGeom->ib->m_buffer;
+        }
+    }
+}
+
 void CVulkanBackend::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     if (!m_is_frame_started)
         return;
 
-    EnsureRenderPass();
-    ApplyBindings();
+    CommitState();
     vkCmdDraw(m_command_buffers[m_current_image_index], vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -455,8 +545,7 @@ void CVulkanBackend::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, ui
     if (!m_is_frame_started)
         return;
 
-    EnsureRenderPass();
-    ApplyBindings();
+    CommitState();
     vkCmdDrawIndexed(m_command_buffers[m_current_image_index], indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
