@@ -2,6 +2,7 @@
 #include "VulkanBackend.h"
 #include "VulkanPipelineCache.h"
 #include "VulkanDescriptorManager.h"
+#include "VulkanOcclusionQuery.h"
 
 CVulkanBackend VulkanBackend;
 
@@ -34,6 +35,7 @@ CVulkanBackend::CVulkanBackend()
     m_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_is_render_pass_active = false;
     m_viewport_dirty = false;
+    m_occq = nullptr;
     m_scissor_dirty = false;
 
     m_pVB.fill(VK_NULL_HANDLE);
@@ -116,6 +118,8 @@ void CVulkanBackend::OnDeviceCreate()
 
 void CVulkanBackend::OnDeviceDestroy()
 {
+    if (m_occq) m_occq->Destroy();
+    xr_delete(m_occq);
     Destroy();
 }
 
@@ -280,6 +284,22 @@ void CVulkanBackend::set_Scissor(const VkRect2D& scissor)
 void CVulkanBackend::set_Topology(VkPrimitiveTopology topology)
 {
     m_topology = topology;
+}
+
+void CVulkanBackend::BeginQuery(uint32_t index)
+{
+    if (!m_occq)
+    {
+        m_occq = xr_new<CVulkanOcclusionQuery>();
+        m_occq->Create(1024);
+    }
+    EnsureRenderPass();
+    m_occq->Begin(index);
+}
+
+void CVulkanBackend::EndQuery(uint32_t index)
+{
+    if (m_occq) m_occq->End(index);
 }
 
 VkRenderPass CVulkanBackend::GetRenderPass(const RenderPassKey& key)
@@ -492,6 +512,7 @@ void CVulkanBackend::ApplyBindings()
     DescriptorSetKey key;
     key.buffers = m_bindings.buffers;
     key.images = m_bindings.images;
+    key.ComputeHash();
 
     VkDescriptorSet set = VulkanDescriptorManager.GetDescriptorSet(m_descriptor_set_layout, key);
 

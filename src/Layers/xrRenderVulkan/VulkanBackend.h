@@ -39,6 +39,9 @@ public:
     void set_Scissor(const VkRect2D& scissor);
     void set_Topology(VkPrimitiveTopology topology);
 
+    void BeginQuery(uint32_t index);
+    void EndQuery(uint32_t index);
+
     void EnsureRenderPass();
     void EndRenderPass();
 
@@ -154,6 +157,8 @@ private:
 
     VkPipelineLayout GetDefaultPipelineLayout() { return m_default_pipeline_layout; }
     VkDescriptorSetLayout GetDefaultDescriptorSetLayout() { return m_descriptor_set_layout; }
+
+    class CVulkanOcclusionQuery* m_occq;
 
 private:
     VkPipelineLayout m_current_pipeline_layout;

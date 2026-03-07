@@ -3,6 +3,24 @@
 
 CVulkanDescriptorManager VulkanDescriptorManager;
 
+void DescriptorSetKey::ComputeHash()
+{
+    hash = 0;
+    for (auto const& [binding, info] : buffers)
+    {
+        hash = crc32(&binding, sizeof(binding), hash);
+        hash = crc32(&info.buffer, sizeof(info.buffer), hash);
+        hash = crc32(&info.offset, sizeof(info.offset), hash);
+        hash = crc32(&info.range, sizeof(info.range), hash);
+    }
+    for (auto const& [binding, info] : images)
+    {
+        hash = crc32(&binding, sizeof(binding), hash);
+        hash = crc32(&info.sampler, sizeof(info.sampler), hash);
+        hash = crc32(&info.imageView, sizeof(info.imageView), hash);
+    }
+}
+
 CVulkanDescriptorManager::CVulkanDescriptorManager()
 {
 }

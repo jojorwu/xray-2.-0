@@ -9,9 +9,13 @@ struct DescriptorSetKey
 {
     xr_map<uint32_t, VkDescriptorImageInfo> images;
     xr_map<uint32_t, VkDescriptorBufferInfo> buffers;
+    uint32_t hash;
+
+    void ComputeHash();
 
     bool operator<(const DescriptorSetKey& other) const
     {
+        if (hash != other.hash) return hash < other.hash;
         if (images != other.images) return images < other.images;
         return buffers < other.buffers;
     }
