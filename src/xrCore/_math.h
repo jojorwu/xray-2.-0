@@ -51,6 +51,15 @@ IC u64 GetCLK(void)
 #ifdef M_BORLAND
 XRCORE_API u64 __fastcall GetCLK (void);
 #endif
+
+#ifdef __linux__
+	IC u64 GetCLK(void)
+	{
+		unsigned int hi, lo;
+		__asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+		return ((u64)hi << 32) | lo;
+	}
+#endif
 };
 
 extern XRCORE_API void _initialize_cpu();

@@ -83,7 +83,10 @@ extern "C" {
     }
 
     HANDLE CreateFileMapping(HANDLE hFile, void* lpFileMappingAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCSTR lpName) {
-        return hFile; // On POSIX we can just use the fd
+        if (hFile == INVALID_HANDLE_VALUE) return INVALID_HANDLE_VALUE;
+        int fd = dup((int)(intptr_t)hFile);
+        if (fd == -1) return INVALID_HANDLE_VALUE;
+        return (HANDLE)(intptr_t)fd;
     }
 
     LPVOID MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, size_t dwNumberOfBytesToMap) {
@@ -131,6 +134,19 @@ extern "C" {
                 handle = dlopen(lib_name.c_str(), RTLD_LAZY);
             }
         }
+
+        if (!handle) {
+            // Try lowercase
+            std::string lower_name = name;
+            for (auto& c : lower_name) c = (char)tolower(c);
+            handle = dlopen(lower_name.c_str(), RTLD_LAZY);
+
+            if (!handle && lower_name.find('/') == std::string::npos && lower_name.compare(0, 3, "lib") != 0) {
+                std::string lib_lower_name = "lib" + lower_name;
+                handle = dlopen(lib_lower_name.c_str(), RTLD_LAZY);
+            }
+        }
+
         return handle;
     }
 
@@ -144,6 +160,18 @@ extern "C" {
 
     BOOL FreeLibrary(HMODULE hLibModule) {
         return dlclose(hLibModule) == 0;
+    }
+
+    void OutputDebugString(LPCSTR lpOutputString) {
+        fprintf(stderr, "%s", lpOutputString);
+    }
+
+    void OutputDebugStringA(LPCSTR lpOutputString) {
+        fprintf(stderr, "%s", lpOutputString);
+    }
+
+    BOOL IsDebuggerPresent() {
+        return FALSE;
     }
 
     void DeleteSRWLock(SRWLOCK* SRWLock) {

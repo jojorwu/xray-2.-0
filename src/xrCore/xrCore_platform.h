@@ -70,6 +70,8 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <limits.h>
+#include <sys/time.h>
 
 typedef uint32_t DWORD;
 typedef uint32_t UINT;
@@ -79,19 +81,31 @@ typedef uint8_t BYTE;
 typedef int32_t BOOL;
 typedef void* HANDLE;
 typedef void* HWND;
+typedef void* HDC;
+typedef void* HICON;
+typedef void* HCURSOR;
+typedef void* HBRUSH;
+typedef void* HMENU;
 typedef const char* LPCSTR;
 typedef char* LPSTR;
 typedef void* LPVOID;
 typedef const void* LPCVOID;
 typedef long LONG;
 typedef unsigned long ULONG;
+typedef uintptr_t ULONG_PTR;
 typedef int32_t HRESULT;
 typedef void* HMODULE;
+typedef HMODULE HINSTANCE;
 typedef void* FARPROC;
+typedef intptr_t INT_PTR;
 
 typedef struct {
     long left, top, right, bottom;
-} RECT;
+} RECT, *PRECT, *LPRECT;
+
+typedef struct {
+    long x, y;
+} POINT, *PPOINT, *LPPOINT;
 
 typedef long long LRESULT;
 typedef unsigned long long WPARAM;
@@ -103,6 +117,9 @@ typedef long long LPARAM;
 #define S_FALSE 1
 typedef uint64_t UINT64;
 typedef int64_t INT64;
+
+#define LOWORD(l) ((uint16_t)(((uintptr_t)(l)) & 0xffff))
+#define HIWORD(l) ((uint16_t)((((uintptr_t)(l)) >> 16) & 0xffff))
 
 typedef int errno_t;
 
@@ -138,6 +155,13 @@ typedef void* SRWLOCK;
 
 #define INVALID_HANDLE_VALUE ((HANDLE)(intptr_t)-1)
 
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+#ifndef _MAX_PATH
+#define _MAX_PATH MAX_PATH
+#endif
+
 #define GENERIC_READ 0x80000000
 #define GENERIC_WRITE 0x40000000
 #define FILE_SHARE_READ 0x00000001
@@ -166,10 +190,50 @@ typedef void* SRWLOCK;
 #define __stdcall
 #define __forceinline __attribute__((always_inline)) inline
 
+inline char* itoa(int value, char* str, int base) {
+    if (base == 10) sprintf(str, "%d", value);
+    else if (base == 16) sprintf(str, "%x", value);
+    else if (base == 8) sprintf(str, "%o", value);
+    return str;
+}
+#define _itoa itoa
+
+inline void Sleep(uint32_t ms) {
+    usleep(ms * 1000);
+}
+
+inline uint32_t GetTickCount() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+inline long InterlockedIncrement(long volatile* addend) {
+    return __sync_add_and_fetch(addend, 1);
+}
+
+inline long InterlockedDecrement(long volatile* addend) {
+    return __sync_sub_and_fetch(addend, 1);
+}
+
+inline long InterlockedExchange(long volatile* target, long value) {
+    return __sync_lock_test_and_set(target, value);
+}
+
+inline void* InterlockedCompareExchangePointer(void* volatile* destination, void* exchange, void* comparand) {
+    return __sync_val_compare_and_swap(destination, comparand, exchange);
+}
+
 #define DLL_PROCESS_ATTACH 1
 #define DLL_THREAD_ATTACH 2
 #define DLL_THREAD_DETACH 3
 #define DLL_PROCESS_DETACH 0
+
+#define __try try
+#define __except(x) catch(...)
+#define RaiseException(...)
+#define EXCEPTION_EXECUTE_HANDLER 1
+#define EXCEPTION_CONTINUE_EXECUTION -1
 
 #define _O_RDONLY O_RDONLY
 #define _O_BINARY 0
@@ -258,6 +322,10 @@ extern "C" {
     LPVOID MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, size_t dwNumberOfBytesToMap);
     BOOL UnmapViewOfFile(LPCVOID lpBaseAddress);
 
+    void OutputDebugString(LPCSTR lpOutputString);
+    void OutputDebugStringA(LPCSTR lpOutputString);
+    BOOL IsDebuggerPresent();
+
     // Dynamic library loading wrappers for Linux
     HMODULE LoadLibraryA(LPCSTR lpLibFileName);
     HMODULE LoadLibrary(LPCSTR lpLibFileName);
@@ -286,12 +354,37 @@ extern "C" {
 
 #define GetModuleHandle(x) (void*)0
 #define GetModuleFileName(h, p, s) (p[0]=0, 0)
+#define GetModuleFileNameA GetModuleFileName
 #define GetCurrentDirectory(s, b) (getcwd(b, s) ? (DWORD)strlen(b) : 0)
 #define SetCurrentDirectory(b) (chdir(b) == 0)
 #define GetUserName(b, s) (strcpy(b, "linux_user"), *s = 10, TRUE)
 #define GetComputerName(b, s) (gethostname(b, *s) == 0 ? (*s = (DWORD)strlen(b), TRUE) : FALSE)
 #define GetProcessHeap() (void*)0
+#define GetCurrentProcess() ((HANDLE)0)
+#define GetCurrentProcessId() ((DWORD)getpid())
+#define GetCurrentThread() ((HANDLE)pthread_self())
 #define GetLastError() errno
+
+#define TerminateProcess(h, c) _exit(c)
+
+inline void _beginthread(void (*entry)(void*), unsigned stack, void* arglist) {
+    pthread_t thread;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    if (stack > 0) pthread_attr_setstacksize(&attr, stack);
+    pthread_create(&thread, &attr, (void* (*)(void*))entry, arglist);
+    pthread_attr_destroy(&attr);
+    pthread_detach(thread);
+}
+
+#define _clear87()
+#define _control87(a, b) 0
+#define MCW_PC 0
+#define MCW_RC 0
+#define _PC_64 0
+#define _PC_53 0
+#define _RC_CHOP 0
+#define _RC_NEAR 0
 
 #define GetCommandLine() "" // Will be handled in xrCore.cpp
 
