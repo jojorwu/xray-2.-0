@@ -72,6 +72,9 @@
 #include <dlfcn.h>
 #include <limits.h>
 #include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
+#include <alloca.h>
 
 typedef uint32_t DWORD;
 typedef uint32_t UINT;
@@ -90,6 +93,9 @@ typedef const char* LPCSTR;
 typedef char* LPSTR;
 typedef void* LPVOID;
 typedef const void* LPCVOID;
+typedef char TCHAR;
+typedef LPSTR LPTSTR;
+typedef LPCSTR LPCTSTR;
 typedef long LONG;
 typedef unsigned long ULONG;
 typedef uintptr_t ULONG_PTR;
@@ -107,6 +113,34 @@ typedef struct {
     long x, y;
 } POINT, *PPOINT, *LPPOINT;
 
+typedef struct {
+    DWORD cb;
+    LPSTR lpReserved;
+    LPSTR lpDesktop;
+    LPSTR lpTitle;
+    DWORD dwX;
+    DWORD dwY;
+    DWORD dwXSize;
+    DWORD dwYSize;
+    DWORD dwXCountChars;
+    DWORD dwYCountChars;
+    DWORD dwFillAttribute;
+    DWORD dwFlags;
+    WORD wShowWindow;
+    WORD cbReserved2;
+    void* lpReserved2;
+    HANDLE hStdInput;
+    HANDLE hStdOutput;
+    HANDLE hStdError;
+} STARTUPINFO, *LPSTARTUPINFO;
+
+typedef struct {
+    HANDLE hProcess;
+    HANDLE hThread;
+    DWORD dwProcessId;
+    DWORD dwThreadId;
+} PROCESS_INFORMATION, *LPPROCESS_INFORMATION;
+
 typedef long long LRESULT;
 typedef unsigned long long WPARAM;
 typedef long long LPARAM;
@@ -117,6 +151,9 @@ typedef long long LPARAM;
 #define S_FALSE 1
 typedef uint64_t UINT64;
 typedef int64_t INT64;
+
+#define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
+#define FAILED(hr) (((HRESULT)(hr)) < 0)
 
 #define LOWORD(l) ((uint16_t)(((uintptr_t)(l)) & 0xffff))
 #define HIWORD(l) ((uint16_t)((((uintptr_t)(l)) >> 16) & 0xffff))
@@ -166,12 +203,23 @@ typedef void* SRWLOCK;
 #define GENERIC_WRITE 0x40000000
 #define FILE_SHARE_READ 0x00000001
 #define FILE_SHARE_WRITE 0x00000002
-#define OPEN_EXISTING 3
+#define CREATE_NEW 1
 #define CREATE_ALWAYS 2
+#define OPEN_EXISTING 3
+#define OPEN_ALWAYS 4
 #define TRUNCATE_EXISTING 5
 
 #define PAGE_READONLY 0x02
 #define PAGE_READWRITE 0x04
+
+#define MB_OK 0x00000000L
+#define MB_ICONERROR 0x00000010L
+#define MB_SYSTEMMODAL 0x00001000L
+
+#define WAIT_OBJECT_0 0
+#define WAIT_TIMEOUT 258
+#define WAIT_FAILED ((DWORD)0xFFFFFFFF)
+#define INFINITE 0xFFFFFFFF
 
 #define FILE_MAP_READ 0x0004
 #define FILE_MAP_WRITE 0x0002
@@ -203,9 +251,15 @@ inline void Sleep(uint32_t ms) {
 }
 
 inline uint32_t GetTickCount() {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint32_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+}
+
+inline uint64_t GetTickCount64() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 inline long InterlockedIncrement(long volatile* addend) {
@@ -248,10 +302,14 @@ inline void* InterlockedCompareExchangePointer(void* volatile* destination, void
 #define SH_DENYWR 0
 
 #define CopyMemory(dest, src, len) memcpy((dest), (src), (len))
+#define MoveMemory(dest, src, len) memmove((dest), (src), (len))
 #define ZeroMemory(dest, len) memset((dest), 0, (len))
 #define FillMemory(dest, len, val) memset((dest), (val), (len))
 
 #define stricmp strcasecmp
+#define strnicmp strncasecmp
+#define _stricmp stricmp
+#define _strnicmp strnicmp
 #define _copysign copysign
 #define _vsnprintf vsnprintf
 
@@ -259,6 +317,15 @@ inline char* strlwr(char* s) {
     char* p = s;
     while (*p) {
         *p = (char)tolower(*p);
+        p++;
+    }
+    return s;
+}
+
+inline char* path_normalize(char* s) {
+    char* p = s;
+    while (*p) {
+        if (*p == '\\') *p = '/';
         p++;
     }
     return s;
@@ -325,12 +392,38 @@ extern "C" {
     void OutputDebugString(LPCSTR lpOutputString);
     void OutputDebugStringA(LPCSTR lpOutputString);
     BOOL IsDebuggerPresent();
+    int MessageBox(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
 
     // Dynamic library loading wrappers for Linux
     HMODULE LoadLibraryA(LPCSTR lpLibFileName);
     HMODULE LoadLibrary(LPCSTR lpLibFileName);
     FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
     BOOL FreeLibrary(HMODULE hLibModule);
+    HMODULE GetModuleHandle(LPCSTR lpModuleName);
+    DWORD GetModuleFileName(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
+
+    BOOL CreateProcess(LPCSTR lpApplicationName, LPSTR lpCommandLine, void* lpProcessAttributes, void* lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, void* lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFO lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);
+
+    BOOL GetClientRect(HWND hWnd, LPRECT lpRect);
+    BOOL GetWindowRect(HWND hWnd, LPRECT lpRect);
+    BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
+    BOOL ShowWindow(HWND hWnd, int nCmdShow);
+    BOOL UpdateWindow(HWND hWnd);
+    HWND GetDlgItem(HWND hDlg, int nIDDlgItem);
+    HWND CreateDialog(HINSTANCE hInstance, LPCSTR lpTemplateName, HWND hWndParent, void* lpDialogFunc);
+    BOOL DestroyWindow(HWND hWnd);
+    BOOL SetWindowText(HWND hWnd, LPCSTR lpString);
+    BOOL ShowCursor(BOOL bShow);
+    LPCSTR GetCommandLine();
+
+    // Synchronization wrappers for Linux
+    HANDLE CreateEvent(void* lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName);
+    BOOL SetEvent(HANDLE hEvent);
+    BOOL ResetEvent(HANDLE hEvent);
+    DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
+
+    HANDLE CreateMutex(void* lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName);
+    BOOL ReleaseMutex(HANDLE hMutex);
 
     // Critical Section and SRW Lock wrappers for Linux
     void InitializeCriticalSection(CRITICAL_SECTION* lpCriticalSection);
@@ -352,20 +445,28 @@ extern "C" {
 }
 #endif
 
-#define GetModuleHandle(x) (void*)0
-#define GetModuleFileName(h, p, s) (p[0]=0, 0)
+#define GetModuleHandleA GetModuleHandle
 #define GetModuleFileNameA GetModuleFileName
 #define GetCurrentDirectory(s, b) (getcwd(b, s) ? (DWORD)strlen(b) : 0)
 #define SetCurrentDirectory(b) (chdir(b) == 0)
 #define GetUserName(b, s) (strcpy(b, "linux_user"), *s = 10, TRUE)
 #define GetComputerName(b, s) (gethostname(b, *s) == 0 ? (*s = (DWORD)strlen(b), TRUE) : FALSE)
-#define GetProcessHeap() (void*)0
+#define GetProcessHeap() ((HANDLE)1)
 #define GetCurrentProcess() ((HANDLE)0)
 #define GetCurrentProcessId() ((DWORD)getpid())
 #define GetCurrentThread() ((HANDLE)pthread_self())
 #define GetLastError() errno
 
 #define TerminateProcess(h, c) _exit(c)
+#define PostQuitMessage(c) _exit(c)
+
+#define _T(x) x
+#define TEXT(x) x
+
+#define timeBeginPeriod(x)
+#define timeEndPeriod(x)
+
+#define _alloca alloca
 
 inline void _beginthread(void (*entry)(void*), unsigned stack, void* arglist) {
     pthread_t thread;
@@ -386,7 +487,6 @@ inline void _beginthread(void (*entry)(void*), unsigned stack, void* arglist) {
 #define _RC_CHOP 0
 #define _RC_NEAR 0
 
-#define GetCommandLine() "" // Will be handled in xrCore.cpp
 
 #define RGB(r,g,b)          ((DWORD)(((BYTE)(r)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(b))<<16)))
 

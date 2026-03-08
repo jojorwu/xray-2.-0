@@ -168,16 +168,13 @@ namespace CPU
 
 	XRCORE_API u64 QPC()
 	{
-#ifdef __linux__
-        qpc_freq = 1000000;
-#endif
 		u64 _dest;
 #ifdef _WIN32
 		QueryPerformanceCounter((PLARGE_INTEGER)&_dest);
 #else
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        _dest = (u64)tv.tv_sec * 1000000 + tv.tv_usec;
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        _dest = (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
 #endif
 		qpc_counter++;
 		return _dest;
@@ -204,7 +201,7 @@ void Detect()
 #ifdef _WIN32
 	QueryPerformanceFrequency((PLARGE_INTEGER)&qpc_freq);
 #else
-    qpc_freq = 1000000;
+    qpc_freq = 1000000000ULL;
 #endif
 
 	// 3. Detect clk_per_second (RDTSC Frequency)
