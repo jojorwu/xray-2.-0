@@ -366,6 +366,17 @@ extern "C" {
         return TRUE;
     }
 
+    BOOL GetProcessAffinityMask(HANDLE hProcess, ULONG_PTR* lpProcessAffinityMask, ULONG_PTR* lpSystemAffinityMask) {
+        if (lpProcessAffinityMask) *lpProcessAffinityMask = 1;
+        if (lpSystemAffinityMask) *lpSystemAffinityMask = 1;
+        return TRUE;
+    }
+
+    BOOL GetLogicalProcessorInformation(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, DWORD* ReturnedLength) {
+        if (ReturnedLength) *ReturnedLength = 0;
+        return FALSE;
+    }
+
     LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, size_t dwBytes) {
         return xr_malloc(dwBytes);
     }

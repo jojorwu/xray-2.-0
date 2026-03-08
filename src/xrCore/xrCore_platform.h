@@ -56,6 +56,10 @@
 
 #elif defined(__linux__)
 #include <stdint.h>
+
+#ifndef UINT64
+typedef uint64_t UINT64;
+#endif
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
@@ -141,16 +145,46 @@ typedef struct {
     DWORD dwThreadId;
 } PROCESS_INFORMATION, *LPPROCESS_INFORMATION;
 
+typedef enum {
+    RelationProcessorCore,
+    RelationNumaNode,
+    RelationCache,
+    RelationProcessorPackage,
+    RelationGroup,
+    RelationAll = 0xffff
+} LOGICAL_PROCESSOR_RELATIONSHIP;
+
+typedef struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION {
+    ULONG_PTR ProcessorMask;
+    LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
+    union {
+        struct {
+            BYTE Flags;
+        } ProcessorCore;
+        struct {
+            DWORD NodeNumber;
+        } NumaNode;
+        struct {
+            BYTE Level;
+            BYTE Associativity;
+            WORD LineSize;
+            DWORD Size;
+            int Type;
+        } Cache;
+        UINT64 Reserved[2];
+    };
+} SYSTEM_LOGICAL_PROCESSOR_INFORMATION, *PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+
 typedef long long LRESULT;
 typedef unsigned long long WPARAM;
 typedef long long LPARAM;
+
+typedef int64_t INT64;
 
 #define S_OK 0
 #define E_FAIL ((HRESULT)0x80004005L)
 #define E_NOTIMPL ((HRESULT)0x80004001L)
 #define S_FALSE 1
-typedef uint64_t UINT64;
-typedef int64_t INT64;
 
 #define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
 #define FAILED(hr) (((HRESULT)(hr)) < 0)
@@ -424,6 +458,9 @@ extern "C" {
 
     HANDLE CreateMutex(void* lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName);
     BOOL ReleaseMutex(HANDLE hMutex);
+
+    BOOL GetProcessAffinityMask(HANDLE hProcess, ULONG_PTR* lpProcessAffinityMask, ULONG_PTR* lpSystemAffinityMask);
+    BOOL GetLogicalProcessorInformation(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, DWORD* ReturnedLength);
 
     // Critical Section and SRW Lock wrappers for Linux
     void InitializeCriticalSection(CRITICAL_SECTION* lpCriticalSection);
