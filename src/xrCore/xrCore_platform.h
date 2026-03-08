@@ -69,6 +69,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <dlfcn.h>
 
 typedef uint32_t DWORD;
 typedef uint32_t UINT;
@@ -84,8 +85,9 @@ typedef void* LPVOID;
 typedef const void* LPCVOID;
 typedef long LONG;
 typedef unsigned long ULONG;
-typedef long long HRESULT;
+typedef int32_t HRESULT;
 typedef void* HMODULE;
+typedef void* FARPROC;
 
 typedef struct {
     long left, top, right, bottom;
@@ -95,10 +97,10 @@ typedef long long LRESULT;
 typedef unsigned long long WPARAM;
 typedef long long LPARAM;
 
-#define S_OK 0ll
-#define E_FAIL -1ll
-#define E_NOTIMPL -2ll
-#define S_FALSE 1ll
+#define S_OK 0
+#define E_FAIL ((HRESULT)0x80004005L)
+#define E_NOTIMPL ((HRESULT)0x80004001L)
+#define S_FALSE 1
 typedef uint64_t UINT64;
 typedef int64_t INT64;
 
@@ -157,6 +159,7 @@ typedef void* SRWLOCK;
 
 #define STDMETHODCALLTYPE
 #define WINAPI
+#define APIENTRY WINAPI
 #define CALLBACK
 #define _cdecl
 #define __cdecl
@@ -254,6 +257,12 @@ extern "C" {
     HANDLE CreateFileMapping(HANDLE hFile, void* lpFileMappingAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCSTR lpName);
     LPVOID MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, size_t dwNumberOfBytesToMap);
     BOOL UnmapViewOfFile(LPCVOID lpBaseAddress);
+
+    // Dynamic library loading wrappers for Linux
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName);
+    HMODULE LoadLibrary(LPCSTR lpLibFileName);
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+    BOOL FreeLibrary(HMODULE hLibModule);
 
     // Critical Section and SRW Lock wrappers for Linux
     void InitializeCriticalSection(CRITICAL_SECTION* lpCriticalSection);

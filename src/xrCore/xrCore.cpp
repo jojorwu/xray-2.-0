@@ -115,6 +115,37 @@ extern "C" {
         return FALSE;
     }
 
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName) {
+        std::string name = lpLibFileName;
+        // Convert .dll to .so
+        size_t pos = name.find(".dll");
+        if (pos != std::string::npos) {
+            name.replace(pos, 4, ".so");
+        }
+
+        void* handle = dlopen(name.c_str(), RTLD_LAZY);
+        if (!handle) {
+            // Try with lib prefix
+            if (name.find('/') == std::string::npos && name.compare(0, 3, "lib") != 0) {
+                std::string lib_name = "lib" + name;
+                handle = dlopen(lib_name.c_str(), RTLD_LAZY);
+            }
+        }
+        return handle;
+    }
+
+    HMODULE LoadLibrary(LPCSTR lpLibFileName) {
+        return LoadLibraryA(lpLibFileName);
+    }
+
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
+        return dlsym(hModule, lpProcName);
+    }
+
+    BOOL FreeLibrary(HMODULE hLibModule) {
+        return dlclose(hLibModule) == 0;
+    }
+
     void DeleteSRWLock(SRWLOCK* SRWLock) {
         if (*SRWLock) {
             pthread_rwlock_destroy((pthread_rwlock_t*)*SRWLock);

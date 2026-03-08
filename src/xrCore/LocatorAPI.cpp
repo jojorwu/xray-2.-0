@@ -234,6 +234,14 @@ void CLocatorAPI::Register(LPCSTR name, u32 vfs, u32 crc, u32 ptr, u32 size_real
 	xr_strcpy(temp_file_name, sizeof(temp_file_name), name);
 	xr_strlwr(temp_file_name);
 
+#ifdef __linux__
+    for (int i = 0; temp_file_name[i]; i++) {
+        if (temp_file_name[i] == '\\') {
+            temp_file_name[i] = '/';
+        }
+    }
+#endif
+
 	// Register file
 	file desc;
 	// desc.name = xr_strlwr(xr_strdup(name));
