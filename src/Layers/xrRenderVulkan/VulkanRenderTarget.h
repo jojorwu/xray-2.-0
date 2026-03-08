@@ -26,6 +26,7 @@ public:
     void phase_sunshafts();
     void phase_smap_direct();
     void phase_smap_spot();
+    void phase_smap_end();
     void u_stencil_optimize(BOOL common_stencil = TRUE);
     void render_screen_quad();
 

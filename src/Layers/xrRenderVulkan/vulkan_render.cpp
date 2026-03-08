@@ -92,12 +92,15 @@ void CVulkanRender::Render()
     if (!Begin()) return;
 
     // Shadow passes
-    // Lights.package.sort();
     for (light* L : Lights.package.v_shadowed)
     {
-        Target->phase_smap_direct();
+        if (L->flags.type == IRender_Light::DIRECT)
+            Target->phase_smap_direct();
+        else
+            Target->phase_smap_spot();
+
         r_dsgraph_render_graph(0);
-        Target->phase_scene_end();
+        Target->phase_smap_end();
     }
 
     // Depth pre-pass

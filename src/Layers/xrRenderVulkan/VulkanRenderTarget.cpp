@@ -195,12 +195,31 @@ void CVulkanRenderTarget::phase_bloom()
 
 void CVulkanRenderTarget::phase_dof()
 {
+    // Transition scene color and depth for sampling
+    VulkanBackend.TransitionRT(VulkanHW.GetSwapchainRTView(VulkanBackend.GetCurrentImageIndex()), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.TransitionRT(VulkanHW.GetDepthRTView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     VulkanBackend.set_RT(rt_DOF->pRT, 0);
     VulkanBackend.set_RT(nullptr, 1);
     VulkanBackend.set_RT(nullptr, 2);
     VulkanBackend.set_ZB(nullptr);
     VulkanBackend.ClearTarget();
-    // Render DOF here
+
+    // Bind inputs: scene color and depth
+    VulkanBackend.SetTexture(0, VulkanHW.GetSwapchainRTView(VulkanBackend.GetCurrentImageIndex())->view, VulkanHW.GetSampler());
+    VulkanBackend.SetTexture(1, VulkanHW.GetDepthImageView(), VulkanHW.GetSampler());
+
+    render_screen_quad();
+    VulkanBackend.EndRenderPass();
+
+    // Copy result back to swapchain
+    VulkanBackend.TransitionRT(rt_DOF->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.TransitionRT(VulkanHW.GetSwapchainRTView(VulkanBackend.GetCurrentImageIndex()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    VulkanBackend.set_RT(VulkanHW.GetSwapchainRTView(VulkanBackend.GetCurrentImageIndex()), 0);
+    VulkanBackend.SetTexture(0, rt_DOF->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    VulkanBackend.EndRenderPass();
 }
 
 void CVulkanRenderTarget::phase_smap_direct()
@@ -208,7 +227,7 @@ void CVulkanRenderTarget::phase_smap_direct()
     VulkanBackend.set_RT(rt_smap_surf->pRT, 0);
     VulkanBackend.set_RT(nullptr, 1);
     VulkanBackend.set_RT(nullptr, 2);
-    VulkanBackend.set_ZB(rt_smap_depth->pRT); // depth RT is CVulkanRTView
+    VulkanBackend.set_ZB(rt_smap_depth->pRT);
     VulkanBackend.Clear();
 }
 
@@ -221,6 +240,13 @@ void CVulkanRenderTarget::phase_smap_spot()
     VulkanBackend.Clear();
 }
 
+void CVulkanRenderTarget::phase_smap_end()
+{
+    VulkanBackend.EndRenderPass();
+    VulkanBackend.TransitionRT(rt_smap_surf->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.TransitionRT(rt_smap_depth->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
 void CVulkanRenderTarget::phase_sunshafts()
 {
     // Sunshafts mask generation
@@ -229,20 +255,34 @@ void CVulkanRenderTarget::phase_sunshafts()
     VulkanBackend.set_RT(nullptr, 2);
     VulkanBackend.set_ZB(VulkanHW.GetDepthRTView());
     VulkanBackend.ClearTarget();
-    // Render mask
+
+    // Bind G-buffer depth for mask generation
+    VulkanBackend.TransitionRT(VulkanHW.GetDepthRTView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanBackend.SetTexture(0, VulkanHW.GetDepthImageView(), VulkanHW.GetSampler());
+    render_screen_quad();
+    VulkanBackend.EndRenderPass();
 
     // Sunshafts blur passes
+    VulkanBackend.TransitionRT(rt_Sunshafts_0->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VulkanBackend.set_RT(rt_Sunshafts_1->pRT, 0);
     VulkanBackend.ClearTarget();
-    // Pass 1
+    VulkanBackend.SetTexture(0, rt_Sunshafts_0->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    VulkanBackend.EndRenderPass();
 
+    VulkanBackend.TransitionRT(rt_Sunshafts_1->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VulkanBackend.set_RT(rt_Sunshafts_0->pRT, 0);
     VulkanBackend.ClearTarget();
-    // Pass 2
+    VulkanBackend.SetTexture(0, rt_Sunshafts_1->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    VulkanBackend.EndRenderPass();
 
+    VulkanBackend.TransitionRT(rt_Sunshafts_0->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VulkanBackend.set_RT(rt_Sunshafts_1->pRT, 0);
     VulkanBackend.ClearTarget();
-    // Pass 3
+    VulkanBackend.SetTexture(0, rt_Sunshafts_0->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    VulkanBackend.EndRenderPass();
 }
 
 void CVulkanRenderTarget::phase_scene_begin()
