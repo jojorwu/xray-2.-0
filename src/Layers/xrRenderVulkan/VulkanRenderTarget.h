@@ -27,6 +27,7 @@ public:
     void phase_smap_direct();
     void phase_smap_spot();
     void u_stencil_optimize(BOOL common_stencil = TRUE);
+    void render_screen_quad();
 
     // G-Buffer targets
     ref_rt rt_Position; // fat (x,y,z,?)
@@ -49,6 +50,7 @@ public:
     ref_geom g_accum_point;
     ref_geom g_accum_spot;
     ref_geom g_accum_omnipart;
+    ref_geom g_screen_quad;
 
     // Shadow mapping
     ref_rt rt_smap_depth;

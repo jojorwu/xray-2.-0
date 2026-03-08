@@ -52,6 +52,7 @@ public:
     void CommitState();
 
     void SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
+    void SetPushConstants(uint32_t offset, uint32_t size, const void* data);
     void SetTexture(uint32_t binding, VkImageView view, VkSampler sampler);
 
     VkCommandBuffer GetCurrentCommandBuffer() { return m_command_buffers[m_current_image_index]; }

@@ -231,6 +231,13 @@ void CVulkanBackend::SetUniformBuffer(uint32_t binding, VkBuffer buffer, VkDevic
     m_bindings.dirty = true;
 }
 
+void CVulkanBackend::SetPushConstants(uint32_t offset, uint32_t size, const void* data)
+{
+    if (!m_is_frame_started)
+        return;
+    vkCmdPushConstants(m_command_buffers[m_current_image_index], m_current_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, offset, size, data);
+}
+
 void CVulkanBackend::SetTexture(uint32_t binding, VkImageView view, VkSampler sampler)
 {
     if (m_bindings.images.count(binding) &&
@@ -853,10 +860,17 @@ void CVulkanBackend::CreateDescriptorSetLayout()
 
 void CVulkanBackend::CreatePipelineLayout()
 {
+    VkPushConstantRange pushConstantRange = {};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = 128; // Standard push constant size
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &m_descriptor_set_layout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(VulkanHW.GetDevice(), &pipelineLayoutInfo, nullptr, &m_default_pipeline_layout) != VK_SUCCESS)
     {
@@ -866,11 +880,18 @@ void CVulkanBackend::CreatePipelineLayout()
 
 void CVulkanBackend::CreateBindlessPipelineLayout()
 {
+    VkPushConstantRange pushConstantRange = {};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = 128;
+
     xr_array<VkDescriptorSetLayout, 2> layouts = { m_descriptor_set_layout, VulkanDescriptorManager.GetBindlessLayout() };
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = (uint32_t)layouts.size();
     pipelineLayoutInfo.pSetLayouts = layouts.data();
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(VulkanHW.GetDevice(), &pipelineLayoutInfo, nullptr, &m_bindless_pipeline_layout) != VK_SUCCESS)
     {

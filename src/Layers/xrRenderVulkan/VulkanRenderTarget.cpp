@@ -31,6 +31,33 @@ CVulkanRenderTarget::CVulkanRenderTarget()
     accum_point_geom_create();
     accum_omnip_geom_create();
     accum_spot_geom_create();
+
+    // Create screen quad geometry
+    {
+        FVF::TL2uv verts[4] = {
+            { -1.f, -1.f, 0.f, 1.f, 0.f, 1.f },
+            {  1.f, -1.f, 0.f, 1.f, 1.f, 1.f },
+            { -1.f,  1.f, 0.f, 1.f, 0.f, 0.f },
+            {  1.f,  1.f, 0.f, 1.f, 1.f, 0.f }
+        };
+        u16 indices[6] = { 0, 1, 2, 2, 1, 3 };
+
+        CVulkanBuffer* vb = xr_new<CVulkanVertexBuffer>();
+        vb->Create(4 * sizeof(FVF::TL2uv), false);
+        void* mapped_vb;
+        vb->Map(&mapped_vb);
+        memcpy(mapped_vb, verts, 4 * sizeof(FVF::TL2uv));
+        vb->Unmap();
+
+        CVulkanBuffer* ib = xr_new<CVulkanIndexBuffer>();
+        ib->Create(6 * sizeof(u16), false);
+        void* mapped_ib;
+        ib->Map(&mapped_ib);
+        memcpy(mapped_ib, indices, 6 * sizeof(u16));
+        ib->Unmap();
+
+        g_screen_quad.create(FVF::F_TL2uv, vb, ib);
+    }
 }
 
 CVulkanRenderTarget::~CVulkanRenderTarget()
@@ -136,23 +163,34 @@ void CVulkanRenderTarget::accum_spot_geom_create()
 
 void CVulkanRenderTarget::phase_bloom()
 {
-    // Bloom build pass
+    // Transition accumulator for sampling
+    VulkanBackend.TransitionRT(rt_Accumulator->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    // Bloom build pass (Downsample)
     VulkanBackend.set_RT(rt_Bloom_1->pRT, 0);
     VulkanBackend.set_RT(nullptr, 1);
     VulkanBackend.set_RT(nullptr, 2);
     VulkanBackend.set_ZB(nullptr);
     VulkanBackend.ClearTarget();
-    // Render downsampled scene here
+    VulkanBackend.SetTexture(0, rt_Accumulator->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    phase_scene_end();
 
     // Horizontal blur
+    VulkanBackend.TransitionRT(rt_Bloom_1->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VulkanBackend.set_RT(rt_Bloom_2->pRT, 0);
     VulkanBackend.ClearTarget();
-    // Render blur here
+    VulkanBackend.SetTexture(0, rt_Bloom_1->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    phase_scene_end();
 
     // Vertical blur
+    VulkanBackend.TransitionRT(rt_Bloom_2->pRT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VulkanBackend.set_RT(rt_Bloom_1->pRT, 0);
     VulkanBackend.ClearTarget();
-    // Render blur here
+    VulkanBackend.SetTexture(0, rt_Bloom_2->pRT->view, VulkanHW.GetSampler());
+    render_screen_quad();
+    phase_scene_end();
 }
 
 void CVulkanRenderTarget::phase_dof()
@@ -248,6 +286,14 @@ void CVulkanRenderTarget::phase_combine()
     VulkanBackend.SetTexture(1, rt_Normal->pRT->view, VulkanHW.GetSampler());
     VulkanBackend.SetTexture(2, rt_Color->pRT->view, VulkanHW.GetSampler());
     VulkanBackend.SetTexture(3, rt_Accumulator->pRT->view, VulkanHW.GetSampler());
+
+    render_screen_quad();
+}
+
+void CVulkanRenderTarget::render_screen_quad()
+{
+    VulkanBackend.set_Geometry(g_screen_quad._get());
+    VulkanBackend.DrawIndexed(6);
 }
 
 void CVulkanRenderTarget::phase_wallmarks()
