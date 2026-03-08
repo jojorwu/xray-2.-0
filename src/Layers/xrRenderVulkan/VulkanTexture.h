@@ -19,6 +19,8 @@ public:
     VkImage GetImage() { return m_image; }
     VkImageView GetImageView() { return m_image_view; }
     VkSampler GetSampler() { return m_sampler; }
+    CVulkanRTView* GetRTView() { return &m_rt_view; }
+    uint32_t GetBindlessIndex() const { return m_bindless_index; }
 
     uint32_t GetWidth() const { return m_width; }
     uint32_t GetHeight() const { return m_height; }
@@ -34,12 +36,14 @@ public:
     }
 
 private:
+    uint32_t m_bindless_index;
     VkImage m_image;
     VmaAllocation m_allocation;
     VkImageView m_image_view;
+    CVulkanRTView m_rt_view;
     VkSampler m_sampler;
     VkFormat m_format;
-    uint32_t m_width, m_height;
+    uint32_t m_width, m_height, m_mips;
 
     void CreateImageView();
 };

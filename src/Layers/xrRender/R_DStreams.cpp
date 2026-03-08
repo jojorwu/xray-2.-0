@@ -18,7 +18,9 @@ void _VertexStream::Create()
 	DEV->Evict();
 
 	mSize = rsDVB_Size * 1024;
-#if defined(USE_DX10) || defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pVB = nullptr;
+#elif defined(USE_DX10) || defined(USE_DX11)
 	D3D_BUFFER_DESC bufferDesc;
 	bufferDesc.ByteWidth = mSize;
 	bufferDesc.Usage = D3D_USAGE_DYNAMIC;
@@ -78,7 +80,12 @@ void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 		vOffset = 0;
 		mDiscardID ++;
 
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+        void* ptr;
+		uint32_t offset = VulkanBackend.AllocateVB(vl_Count * Stride, &ptr);
+        pData = (BYTE*)ptr;
+		vOffset = offset / Stride;
+#elif defined(USE_DX11)
 		HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_DISCARD, 0, &MappedSubRes);
 		pData = (BYTE*)MappedSubRes.pData;
 		pData += vOffset;
@@ -100,13 +107,18 @@ void* _VertexStream::Lock(u32 vl_Count, u32 Stride, u32& vOffset)
 		mPosition = vl_mPosition * Stride;
 		vOffset = vl_mPosition;
 
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+        void* ptr;
+		uint32_t offset = VulkanBackend.AllocateVB(vl_Count * Stride, &ptr);
+        pData = (BYTE*)ptr;
+		vOffset = offset / Stride;
+#elif defined(USE_DX11)
 		HW.pContext->Map(pVB, 0, D3D_MAP_WRITE_NO_OVERWRITE, 0, &MappedSubRes);
 		pData = (BYTE*)MappedSubRes.pData;
 		pData += vOffset * Stride;
 #elif defined(USE_DX10)
-		pVB->Map(D3D_MAP_WRITE_NO_OVERWRITE, 0, (void**)&pData);
-		pData += vOffset * Stride;
+	pVB->Map(D3D_MAP_WRITE_NO_OVERWRITE, 0, (void**)&pData);
+	pData += vOffset * Stride;
 #else	//	USE_DX10
 		HRESULT res = pVB->Lock(mPosition, bytes_need, (void**)&pData, LOCKFLAGS_APPEND);
 
@@ -130,6 +142,9 @@ void _VertexStream::Unlock(u32 Count, u32 Stride)
 #endif
 	mPosition += Count * Stride;
 
+#if defined(USE_VULKAN)
+    // Vulkan uses dynamic ring buffer, no explicit unlock needed for the stream itself
+#else
 	VERIFY(pVB);
 
 #if defined(USE_DX11)
@@ -139,6 +154,7 @@ void _VertexStream::Unlock(u32 Count, u32 Stride)
 #else	//	USE_DX10
 	pVB->Unlock();
 #endif	//	USE_DX10
+#endif
 }
 
 void _VertexStream::reset_begin()
@@ -177,7 +193,9 @@ void _IndexStream::Create()
 
 	mSize = rsDIB_Size * 1024;
 
-#if defined(USE_DX10) || defined(USE_DX11)
+#if defined(USE_VULKAN)
+    pIB = nullptr;
+#elif defined(USE_DX10) || defined(USE_DX11)
 	D3D_BUFFER_DESC bufferDesc;
 	bufferDesc.ByteWidth = mSize;
 	bufferDesc.Usage = D3D_USAGE_DYNAMIC;
@@ -229,7 +247,12 @@ u16* _IndexStream::Lock(u32 Count, u32& vOffset)
 		dwFlags = LOCKFLAGS_FLUSH; // discard it's contens
 		mDiscardID ++;
 	}
-#if defined(USE_DX11)
+#if defined(USE_VULKAN)
+    void* ptr;
+	uint32_t offset = VulkanBackend.AllocateIB(Count * 2, &ptr);
+	vOffset = offset / 2;
+	return (u16*)ptr;
+#elif defined(USE_DX11)
 	D3D_MAP MapMode = (dwFlags == LOCKFLAGS_APPEND) ? D3D_MAP_WRITE_NO_OVERWRITE : D3D_MAP_WRITE_DISCARD;
 	HW.pContext->Map(pIB, 0, MapMode, 0, &MappedSubRes);
 	pLockedData = (BYTE*)MappedSubRes.pData;
@@ -253,6 +276,9 @@ void _IndexStream::Unlock(u32 RealCount)
 {
 	PGO(Msg("PGO:IB_UNLOCK:%d",RealCount));
 	mPosition += RealCount;
+#if defined(USE_VULKAN)
+    // Vulkan uses dynamic ring buffer
+#else
 	VERIFY(pIB);
 #if defined(USE_DX11)
 	HW.pContext->Unmap(pIB, 0);
@@ -261,6 +287,7 @@ void _IndexStream::Unlock(u32 RealCount)
 #else	//	USE_DX10
 	pIB->Unlock();
 #endif	//	USE_DX10
+#endif
 }
 
 void _IndexStream::reset_begin()

@@ -3,7 +3,11 @@
 
 #include "ResourceManager.h"
 
+#ifdef USE_VULKAN
+#include "VulkanTexture.h"
+#else
 #include "dxRenderDeviceRender.h"
+#endif
 
 CRT::CRT()
 {
@@ -22,6 +26,66 @@ CRT::~CRT()
 	DEV->_DeleteRT(this);
 }
 
+#ifdef USE_VULKAN
+static VkFormat ConvertFormat(D3DFORMAT f)
+{
+    switch (f)
+    {
+    case D3DFMT_A8R8G8B8: return VK_FORMAT_B8G8R8A8_UNORM;
+    case D3DFMT_A16B16G16R16F: return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case D3DFMT_R32F: return VK_FORMAT_R32_SFLOAT;
+    case D3DFMT_D24S8: return VK_FORMAT_D24_UNORM_S8_UINT;
+    case D3DFMT_D16: return VK_FORMAT_D16_UNORM;
+    default: return VK_FORMAT_UNDEFINED;
+    }
+}
+
+void CRT::create(LPCSTR Name, u32 w, u32 h, D3DFORMAT f, u32 SampleCount)
+{
+    if (pSurface) return;
+
+    dwWidth = w;
+    dwHeight = h;
+    fmt = f;
+
+    VkFormat vk_fmt = ConvertFormat(f);
+    if (vk_fmt == VK_FORMAT_UNDEFINED)
+    {
+        Msg("! Vulkan: Unsupported RT format %d", f);
+        return;
+    }
+
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (f == D3DFMT_D24S8 || f == D3DFMT_D16)
+        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    else
+        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    pSurface = xr_new<CVulkanTexture>();
+    pSurface->Create(w, h, 1, vk_fmt, usage);
+    pRT = pSurface->GetRTView();
+
+    pTexture = DEV->_CreateTexture(Name);
+    pTexture->surface_set(pSurface);
+}
+
+void CRT::destroy()
+{
+    if (pTexture._get())
+    {
+        pTexture->surface_set(0);
+        pTexture.destroy();
+        pTexture = nullptr;
+    }
+
+    if (pSurface)
+    {
+        xr_delete(pSurface);
+        pSurface = nullptr;
+        pRT = nullptr;
+    }
+}
+#else
 void CRT::create(LPCSTR Name, u32 w, u32 h, D3DFORMAT f, u32 SampleCount)
 {
 	if (pSurface) return;
@@ -100,6 +164,7 @@ void CRT::destroy()
 	HW.stats_manager.decrement_stats_rtarget(pSurface);
 	_RELEASE(pSurface);
 }
+#endif
 
 void CRT::reset_begin()
 {

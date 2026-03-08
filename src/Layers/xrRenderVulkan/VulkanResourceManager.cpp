@@ -89,7 +89,7 @@ SVS* CVulkanResourceManager::_CreateVS(LPCSTR Name)
     CVulkanShader shader;
     shader.Load(Name);
     VS->vs = shader.ExtractModule();
-    // VS->constants = ...; // Need to handle reflection
+    VS->constants.parse((void*)&shader.GetReflection(), 0x2); // RC_dest_vertex
     m_vs.insert(std::make_pair(xr_strdup(Name), VS));
     return VS;
 }
@@ -121,7 +121,7 @@ SPS* CVulkanResourceManager::_CreatePS(LPCSTR Name)
     CVulkanShader shader;
     shader.Load(Name);
     PS->ps = shader.ExtractModule();
-    // PS->constants = ...;
+    PS->constants.parse((void*)&shader.GetReflection(), 0x1); // RC_dest_pixel
     m_ps.insert(std::make_pair(xr_strdup(Name), PS));
     return PS;
 }

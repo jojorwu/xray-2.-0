@@ -1,8 +1,12 @@
 #include "stdafx.h"
 #include "VulkanTexture.h"
+#include "VulkanDescriptorManager.h"
+
+static uint32_t g_bindless_index_counter = 0;
 
 CVulkanTexture::CVulkanTexture()
 {
+    m_bindless_index = g_bindless_index_counter++;
     m_ref_count = 0;
     m_image = VK_NULL_HANDLE;
     m_allocation = VK_NULL_HANDLE;
@@ -11,6 +15,7 @@ CVulkanTexture::CVulkanTexture()
     m_format = VK_FORMAT_UNDEFINED;
     m_width = 0;
     m_height = 0;
+    m_mips = 0;
 }
 
 CVulkanTexture::~CVulkanTexture()
@@ -22,6 +27,7 @@ void CVulkanTexture::Create(uint32_t width, uint32_t height, uint32_t mips, VkFo
 {
     m_width = width;
     m_height = height;
+    m_mips = mips;
     m_format = format;
 
     VkImageCreateInfo imageInfo = {};
@@ -49,6 +55,7 @@ void CVulkanTexture::Create(uint32_t width, uint32_t height, uint32_t mips, VkFo
 
     CreateImageView();
     VulkanHW.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_sampler);
+    VulkanDescriptorManager.UpdateBindless(m_bindless_index, m_image_view, m_sampler);
 }
 
 void CVulkanTexture::Destroy()
@@ -78,14 +85,18 @@ void CVulkanTexture::Load(LPCSTR name, uint32_t& out_size)
     Msg("Vulkan: Loading texture %s", name);
     out_size = 0;
 
+    string_path lowercase_name;
+    xr_strcpy(lowercase_name, name);
+    strlwr(lowercase_name);
+
     string_path fn;
-    if (!FS.exist(fn, "$game_textures$", name, ".dds"))
+    if (!FS.exist(fn, "$game_textures$", lowercase_name, ".dds"))
     {
-        if (!FS.exist(fn, "$level$", name, ".dds"))
+        if (!FS.exist(fn, "$level$", lowercase_name, ".dds"))
         {
-            if (!FS.exist(fn, "$game_saves$", name, ".dds"))
+            if (!FS.exist(fn, "$game_saves$", lowercase_name, ".dds"))
             {
-                Msg("! Vulkan: Can't find texture %s", name);
+                Msg("! Vulkan: Can't find texture %s", lowercase_name);
                 return;
             }
         }
@@ -278,9 +289,16 @@ void CVulkanTexture::CreateImageView()
     viewInfo.image = m_image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = m_format;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    if (m_format == VK_FORMAT_D32_SFLOAT || m_format == VK_FORMAT_D16_UNORM)
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    else if (m_format == VK_FORMAT_D32_SFLOAT_S8_UINT || m_format == VK_FORMAT_D24_UNORM_S8_UINT)
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    else
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
     viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.levelCount = m_mips > 0 ? m_mips : 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
@@ -288,4 +306,13 @@ void CVulkanTexture::CreateImageView()
     {
         Msg("! Vulkan: Failed to create image view!");
     }
+
+    if (m_sampler != VK_NULL_HANDLE)
+        VulkanDescriptorManager.UpdateBindless(m_bindless_index, m_image_view, m_sampler);
+
+    m_rt_view.image = m_image;
+    m_rt_view.view = m_image_view;
+    m_rt_view.format = m_format;
+    m_rt_view.extent = { m_width, m_height };
+    m_rt_view.current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }

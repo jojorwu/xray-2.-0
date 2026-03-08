@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VulkanPipelineCache.h"
+#include "VulkanVertexInputState.h"
 
 CVulkanPipelineCache VulkanPipelineCache;
 
@@ -47,18 +48,72 @@ void CVulkanPipelineCache::Destroy()
     }
 }
 
-VkPipeline CVulkanPipelineCache::GetPipeline(const PipelineStateKey& key, const VkGraphicsPipelineCreateInfo& createInfo)
+VkPipeline CVulkanPipelineCache::GetPipeline(const PipelineStateKey& key)
 {
     auto it = m_pipelines.find(key);
     if (it != m_pipelines.end())
         return it->second;
 
-    VkPipeline pipeline;
-    VkGraphicsPipelineCreateInfo info = createInfo;
-    info.basePipelineHandle = VK_NULL_HANDLE;
-    info.basePipelineIndex = -1;
+    VkPipelineShaderStageCreateInfo shaderStages[2] = {};
+    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    shaderStages[0].module = key.vs;
+    shaderStages[0].pName = "main";
 
-    if (vkCreateGraphicsPipelines(VulkanHW.GetDevice(), m_pipeline_cache, 1, &info, nullptr, &pipeline) != VK_SUCCESS)
+    shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    shaderStages[1].module = key.ps;
+    shaderStages[1].pName = "main";
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = key.topology;
+
+    VkPipelineViewportStateCreateInfo viewportState = {};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+
+    VkPipelineMultisampleStateCreateInfo multisampling = {};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.attachmentCount = key.colorAttachmentCount;
+    colorBlending.pAttachments = key.blendAttachments.data();
+
+    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = 2;
+    dynamicState.pDynamicStates = dynamicStates;
+
+    SDeclaration* dcl = (SDeclaration*)(intptr_t)key.inputLayoutHash;
+    VkPipelineVertexInputStateCreateInfo* vertexInputInfo = VulkanVertexInputCache.GetState(dcl->dcl_code.data());
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil = key.depthStencil;
+    depthStencil.front = key.front;
+    depthStencil.back = key.back;
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &key.rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = key.layout;
+    pipelineInfo.renderPass = key.renderPass;
+    pipelineInfo.subpass = 0;
+
+    VkPipeline pipeline;
+    if (vkCreateGraphicsPipelines(VulkanHW.GetDevice(), m_pipeline_cache, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
     {
         Msg("! Vulkan: Failed to create graphics pipeline in cache!");
         return VK_NULL_HANDLE;

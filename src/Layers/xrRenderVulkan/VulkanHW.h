@@ -6,6 +6,15 @@
 #include "../../3rd party/volk/volk.h"
 #include "../../3rd party/vma/vk_mem_alloc.h"
 
+struct CVulkanRTView
+{
+    VkImage image;
+    VkImageView view;
+    VkFormat format;
+    VkExtent2D extent;
+    VkImageLayout current_layout;
+};
+
 class CVulkanHW
 {
 public:
@@ -34,6 +43,8 @@ public:
     VkImage GetDepthImage() { return m_depth_image; }
     VkImageView GetDepthImageView() { return m_depth_image_view; }
     VkFormat GetDepthFormat() { return m_depth_format; }
+    CVulkanRTView* GetDepthRTView() { return &m_depth_rt_view; }
+    CVulkanRTView* GetSwapchainRTView(uint32_t index) { return &m_swapchain_rt_views[index]; }
 
 private:
     VkInstance m_instance;
@@ -52,6 +63,9 @@ private:
     VmaAllocation m_depth_allocation;
     VkImageView m_depth_image_view;
     VkFormat m_depth_format;
+
+    xr_vector<CVulkanRTView> m_swapchain_rt_views;
+    CVulkanRTView m_depth_rt_view;
 
     VmaAllocator m_allocator;
     int m_graphics_family;

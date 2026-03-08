@@ -251,9 +251,9 @@ void CVulkanHW::CreateSurface()
         Msg("! Vulkan: Failed to create Win32 surface!");
     }
 #else
-    if (Device.m_hWnd == NULL)
+    if (Device.m_hWnd == NULL || Device.m_XWindow == NULL)
     {
-        Msg("! Vulkan: Device.m_hWnd is NULL during surface creation!");
+        Msg("! Vulkan: Device.m_hWnd or Device.m_XWindow is NULL during surface creation!");
         return;
     }
     VkXcbSurfaceCreateInfoKHR surface_create_info = {};
@@ -416,11 +416,23 @@ void CVulkanHW::CreateLogicalDevice()
     }
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
+    deviceFeatures.multiDrawIndirect = VK_TRUE; // For Step 8
+
     xr_vector<const char*> deviceExtensions;
     deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+    indexingFeatures.runtimeDescriptorArray = VK_TRUE;
+    indexingFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    indexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 
     VkDeviceCreateInfo deviceCreateInfo = {};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pNext = &indexingFeatures;
     deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
@@ -550,6 +562,16 @@ void CVulkanHW::CreateSwapchain()
             Msg("! Vulkan: Failed to create image view!");
         }
     }
+
+    m_swapchain_rt_views.resize(m_swapchain_images.size());
+    for (size_t i = 0; i < m_swapchain_images.size(); i++)
+    {
+        m_swapchain_rt_views[i].image = m_swapchain_images[i];
+        m_swapchain_rt_views[i].view = m_swapchain_image_views[i];
+        m_swapchain_rt_views[i].format = m_swapchain_format;
+        m_swapchain_rt_views[i].extent = m_swapchain_extent;
+        m_swapchain_rt_views[i].current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
 }
 
 void CVulkanHW::CreateDepthResources()
@@ -598,6 +620,12 @@ void CVulkanHW::CreateDepthResources()
     {
         Msg("! Vulkan: Failed to create depth image view!");
     }
+
+    m_depth_rt_view.image = m_depth_image;
+    m_depth_rt_view.view = m_depth_image_view;
+    m_depth_rt_view.format = m_depth_format;
+    m_depth_rt_view.extent = m_swapchain_extent;
+    m_depth_rt_view.current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 VkFormat CVulkanHW::FindSupportedFormat(const xr_vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)

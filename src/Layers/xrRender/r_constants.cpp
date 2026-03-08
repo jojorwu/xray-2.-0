@@ -10,6 +10,10 @@
 #include "../../xrCore/xrPool.h"
 #include "r_constants.h"
 
+#ifdef USE_VULKAN
+#include "../xrRenderVulkan/VulkanShader.h"
+#endif
+
 #include "../xrRender/dxRenderDeviceRender.h"
 
 // pool
@@ -195,6 +199,22 @@ BOOL R_constant_table::parse(void* _desc, u32 destination)
 	return TRUE;
 }
 #endif	//	USE_DX10
+
+#ifdef USE_VULKAN
+BOOL R_constant_table::parse(void* _desc, u32 destination)
+{
+    CVulkanShader::ReflectionInfo* desc = (CVulkanShader::ReflectionInfo*)_desc;
+    if (!desc) return FALSE;
+
+    for (auto const& cb : desc->constant_buffers)
+    {
+        ref_cbuffer buffer = xr_new<CVulkanConstantBuffer>(cb.second);
+        m_CBTable.push_back(std::make_pair(cb.first, buffer));
+    }
+
+    return TRUE;
+}
+#endif
 
 #include <iterator>
 /// !!!!!!!!FIX THIS FOR DX11!!!!!!!!!

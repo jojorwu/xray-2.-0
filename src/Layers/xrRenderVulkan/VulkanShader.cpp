@@ -27,8 +27,8 @@ void CVulkanShader::Create(const xr_vector<u32>& code)
 void CVulkanShader::Load(LPCSTR name)
 {
     string_path path;
-    FS.update_path(path, "$game_shaders$", name);
-    strcat(path, ".spv");
+    strconcat(sizeof(path), path, "vulkan", FS.sep, name, ".spv");
+    FS.update_path(path, "$game_shaders$", path);
 
     IReader* r = FS.r_open(path);
     if (!r)
@@ -42,6 +42,11 @@ void CVulkanShader::Load(LPCSTR name)
     FS.r_close(r);
 
     Create(code);
+
+    // Simple reflection - in a real engine we'd parse SPIR-V or use a sidecar file
+    // For now, assume binding 0 for VS constants and binding 1 for PS constants
+    if (strstr(name, ".vs")) m_reflection.constant_buffers.push_back({ 0, 1024 });
+    else if (strstr(name, ".ps")) m_reflection.constant_buffers.push_back({ 1, 1024 });
 }
 
 void CVulkanShader::Destroy()
