@@ -143,6 +143,13 @@ void CVulkanRender::Render()
     }
     Target->phase_scene_end();
 
+    // Details pass
+    if (RImplementation.Details)
+    {
+        Target->phase_scene_prepare();
+        RImplementation.Details->Render();
+    }
+
     // Final combine
     Target->phase_combine();
     // Render environment (sky, clouds)

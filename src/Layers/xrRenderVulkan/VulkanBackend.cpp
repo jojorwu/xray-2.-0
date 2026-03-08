@@ -3,6 +3,7 @@
 #include "VulkanPipelineCache.h"
 #include "VulkanDescriptorManager.h"
 #include "VulkanOcclusionQuery.h"
+#include "VulkanConstantBuffer.h"
 
 CVulkanBackend VulkanBackend;
 
@@ -300,6 +301,22 @@ void CVulkanBackend::set_Topology(VkPrimitiveTopology topology)
     m_topology = topology;
 }
 
+void CVulkanBackend::SetComputePipeline(VkPipeline pipeline, VkPipelineLayout layout)
+{
+    if (!m_is_frame_started)
+        return;
+    m_current_pipeline_layout = layout;
+    vkCmdBindPipeline(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+}
+
+void CVulkanBackend::Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+{
+    if (!m_is_frame_started)
+        return;
+    // Potentially apply compute bindings here
+    vkCmdDispatch(m_command_buffers[m_current_image_index], groupCountX, groupCountY, groupCountZ);
+}
+
 void CVulkanBackend::BeginQuery(uint32_t index)
 {
     if (!m_occq)
@@ -527,8 +544,6 @@ void CVulkanBackend::EndRenderPass()
 
 void CVulkanBackend::ApplyBindings()
 {
-    if (!m_bindings.dirty) return;
-
     DescriptorSetKey key;
     key.buffers = m_bindings.buffers;
     key.images = m_bindings.images;
@@ -538,11 +553,18 @@ void CVulkanBackend::ApplyBindings()
 
     if (set != VK_NULL_HANDLE)
     {
-        vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_current_pipeline_layout, 0, 1, &set, 0, nullptr);
+        xr_vector<uint32_t> dynamic_offsets;
+        for (auto const& [binding, info] : m_bindings.buffers)
+            dynamic_offsets.push_back((uint32_t)info.offset);
+
+        vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_current_pipeline_layout, 0, 1, &set, (uint32_t)dynamic_offsets.size(), dynamic_offsets.data());
     }
 
-    VkDescriptorSet bindless_set = VulkanDescriptorManager.GetBindlessSet();
-    vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_bindless_pipeline_layout, 1, 1, &bindless_set, 0, nullptr);
+    if (m_bindless_pipeline_layout)
+    {
+        VkDescriptorSet bindless_set = VulkanDescriptorManager.GetBindlessSet();
+        vkCmdBindDescriptorSets(m_command_buffers[m_current_image_index], VK_PIPELINE_BIND_POINT_GRAPHICS, m_current_pipeline_layout, 1, 1, &bindless_set, 0, nullptr);
+    }
 
     m_bindings.dirty = false;
 }
@@ -564,9 +586,11 @@ void CVulkanBackend::CommitState()
 
     ApplyBindings();
 
+    if (!m_pVS || !m_pPS) return;
+
     PipelineStateKey key = {};
-    key.vs = m_pVS ? m_pVS->vs : VK_NULL_HANDLE;
-    key.ps = m_pPS ? m_pPS->ps : VK_NULL_HANDLE;
+    key.vs = m_pVS->vs;
+    key.ps = m_pPS->ps;
     key.renderPass = m_active_render_pass;
     key.layout = m_current_pipeline_layout;
     key.topology = m_topology;
@@ -629,9 +653,9 @@ void CVulkanBackend::CommitState()
 
     if (m_pGeom)
     {
-        if (m_pGeom->vb)
+        if (m_pGeom->vb && m_pGeom->vb->m_buffer != VK_NULL_HANDLE)
             SetVB(m_pGeom->vb->m_buffer, 0, 0);
-        if (m_pGeom->ib)
+        if (m_pGeom->ib && m_pGeom->ib->m_buffer != VK_NULL_HANDLE)
             SetIB(m_pGeom->ib->m_buffer, 0, VK_INDEX_TYPE_UINT16);
     }
 
@@ -839,10 +863,10 @@ void CVulkanBackend::CreateDescriptorSetLayout()
 {
     xr_vector<VkDescriptorSetLayoutBinding> bindings;
 
-    // Uniform Buffers (Slot 0..3)
+    // Uniform Buffers (Slot 0..3) - Use dynamic offsets to reduce descriptor updates
     for (uint32_t i = 0; i < 4; i++)
     {
-        VkDescriptorSetLayoutBinding b = { i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr };
+        VkDescriptorSetLayoutBinding b = { i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr };
         bindings.push_back(b);
     }
 

@@ -17,7 +17,19 @@ struct DescriptorSetKey
     {
         if (hash != other.hash) return hash < other.hash;
         if (images != other.images) return images < other.images;
-        return buffers < other.buffers;
+
+        if (buffers.size() != other.buffers.size()) return buffers.size() < other.buffers.size();
+        auto it1 = buffers.begin();
+        auto it2 = other.buffers.begin();
+        while (it1 != buffers.end())
+        {
+            if (it1->first != it2->first) return it1->first < it2->first;
+            if (it1->second.buffer != it2->second.buffer) return it1->second.buffer < it2->second.buffer;
+            if (it1->second.range != it2->second.range) return it1->second.range < it2->second.range;
+            // Skip offset for dynamic UBO
+            ++it1; ++it2;
+        }
+        return false;
     }
 };
 

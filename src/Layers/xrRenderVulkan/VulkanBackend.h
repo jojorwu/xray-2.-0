@@ -39,6 +39,9 @@ public:
     void set_Scissor(const VkRect2D& scissor);
     void set_Topology(VkPrimitiveTopology topology);
 
+    void SetComputePipeline(VkPipeline pipeline, VkPipelineLayout layout);
+    void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
     uint32_t AllocateVB(uint32_t size, void** ptr);
     uint32_t AllocateIB(uint32_t size, void** ptr);
 

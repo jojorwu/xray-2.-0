@@ -10,7 +10,7 @@ void DescriptorSetKey::ComputeHash()
     {
         hash = crc32(&binding, sizeof(binding), hash);
         hash = crc32(&info.buffer, sizeof(info.buffer), hash);
-        hash = crc32(&info.offset, sizeof(info.offset), hash);
+        // hash = crc32(&info.offset, sizeof(info.offset), hash); // Skip offset for dynamic UBO
         hash = crc32(&info.range, sizeof(info.range), hash);
     }
     for (auto const& [binding, info] : images)
@@ -106,13 +106,16 @@ VkDescriptorSet CVulkanDescriptorManager::GetDescriptorSet(VkDescriptorSetLayout
     xr_vector<VkWriteDescriptorSet> writes;
     for (auto const& [binding, info] : key.buffers)
     {
+        VkDescriptorBufferInfo dynamic_info = info;
+        dynamic_info.offset = 0; // Use base offset for dynamic descriptors
+
         VkWriteDescriptorSet write = {};
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.dstSet = set.GetSet();
         write.dstBinding = binding;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         write.descriptorCount = 1;
-        write.pBufferInfo = &info;
+        write.pBufferInfo = &dynamic_info;
         writes.push_back(write);
     }
 
