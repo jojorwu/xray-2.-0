@@ -582,15 +582,21 @@ void CVulkanBackend::CommitState()
     if (m_bindings.dirty)
     {
         // Update shader constants
-        if (m_pVS && m_pVS->constants)
+        if (m_pVS)
         {
-            VkDescriptorBufferInfo info = AllocateUniform(m_pVS->constants->size, m_pVS->constants->data);
-            if (info.buffer != VK_NULL_HANDLE) SetUniformBuffer(0, info.buffer, info.offset, info.range);
+            for (auto& cb : m_pVS->constants.m_CBTable)
+            {
+                VkDescriptorBufferInfo info = cb.second->VulkanUpdate();
+                SetUniformBuffer(cb.first, info.buffer, info.offset, info.range);
+            }
         }
-        if (m_pPS && m_pPS->constants)
+        if (m_pPS)
         {
-            VkDescriptorBufferInfo info = AllocateUniform(m_pPS->constants->size, m_pPS->constants->data);
-            if (info.buffer != VK_NULL_HANDLE) SetUniformBuffer(1, info.buffer, info.offset, info.range);
+            for (auto& cb : m_pPS->constants.m_CBTable)
+            {
+                VkDescriptorBufferInfo info = cb.second->VulkanUpdate();
+                SetUniformBuffer(cb.first, info.buffer, info.offset, info.range);
+            }
         }
     }
 
