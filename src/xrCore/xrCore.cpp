@@ -236,6 +236,83 @@ extern "C" {
         if (!hLibModule) return FALSE;
         return dlclose(hLibModule) == 0;
     }
+
+    void Sleep(DWORD dwMilliseconds) {
+        usleep(dwMilliseconds * 1000);
+    }
+
+    DWORD GetTickCount() {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (DWORD)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    }
+
+    DWORD GetCurrentProcessId() {
+        return (DWORD)getpid();
+    }
+
+    BOOL IsDebuggerPresent() {
+        return FALSE;
+    }
+
+    HMODULE GetModuleHandle(LPCSTR lpModuleName) {
+        if (!lpModuleName) return (HMODULE)dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
+        return (HMODULE)dlopen(lpModuleName, RTLD_NOLOAD | RTLD_NOW | RTLD_GLOBAL);
+    }
+
+    DWORD GetModuleFileName(HMODULE hModule, LPSTR lpFilename, DWORD nSize) {
+        if (!hModule || hModule == (HMODULE)dlopen(NULL, RTLD_NOW | RTLD_GLOBAL)) {
+            ssize_t len = readlink("/proc/self/exe", lpFilename, nSize - 1);
+            if (len != -1) {
+                lpFilename[len] = 0;
+                return (DWORD)len;
+            }
+        }
+        lpFilename[0] = 0;
+        return 0;
+    }
+
+    static char g_command_line[2048] = "";
+    LPCSTR GetCommandLineA() {
+        if (g_command_line[0] == 0) {
+            int fd = open("/proc/self/cmdline", O_RDONLY);
+            if (fd != -1) {
+                ssize_t n = read(fd, g_command_line, sizeof(g_command_line) - 1);
+                if (n > 0) {
+                    g_command_line[n] = 0;
+                    for (int i = 0; i < n; i++) {
+                        if (g_command_line[i] == 0) g_command_line[i] = ' ';
+                    }
+                }
+                close(fd);
+            }
+        }
+        return g_command_line;
+    }
+
+    BOOL SystemParametersInfo(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni) {
+        return TRUE;
+    }
+
+    LONG InterlockedExchange(LONG volatile* Target, LONG Value) {
+        return __sync_lock_test_and_set(Target, Value);
+    }
+
+    LONG InterlockedIncrement(LONG volatile* Addend) {
+        return __sync_add_and_fetch(Addend, 1);
+    }
+
+    LONG InterlockedDecrement(LONG volatile* Addend) {
+        return __sync_sub_and_fetch(Addend, 1);
+    }
+
+    LONG InterlockedCompareExchange(LONG volatile* Destination, LONG ExChange, LONG Comperand) {
+        return __sync_val_compare_and_swap(Destination, Comperand, ExChange);
+    }
+
+    PVOID InterlockedCompareExchangePointer(PVOID volatile* Destination, PVOID ExChange, PVOID Comperand) {
+        return __sync_val_compare_and_swap(Destination, Comperand, ExChange);
+    }
 }
 #endif
 
