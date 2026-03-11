@@ -25,6 +25,7 @@
 #ifdef __linux__
 #include <map>
 #include <mutex>
+#include <dlfcn.h>
 
 static std::map<const void*, size_t> g_mapping_sizes;
 static xrCriticalSection g_mapping_mutex;
@@ -179,6 +180,61 @@ extern "C" {
 
     BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock) {
         return pthread_rwlock_tryrdlock((pthread_rwlock_t*)*SRWLock) == 0;
+    }
+
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName) {
+        if (!lpLibFileName) return (HMODULE)NULL;
+
+        string_path name;
+        strncpy(name, lpLibFileName, sizeof(name) - 1);
+        name[sizeof(name) - 1] = 0;
+
+        // Replace backslashes with slashes
+        for (char* p = name; *p; p++) if (*p == '\\') *p = '/';
+
+        // Replace .dll with .so
+        char* ext = strstr(name, ".dll");
+        if (ext) {
+            strcpy(ext, ".so");
+        }
+
+        // Try as is
+        void* h = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+        if (h) return (HMODULE)h;
+
+        // Try with lib prefix if it doesn't have one and it is just a filename
+        const char* last_slash = strrchr(name, '/');
+        const char* fname = last_slash ? last_slash + 1 : name;
+        if (strncmp(fname, "lib", 3) != 0) {
+            string_path libName;
+            if (last_slash) {
+                size_t dirLen = last_slash - name + 1;
+                strncpy(libName, name, dirLen);
+                libName[dirLen] = 0;
+                strcat(libName, "lib");
+                strcat(libName, fname);
+            } else {
+                strcpy(libName, "lib");
+                strcat(libName, name);
+            }
+            h = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+            if (h) return (HMODULE)h;
+        }
+
+        return (HMODULE)NULL;
+    }
+
+    HMODULE LoadLibrary(LPCSTR lpLibFileName) {
+        return LoadLibraryA(lpLibFileName);
+    }
+
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
+        return (FARPROC)dlsym(hModule, lpProcName);
+    }
+
+    BOOL FreeLibrary(HMODULE hLibModule) {
+        if (!hLibModule) return FALSE;
+        return dlclose(hLibModule) == 0;
     }
 }
 #endif

@@ -86,6 +86,7 @@ typedef long LONG;
 typedef unsigned long ULONG;
 typedef long long HRESULT;
 typedef void* HMODULE;
+typedef void* FARPROC;
 
 typedef struct {
     long left, top, right, bottom;
@@ -270,6 +271,11 @@ extern "C" {
     BOOL TryAcquireSRWLockExclusive(SRWLOCK* SRWLock);
     BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock);
     void DeleteSRWLock(SRWLOCK* SRWLock);
+
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName);
+    HMODULE LoadLibrary(LPCSTR lpLibFileName);
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+    BOOL FreeLibrary(HMODULE hLibModule);
 
 #ifdef __cplusplus
 }
