@@ -25,6 +25,7 @@
 #ifdef __linux__
 #include <map>
 #include <mutex>
+#include <dlfcn.h>
 
 static std::map<const void*, size_t> g_mapping_sizes;
 static xrCriticalSection g_mapping_mutex;
@@ -179,6 +180,138 @@ extern "C" {
 
     BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock) {
         return pthread_rwlock_tryrdlock((pthread_rwlock_t*)*SRWLock) == 0;
+    }
+
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName) {
+        if (!lpLibFileName) return (HMODULE)NULL;
+
+        string_path name;
+        strncpy(name, lpLibFileName, sizeof(name) - 1);
+        name[sizeof(name) - 1] = 0;
+
+        // Replace backslashes with slashes
+        for (char* p = name; *p; p++) if (*p == '\\') *p = '/';
+
+        // Replace .dll with .so
+        char* ext = strstr(name, ".dll");
+        if (ext) {
+            strcpy(ext, ".so");
+        }
+
+        // Try as is
+        void* h = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+        if (h) return (HMODULE)h;
+
+        // Try with lib prefix if it doesn't have one and it is just a filename
+        const char* last_slash = strrchr(name, '/');
+        const char* fname = last_slash ? last_slash + 1 : name;
+        if (strncmp(fname, "lib", 3) != 0) {
+            string_path libName;
+            if (last_slash) {
+                size_t dirLen = last_slash - name + 1;
+                strncpy(libName, name, dirLen);
+                libName[dirLen] = 0;
+                strcat(libName, "lib");
+                strcat(libName, fname);
+            } else {
+                strcpy(libName, "lib");
+                strcat(libName, name);
+            }
+            h = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+            if (h) return (HMODULE)h;
+        }
+
+        return (HMODULE)NULL;
+    }
+
+    HMODULE LoadLibrary(LPCSTR lpLibFileName) {
+        return LoadLibraryA(lpLibFileName);
+    }
+
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
+        return (FARPROC)dlsym(hModule, lpProcName);
+    }
+
+    BOOL FreeLibrary(HMODULE hLibModule) {
+        if (!hLibModule) return FALSE;
+        return dlclose(hLibModule) == 0;
+    }
+
+    void Sleep(DWORD dwMilliseconds) {
+        usleep(dwMilliseconds * 1000);
+    }
+
+    DWORD GetTickCount() {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (DWORD)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    }
+
+    DWORD GetCurrentProcessId() {
+        return (DWORD)getpid();
+    }
+
+    BOOL IsDebuggerPresent() {
+        return FALSE;
+    }
+
+    HMODULE GetModuleHandle(LPCSTR lpModuleName) {
+        if (!lpModuleName) return (HMODULE)dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
+        return (HMODULE)dlopen(lpModuleName, RTLD_NOLOAD | RTLD_NOW | RTLD_GLOBAL);
+    }
+
+    DWORD GetModuleFileName(HMODULE hModule, LPSTR lpFilename, DWORD nSize) {
+        if (!hModule || hModule == (HMODULE)dlopen(NULL, RTLD_NOW | RTLD_GLOBAL)) {
+            ssize_t len = readlink("/proc/self/exe", lpFilename, nSize - 1);
+            if (len != -1) {
+                lpFilename[len] = 0;
+                return (DWORD)len;
+            }
+        }
+        lpFilename[0] = 0;
+        return 0;
+    }
+
+    static char g_command_line[2048] = "";
+    LPCSTR GetCommandLineA() {
+        if (g_command_line[0] == 0) {
+            int fd = open("/proc/self/cmdline", O_RDONLY);
+            if (fd != -1) {
+                ssize_t n = read(fd, g_command_line, sizeof(g_command_line) - 1);
+                if (n > 0) {
+                    g_command_line[n] = 0;
+                    for (int i = 0; i < n; i++) {
+                        if (g_command_line[i] == 0) g_command_line[i] = ' ';
+                    }
+                }
+                close(fd);
+            }
+        }
+        return g_command_line;
+    }
+
+    BOOL SystemParametersInfo(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni) {
+        return TRUE;
+    }
+
+    LONG InterlockedExchange(LONG volatile* Target, LONG Value) {
+        return __sync_lock_test_and_set(Target, Value);
+    }
+
+    LONG InterlockedIncrement(LONG volatile* Addend) {
+        return __sync_add_and_fetch(Addend, 1);
+    }
+
+    LONG InterlockedDecrement(LONG volatile* Addend) {
+        return __sync_sub_and_fetch(Addend, 1);
+    }
+
+    LONG InterlockedCompareExchange(LONG volatile* Destination, LONG ExChange, LONG Comperand) {
+        return __sync_val_compare_and_swap(Destination, Comperand, ExChange);
+    }
+
+    PVOID InterlockedCompareExchangePointer(PVOID volatile* Destination, PVOID ExChange, PVOID Comperand) {
+        return __sync_val_compare_and_swap(Destination, Comperand, ExChange);
     }
 }
 #endif

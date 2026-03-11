@@ -6,8 +6,8 @@
 // AlexMX - Alexander Maksimchuk
 //-----------------------------------------------------------------------------
 #include "stdafx.h"
-#include "igame_level.h"
-#include "igame_persistent.h"
+#include "IGame_Level.h"
+#include "IGame_Persistent.h"
 
 #include "dedicated_server_only.h"
 #include "no_single.h"
@@ -1252,6 +1252,19 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
 	return (0);
 }
+
+#ifdef __linux__
+int main(int argc, char* argv[]) {
+    xr_vector<char> cmd_line;
+    for (int i = 1; i < argc; i++) {
+        if (i > 1) cmd_line.push_back(' ');
+        cmd_line.insert(cmd_line.end(), argv[i], argv[i] + strlen(argv[i]));
+    }
+    cmd_line.push_back(0);
+
+    return WinMain(NULL, NULL, cmd_line.data(), 0);
+}
+#endif
 
 LPCSTR _GetFontTexName(LPCSTR section)
 {
