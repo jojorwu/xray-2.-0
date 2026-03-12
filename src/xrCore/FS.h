@@ -40,10 +40,10 @@ public:
 	}
 
 	// kernel
-	virtual void seek(u32 pos) = 0;
-	virtual u32 tell() = 0;
+	virtual void seek(size_t pos) = 0;
+	virtual size_t tell() = 0;
 
-	virtual void w(const void* ptr, u32 count) = 0;
+	virtual void w(const void* ptr, size_t count) = 0;
 
 	// generalized writing functions
 	IC void w_u64(u64 d) { w(&d, sizeof(u64)); }
@@ -57,12 +57,12 @@ public:
 	IC void w_float(float d) { w(&d, sizeof(float)); }
 	IC void w_string(const char* p)
 	{
-		w(p, (u32)xr_strlen(p));
+		w(p, (size_t)xr_strlen(p));
 		w_u8(13);
 		w_u8(10);
 	}
 
-	IC void w_stringZ(const char* p) { w(p, (u32)xr_strlen(p) + 1); }
+	IC void w_stringZ(const char* p) { w(p, (size_t)xr_strlen(p) + 1); }
 	IC void w_stringZ(const shared_str& p)
 	{
 		w(*p ? *p : "", p.size());
@@ -77,7 +77,7 @@ public:
 
 	IC void w_stringZ(const xr_string& p)
 	{
-		w(p.c_str() ? p.c_str() : "", (u32)p.size());
+		w(p.c_str() ? p.c_str() : "", (size_t)p.size());
 		w_u8(0);
 	}
 
@@ -111,12 +111,12 @@ public:
 	void __cdecl w_printf(const char* format, ...);
 
 	// generalized chunking
-	u32 align();
+	size_t align();
 	void open_chunk(u32 type);
 	void close_chunk();
-	u32 chunk_size(); // returns size of currently opened chunk, 0 otherwise
-	void w_compressed(void* ptr, u32 count);
-	void w_chunk(u32 type, void* data, u32 size);
+	size_t chunk_size(); // returns size of currently opened chunk, 0 otherwise
+	void w_compressed(void* ptr, size_t count);
+	void w_chunk(u32 type, void* data, size_t size);
 	virtual bool valid() { return true; }
 	virtual void flush() = 0;
 };
@@ -124,9 +124,9 @@ public:
 class XRCORE_API CMemoryWriter : public IWriter
 {
 	u8* data;
-	u32 position;
-	u32 mem_size;
-	u32 file_size;
+	size_t position;
+	size_t mem_size;
+	size_t file_size;
 public:
 	CMemoryWriter()
 	{
@@ -139,14 +139,14 @@ public:
 	virtual ~CMemoryWriter();
 
 	// kernel
-	virtual void w(const void* ptr, u32 count);
+	virtual void w(const void* ptr, size_t count);
 
-	virtual void seek(u32 pos) { position = pos; }
-	virtual u32 tell() { return position; }
+	virtual void seek(size_t pos) { position = pos; }
+	virtual size_t tell() { return position; }
 
 	// specific
 	IC u8* pointer() { return data; }
-	IC u32 size() const { return file_size; }
+	IC size_t size() const { return file_size; }
 	IC void clear()
 	{
 		file_size = 0;
@@ -209,7 +209,7 @@ public:
 
 	IC BOOL eof() const { return impl().elapsed() <= 0; };
 
-	IC void r(void* p, int cnt) { impl().r(p, cnt); }
+	IC void r(void* p, size_t cnt) { impl().r(p, cnt); }
 
 	IC Fvector r_vec3()
 	{
@@ -324,7 +324,7 @@ public:
 
 	IC BOOL r_chunk(u32 ID, void* dest) // чтение XR Chunk'ов (4b-ID,4b-size,??b-data)
 	{
-		u32 dwSize = ((implementation_type*)this)->find_chunk(ID);
+		size_t dwSize = ((implementation_type*)this)->find_chunk(ID);
 		if (dwSize != 0)
 		{
 			r(dest, dwSize);
@@ -333,9 +333,9 @@ public:
 		else return FALSE;
 	}
 
-	IC BOOL r_chunk_safe(u32 ID, void* dest, u32 dest_size) // чтение XR Chunk'ов (4b-ID,4b-size,??b-data)
+	IC BOOL r_chunk_safe(u32 ID, void* dest, size_t dest_size) // чтение XR Chunk'ов (4b-ID,4b-size,??b-data)
 	{
-		u32 dwSize = ((implementation_type*)this)->find_chunk(ID);
+		size_t dwSize = ((implementation_type*)this)->find_chunk(ID);
 		if (dwSize != 0)
 		{
 			R_ASSERT(dwSize == dest_size);
@@ -353,9 +353,9 @@ class XRCORE_API IReader : public IReaderBase<IReader>
 {
 protected:
 	char* data;
-	int Pos;
-	int Size;
-	int iterpos;
+	size_t Pos;
+	size_t Size;
+	size_t iterpos;
 
 public:
 	IC IReader()
@@ -367,7 +367,7 @@ public:
 	{
 	}
 
-	IC IReader(void* _data, int _size, int _iterpos = 0)
+	IC IReader(void* _data, size_t _size, size_t _iterpos = 0)
 	{
 		data = (char*)_data;
 		Size = _size;
@@ -385,26 +385,26 @@ protected:
 		return 0;
 	}
 
-	u32 advance_term_string();
+	size_t advance_term_string();
 
 public:
-	IC int elapsed() const { return Size - Pos; };
-	IC int tell() const { return Pos; };
-	IC void seek(int ptr)
+	IC size_t elapsed() const { return Size - Pos; };
+	IC size_t tell() const { return Pos; };
+	IC void seek(size_t ptr)
 	{
 		Pos = ptr;
-		VERIFY((Pos <= Size) && (Pos >= 0));
+		VERIFY((Pos <= Size));
 	};
-	IC int length() const { return Size; };
+	IC size_t length() const { return Size; };
 	IC void* pointer() const { return &(data[Pos]); };
-	IC void advance(int cnt)
+	IC void advance(size_t cnt)
 	{
 		Pos += cnt;
-		VERIFY((Pos <= Size) && (Pos >= 0));
+		VERIFY((Pos <= Size));
 	}; //AVO: commented out to allow COC to run in debug. Was failing when reading one of *.thm. UNDONE after non fatal VERIFY implementation
 
 public:
-	void r(void* p, int cnt);
+	void r(void* p, size_t cnt);
 
 	void r_string(char* dest, u32 tgt_sz);
 	void r_string(xr_string& dest);
@@ -425,7 +425,7 @@ public:
 	// iterators
 	IReader* open_chunk_iterator(u32& ID, IReader* previous = nullptr); // nullptr=first
 
-	u32 find_chunk(u32 ID, BOOL* bCompressed = 0);
+	size_t find_chunk(u32 ID, BOOL* bCompressed = 0);
 
 private:
 	typedef IReaderBase<IReader> inherited;

@@ -26,6 +26,9 @@
 #ifdef __BORLANDC__
 typedef _W64 unsigned int  uintptr_t;
 #endif
+#ifndef _WIN32
+#include <stdint.h>
+#endif
 /***
 *
 * |1|___6___|2|3|4|_________5__________|_6_|
@@ -207,7 +210,7 @@ void* __stdcall xr_aligned_offset_realloc(void* memblock, size_t size, size_t al
 	diff = (uintptr_t)memblock - stptr;
 	/* Mov size is min of the size of data available and sizw requested.
 	*/
-	movsz = _msize((void*)stptr) - ((uintptr_t)memblock - stptr);
+	movsz = malloc_usable_size((void*)stptr) - ((uintptr_t)memblock - stptr);
 	movsz = movsz > size ? size : movsz;
 	reqsz = PTR_SZ + gap + align + size;
 
@@ -228,7 +231,7 @@ void* __stdcall xr_aligned_offset_realloc(void* memblock, size_t size, size_t al
 	}
 	else
 	{
-		if ((ptr = (uintptr_t)_expand((void*)stptr, reqsz)) == (uintptr_t)0)
+		if ((ptr = (uintptr_t)0) == (uintptr_t)0)
 		{
 			if ((ptr = (uintptr_t)malloc(reqsz)) == (uintptr_t)0)
 				return nullptr;
@@ -287,7 +290,7 @@ void __stdcall xr_aligned_free(void* memblock)
 	free((void*)ptr);
 }
 
-u32 __stdcall xr_aligned_msize(void* memblock)
+size_t __stdcall xr_aligned_msize(void* memblock)
 {
 	uintptr_t ptr;
 
@@ -301,5 +304,5 @@ u32 __stdcall xr_aligned_msize(void* memblock)
 
 	/* ptr is the pointer to the start of memory block*/
 	ptr = *((uintptr_t*)ptr);
-	return (u32)_msize((void*)ptr);
+	return (size_t)malloc_usable_size((void*)ptr);
 }

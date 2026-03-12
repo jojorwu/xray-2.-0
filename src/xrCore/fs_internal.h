@@ -14,9 +14,9 @@
 #include <unistd.h>
 #endif
 
-void* FileDownload(LPCSTR fn, u32* pdwSize = nullptr);
-void FileCompress(const char* fn, const char* sign, void* data, u32 size);
-void* FileDecompress(const char* fn, const char* sign, u32* size = nullptr);
+void* FileDownload(LPCSTR fn, size_t* pdwSize = nullptr);
+void FileCompress(const char* fn, const char* sign, void* data, size_t size);
+void* FileDecompress(const char* fn, const char* sign, size_t* size = nullptr);
 
 class CFileWriter : public IWriter
 {
@@ -77,13 +77,13 @@ public:
 	}
 
 	// kernel
-	virtual void w(const void* _ptr, u32 count)
+	virtual void w(const void* _ptr, size_t count)
 	{
 		if ((0 != hf) && (0 != count))
 		{
-			const u32 mb_sz = 0x1000000;
+			const size_t mb_sz = 0x1000000;
 			u8* ptr = (u8*)_ptr;
-			int req_size;
+			size_t req_size;
 			for (req_size = count; req_size > mb_sz; req_size -= mb_sz, ptr += mb_sz)
 			{
 				size_t W = fwrite(ptr, mb_sz, 1, hf);
@@ -104,8 +104,8 @@ public:
 			}
 		}
 	};
-	virtual void seek(u32 pos) { if (0 != hf) fseek(hf, pos, SEEK_SET); };
-	virtual u32 tell() { return (0 != hf) ? ftell(hf) : 0; };
+	virtual void seek(size_t pos) { if (0 != hf) fseek(hf, (long)pos, SEEK_SET); };
+	virtual size_t tell() { return (0 != hf) ? (size_t)ftell(hf) : 0; };
 	virtual bool valid() { return (0 != hf); }
 	virtual void flush() { if (hf) fflush(hf); };
 };
@@ -114,7 +114,7 @@ public:
 class CTempReader : public IReader
 {
 public:
-	CTempReader(void* _data, int _size, int _iterpos) : IReader(_data, _size, _iterpos)
+	CTempReader(void* _data, size_t _size, size_t _iterpos) : IReader(_data, _size, _iterpos)
 	{
 	}
 
@@ -125,7 +125,7 @@ class CPackReader : public IReader
 {
 	void* base_address;
 public:
-	CPackReader(void* _base, void* _data, int _size) : IReader(_data, _size) { base_address = _base; }
+	CPackReader(void* _base, void* _data, size_t _size) : IReader(_data, _size) { base_address = _base; }
 	virtual ~CPackReader();
 };
 

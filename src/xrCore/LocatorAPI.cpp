@@ -227,7 +227,7 @@ CLocatorAPI::~CLocatorAPI()
 	_dump_open_files(1);
 }
 
-void CLocatorAPI::Register(LPCSTR name, u32 vfs, u32 crc, u32 ptr, u32 size_real, u32 size_compressed, u32 modif)
+void CLocatorAPI::Register(LPCSTR name, u32 vfs, u32 crc, size_t ptr, size_t size_real, size_t size_compressed, u32 modif)
 {
 	//Msg("Register[%d] [%s]",vfs,name);
 	string256 temp_file_name;
@@ -430,7 +430,7 @@ void CLocatorAPI::LoadArchive(archive& A, LPCSTR entrypoint)
 		name[name_length] = 0;
 		buffer += buffer_size - 4 * sizeof(u32);
 
-		u32 ptr = *(u32*)buffer;
+		size_t ptr = (size_t)*(u32*)buffer;
 		buffer += sizeof(ptr);
 
 		strconcat(sizeof(full), full, fs_entry_point, name);
@@ -1230,13 +1230,13 @@ void CLocatorAPI::file_from_archive(IReader*& R, LPCSTR fname, const file& desc)
 {
 	// Archived one
 	archive& A = m_archives[desc.vfs];
-	u32 start = (desc.ptr / dwAllocGranularity) * dwAllocGranularity;
-	u32 end = (desc.ptr + desc.size_compressed) / dwAllocGranularity;
+	size_t start = (desc.ptr / dwAllocGranularity) * dwAllocGranularity;
+	size_t end = (desc.ptr + desc.size_compressed) / dwAllocGranularity;
 	if ((desc.ptr + desc.size_compressed) % dwAllocGranularity) end += 1;
 	end *= dwAllocGranularity;
 	if (end > A.size) end = A.size;
-	u32 sz = (end - start);
-	u8* ptr = (u8*)MapViewOfFile(A.hSrcMap, FILE_MAP_READ, 0, start, sz);
+	size_t sz = (end - start);
+	u8* ptr = (u8*)MapViewOfFile(A.hSrcMap, FILE_MAP_READ, (DWORD)(start >> 32), (DWORD)(start & 0xFFFFFFFF), sz);
 	VERIFY3(ptr, "cannot create file mapping on file", fname);
 
 	string512 temp;
@@ -1246,7 +1246,7 @@ void CLocatorAPI::file_from_archive(IReader*& R, LPCSTR fname, const file& desc)
     register_file_mapping(ptr, sz, temp);
 #endif // DEBUG
 
-	u32 ptr_offs = desc.ptr - start;
+	size_t ptr_offs = desc.ptr - start;
 	if (desc.size_real == desc.size_compressed)
 	{
 		R = xr_new<CPackReader>(ptr, ptr + ptr_offs, (int)desc.size_real);
@@ -1278,9 +1278,9 @@ void CLocatorAPI::file_from_archive(CStreamReader*& R, LPCSTR fname, const file&
 	R = xr_new<CStreamReader>();
 	R->construct(
 		A.hSrcMap,
-		desc.ptr,
-		desc.size_compressed,
-		A.size,
+		(size_t)desc.ptr,
+		(size_t)desc.size_compressed,
+		(size_t)A.size,
 		BIG_FILE_READER_WINDOW_SIZE
 	);
 }

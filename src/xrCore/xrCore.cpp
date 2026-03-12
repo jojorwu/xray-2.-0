@@ -72,19 +72,19 @@ extern "C" {
     DWORD GetFileSize(HANDLE hFile, DWORD* lpFileSizeHigh) {
         struct stat st;
         if (fstat((int)(intptr_t)hFile, &st) == -1) return (DWORD)-1;
-        if (lpFileSizeHigh) *lpFileSizeHigh = (DWORD)(st.st_size >> 32);
+        if (lpFileSizeHigh) *lpFileSizeHigh = (DWORD)((uint64_t)st.st_size >> 32);
         return (DWORD)st.st_size;
     }
 
-    DWORD SetFilePointer(HANDLE hFile, long lDistanceToMove, long* lpDistanceToMoveHigh, DWORD dwMoveMethod) {
-        off_t offset = lDistanceToMove;
-        if (lpDistanceToMoveHigh) offset |= ((off_t)*lpDistanceToMoveHigh << 32);
+    DWORD SetFilePointer(HANDLE hFile, LONG lDistanceToMove, LONG* lpDistanceToMoveHigh, DWORD dwMoveMethod) {
+        int64_t offset = (uint32_t)lDistanceToMove;
+        if (lpDistanceToMoveHigh) offset |= ((int64_t)*lpDistanceToMoveHigh << 32);
         int whence = SEEK_SET;
         if (dwMoveMethod == 1) whence = SEEK_CUR;
         else if (dwMoveMethod == 2) whence = SEEK_END;
-        off_t res = lseek((int)(intptr_t)hFile, offset, whence);
+        off_t res = lseek((int)(intptr_t)hFile, (off_t)offset, whence);
         if (res == (off_t)-1) return (DWORD)-1;
-        if (lpDistanceToMoveHigh) *lpDistanceToMoveHigh = (long)(res >> 32);
+        if (lpDistanceToMoveHigh) *lpDistanceToMoveHigh = (LONG)((uint64_t)res >> 32);
         return (DWORD)res;
     }
 
@@ -311,11 +311,13 @@ extern "C" {
         return TRUE;
     }
 
+    struct thread_data {
+        thread_start_t fn;
+        void* arg;
+    };
+
     static void* thread_wrapper(void* args) {
-        struct {
-            thread_start_t fn;
-            void* arg;
-        }* data = (decltype(data))args;
+        thread_data* data = (thread_data*)args;
         thread_start_t fn = data->fn;
         void* arg = data->arg;
         free(data);
@@ -325,12 +327,12 @@ extern "C" {
 
     uintptr_t _beginthread(thread_start_t start_address, unsigned stack_size, void *arglist) {
         pthread_t thread;
-        auto data = (struct { thread_start_t fn; void* arg; }*)malloc(sizeof(*data));
+        thread_data* data = (thread_data*)malloc(sizeof(thread_data));
         data->fn = start_address;
         data->arg = arglist;
         if (pthread_create(&thread, NULL, thread_wrapper, data) != 0) {
             free(data);
-            return -1;
+            return (uintptr_t)-1;
         }
         return (uintptr_t)thread;
     }

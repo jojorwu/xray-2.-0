@@ -23,18 +23,18 @@
 #ifdef FS_DEBUG
 XRCORE_API u32 g_file_mapped_memory = 0;
 u32 g_file_mapped_count = 0;
-typedef xr_map<u32, std::pair<u32, shared_str> > FILE_MAPPINGS;
+typedef xr_map<uintptr_t, std::pair<size_t, shared_str> > FILE_MAPPINGS;
 FILE_MAPPINGS g_file_mappings;
 
-void register_file_mapping(void* address, const u32& size, LPCSTR file_name)
+void register_file_mapping(void* address, const size_t& size, LPCSTR file_name)
 {
-    FILE_MAPPINGS::const_iterator I = g_file_mappings.find(*(u32*)&address);
+    FILE_MAPPINGS::const_iterator I = g_file_mappings.find((uintptr_t)address);
     VERIFY(I == g_file_mappings.end());
-    g_file_mappings.insert(std::make_pair(*(u32*)&address, std::make_pair(size, shared_str(file_name))));
+    g_file_mappings.insert(std::make_pair((uintptr_t)address, std::make_pair(size, shared_str(file_name))));
 
     // Msg ("++register_file_mapping(%2d): [0x%08x]%s", g_file_mapped_count + 1, *((u32*)&address), file_name);
 
-    g_file_mapped_memory += size;
+    g_file_mapped_memory += (u32)size;
     ++g_file_mapped_count;
 #ifdef USE_MEMORY_MONITOR
     // memory_monitor::monitor_alloc (addres,size,"file mapping");
@@ -44,12 +44,12 @@ void register_file_mapping(void* address, const u32& size, LPCSTR file_name)
 #endif // USE_MEMORY_MONITOR
 }
 
-void unregister_file_mapping(void* address, const u32& size)
+void unregister_file_mapping(void* address, const size_t& size)
 {
-    FILE_MAPPINGS::iterator I = g_file_mappings.find(*(u32*)&address);
+    FILE_MAPPINGS::iterator I = g_file_mappings.find((uintptr_t)address);
     VERIFY(I != g_file_mappings.end());
     // VERIFY2 ((*I).second.first == size,make_string("file mapping sizes are different: %d -> %d",(*I).second.first,size));
-    g_file_mapped_memory -= (*I).second.first;
+    g_file_mapped_memory -= (u32)(*I).second.first;
     --g_file_mapped_count;
 
     // Msg ("--unregister_file_mapping(%2d): [0x%08x]%s", g_file_mapped_count + 1, *((u32*)&address), (*I).second.second.c_str());
@@ -98,7 +98,7 @@ void VerifyPath(LPCSTR path)
 }
 
 #ifdef _EDITOR
-bool file_handle_internal(LPCSTR file_name, u32& size, int& hFile)
+bool file_handle_internal(LPCSTR file_name, size_t& size, int& hFile)
 {
     hFile = _open(file_name, O_RDONLY | O_BINARY | O_SEQUENTIAL);
     if (hFile <= 0)
@@ -136,7 +136,7 @@ static errno_t open_internal(LPCSTR fn, int& handle)
 	);
 }
 
-bool file_handle_internal(LPCSTR file_name, u32& size, int& file_handle)
+bool file_handle_internal(LPCSTR file_name, size_t& size, int& file_handle)
 {
 	if (open_internal(file_name, file_handle))
 	{
@@ -145,11 +145,11 @@ bool file_handle_internal(LPCSTR file_name, u32& size, int& file_handle)
 			return (false);
 	}
 
-	size = _filelength(file_handle);
+	size = (size_t)_filelength(file_handle);
 	return (true);
 }
 #else // LINUX
-bool file_handle_internal(LPCSTR file_name, u32& size, int& file_handle)
+bool file_handle_internal(LPCSTR file_name, size_t& size, int& file_handle)
 {
     file_handle = open(file_name, O_RDONLY);
     if (file_handle == -1)
@@ -167,7 +167,7 @@ bool file_handle_internal(LPCSTR file_name, u32& size, int& file_handle)
 }
 #endif
 
-void* FileDownload(LPCSTR file_name, const int& file_handle, u32& file_size)
+void* FileDownload(LPCSTR file_name, const int& file_handle, size_t& file_size)
 {
 	void* buffer = Memory.mem_alloc(
 		file_size
@@ -208,7 +208,7 @@ void* FileDownload(LPCSTR file_name, const int& file_handle, u32& file_size)
 	return (buffer);
 }
 
-void* FileDownload(LPCSTR file_name, u32* buffer_size)
+void* FileDownload(LPCSTR file_name, size_t* buffer_size)
 {
 	int file_handle;
 	R_ASSERT3(
@@ -231,7 +231,7 @@ IC void mk_mark(MARK& M, const char* S)
 #endif
 }
 
-void FileCompress(const char* fn, const char* sign, void* data, u32 size)
+void FileCompress(const char* fn, const char* sign, void* data, size_t size)
 {
 	MARK M;
 	mk_mark(M, sign);
@@ -253,7 +253,7 @@ void FileCompress(const char* fn, const char* sign, void* data, u32 size)
 #endif
 }
 
-void* FileDecompress(const char* fn, const char* sign, u32* size)
+void* FileDecompress(const char* fn, const char* sign, size_t* size)
 {
 	MARK M, F;
 	mk_mark(M, sign);
@@ -277,14 +277,14 @@ void* FileDecompress(const char* fn, const char* sign, u32* size)
 	R_ASSERT(strncmp(M, F, 8) == 0);
 
 	void* ptr = 0;
-	u32 SZ;
+	size_t SZ;
 #ifdef _WIN32
-	SZ = _readLZ(H, ptr, filelength(H) - 8);
+	SZ = (size_t)_readLZ(H, ptr, (u32)filelength(H) - 8);
 	_close(H);
 #else
     struct stat st;
     fstat(H, &st);
-    SZ = _readLZ(H, ptr, (u32)st.st_size - 8);
+    SZ = (size_t)_readLZ(H, ptr, (u32)st.st_size - 8);
     close(H);
 #endif
 	if (size) *size = SZ;
@@ -301,7 +301,7 @@ CMemoryWriter::~CMemoryWriter()
 	xr_free(data);
 }
 
-void CMemoryWriter::w(const void* ptr, u32 count)
+void CMemoryWriter::w(const void* ptr, size_t count)
 {
 	if (position + count > mem_size)
 	{
@@ -351,20 +351,20 @@ void IWriter::close_chunk()
 {
 	VERIFY(!chunk_pos.empty());
 
-	int pos = tell();
+	size_t pos = tell();
 	seek(chunk_pos.top());
-	w_u32(pos - chunk_pos.top() - 4);
+	w_u32((u32)(pos - chunk_pos.top() - 4));
 	seek(pos);
 	chunk_pos.pop();
 }
 
-u32 IWriter::chunk_size() // returns size of currently opened chunk, 0 otherwise
+size_t IWriter::chunk_size() // returns size of currently opened chunk, 0 otherwise
 {
 	if (chunk_pos.empty()) return 0;
 	return tell() - chunk_pos.top() - 4;
 }
 
-void IWriter::w_compressed(void* ptr, u32 count)
+void IWriter::w_compressed(void* ptr, size_t count)
 {
 	BYTE* dest = 0;
 	unsigned dest_sz = 0;
@@ -378,7 +378,7 @@ void IWriter::w_compressed(void* ptr, u32 count)
 	xr_free(dest);
 }
 
-void IWriter::w_chunk(u32 type, void* data, u32 size)
+void IWriter::w_chunk(u32 type, void* data, size_t size)
 {
 	open_chunk(type);
 	if (type & CFS_CompressMark) w_compressed(data, size);
@@ -467,7 +467,7 @@ IReaderTestPolicy::~IReaderTestPolicy()
 find_chunk_counter g_find_chunk_counter;
 #endif // FIND_CHUNK_BENCHMARK_ENABLE
 
-u32 IReader::find_chunk(u32 ID, BOOL* bCompressed)
+size_t IReader::find_chunk(u32 ID, BOOL* bCompressed)
 {
 	return inherited::find_chunk(ID, bCompressed);
 }
@@ -505,7 +505,7 @@ IReader* IReader::open_chunk_iterator(u32& ID, IReader* _prev)
 	}
 }
 
-void IReader::r(void* p, int cnt)
+void IReader::r(void* p, size_t cnt)
 {
 	VERIFY(Pos + cnt <= Size);
 	CopyMemory(p, pointer(), cnt);
@@ -522,9 +522,9 @@ void IReader::r(void* p, int cnt)
 };
 
 IC BOOL is_term(char a) { return (a == 13) || (a == 10); };
-IC u32 IReader::advance_term_string()
+IC size_t IReader::advance_term_string()
 {
-	u32 sz = 0;
+	size_t sz = 0;
 	char* src = (char*)data;
 	while (!eof())
 	{
@@ -543,8 +543,8 @@ IC u32 IReader::advance_term_string()
 void IReader::r_string(char* dest, u32 tgt_sz)
 {
 	char* src = (char*)data + Pos;
-	u32 sz = advance_term_string();
-	R_ASSERT2(sz < (tgt_sz - 1), "Dest string less than needed.");
+	size_t sz = advance_term_string();
+	R_ASSERT2(sz < (size_t)(tgt_sz - 1), "Dest string less than needed.");
 #ifdef _WIN32
 	R_ASSERT(!IsBadReadPtr((void*)src, sz));
 #endif
@@ -562,15 +562,15 @@ void IReader::r_string(char* dest, u32 tgt_sz)
 void IReader::r_string(xr_string& dest)
 {
 	char* src = (char*)data + Pos;
-	u32 sz = advance_term_string();
-	dest.assign(src, sz);
+	size_t sz = advance_term_string();
+	dest.assign(src, (u32)sz);
 }
 
 void IReader::r_stringZ(char* dest, u32 tgt_sz)
 {
 	char* src = (char*)data;
-	u32 sz = xr_strlen(src);
-	R_ASSERT2(sz < tgt_sz, "Dest string less than needed.");
+	size_t sz = xr_strlen(src);
+	R_ASSERT2(sz < (size_t)tgt_sz, "Dest string less than needed.");
 	while ((src[Pos] != 0) && (!eof())) *dest++ = src[Pos++];
 	*dest = 0;
 	Pos++;
@@ -615,7 +615,7 @@ CPackReader::~CPackReader()
 // file stream
 CFileReader::CFileReader(const char* name)
 {
-	data = (char*)FileDownload(name, (u32*)&Size);
+	data = (char*)FileDownload(name, &Size);
 	Pos = 0;
 };
 
@@ -627,7 +627,7 @@ CFileReader::~CFileReader()
 // compressed stream
 CCompressedReader::CCompressedReader(const char* name, const char* sign)
 {
-	data = (char*)FileDecompress(name, sign, (u32*)&Size);
+	data = (char*)FileDecompress(name, sign, &Size);
 	Pos = 0;
 }
 
@@ -646,7 +646,7 @@ CVirtualFileRW::CVirtualFileRW(const char* cFileName)
 #else
     R_ASSERT3(hSrcFile != INVALID_HANDLE_VALUE, cFileName, strerror(errno));
 #endif
-	Size = (int)GetFileSize(hSrcFile, nullptr);
+	Size = (size_t)GetFileSize(hSrcFile, nullptr);
 #ifdef _WIN32
 	R_ASSERT3(Size, cFileName, Debug.error2string(GetLastError()));
 #else
