@@ -25,12 +25,18 @@
 #ifdef __linux__
 #include <map>
 #include <mutex>
+#include <dlfcn.h>
+#include <time.h>
 
 static std::map<const void*, size_t> g_mapping_sizes;
 static xrCriticalSection g_mapping_mutex;
 
 extern "C" {
     HANDLE CreateFile(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void* lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
+        char normalized_path[MAX_PATH];
+        xr_strcpy(normalized_path, lpFileName);
+        for (char* p = normalized_path; *p; p++) if (*p == '\\') *p = '/';
+
         int flags = 0;
         if ((dwDesiredAccess & GENERIC_READ) && (dwDesiredAccess & GENERIC_WRITE)) flags = O_RDWR;
         else if (dwDesiredAccess & GENERIC_WRITE) flags = O_WRONLY;
@@ -40,7 +46,7 @@ extern "C" {
         else if (dwCreationDisposition == OPEN_EXISTING) {}
         else if (dwCreationDisposition == TRUNCATE_EXISTING) flags |= O_TRUNC;
 
-        int fd = open(lpFileName, flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        int fd = open(normalized_path, flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if (fd == -1) return INVALID_HANDLE_VALUE;
         return (HANDLE)(intptr_t)fd;
     }
@@ -180,6 +186,157 @@ extern "C" {
     BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock) {
         return pthread_rwlock_tryrdlock((pthread_rwlock_t*)*SRWLock) == 0;
     }
+
+    void Sleep(DWORD dwMilliseconds) {
+        usleep(dwMilliseconds * 1000);
+    }
+
+    DWORD GetTickCount() {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (DWORD)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    }
+
+    BOOL QueryPerformanceCounter(PLARGE_INTEGER lpPerformanceCount) {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        lpPerformanceCount->QuadPart = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+        return TRUE;
+    }
+
+    BOOL QueryPerformanceFrequency(PLARGE_INTEGER lpFrequency) {
+        lpFrequency->QuadPart = 1000000000LL;
+        return TRUE;
+    }
+
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName) {
+        char normalized_path[MAX_PATH];
+        xr_strcpy(normalized_path, lpLibFileName);
+        for (char* p = normalized_path; *p; p++) if (*p == '\\') *p = '/';
+
+        // Replace .dll with .so
+        char* ext = strstr(normalized_path, ".dll");
+        if (ext) strcpy(ext, ".so");
+
+        void* handle = dlopen(normalized_path, RTLD_NOW | RTLD_GLOBAL);
+        if (!handle) {
+            // Try with lib prefix
+            char lib_path[MAX_PATH + 4];
+            const char* last_slash = strrchr(normalized_path, '/');
+            if (last_slash) {
+                int dir_len = last_slash - normalized_path + 1;
+                strncpy(lib_path, normalized_path, dir_len);
+                strcpy(lib_path + dir_len, "lib");
+                strcpy(lib_path + dir_len + 3, last_slash + 1);
+            } else {
+                strcpy(lib_path, "lib");
+                strcpy(lib_path + 3, normalized_path);
+            }
+            handle = dlopen(lib_path, RTLD_NOW | RTLD_GLOBAL);
+        }
+        return (HMODULE)handle;
+    }
+
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
+        return (FARPROC)dlsym(hModule, lpProcName);
+    }
+
+    BOOL FreeLibrary(HMODULE hLibModule) {
+        return dlclose(hLibModule) == 0;
+    }
+
+    HMODULE GetModuleHandleA(LPCSTR lpModuleName) {
+        if (!lpModuleName) return dlopen(NULL, RTLD_NOW);
+
+        char normalized_path[MAX_PATH];
+        xr_strcpy(normalized_path, lpModuleName);
+        for (char* p = normalized_path; *p; p++) if (*p == '\\') *p = '/';
+        char* ext = strstr(normalized_path, ".dll");
+        if (ext) strcpy(ext, ".so");
+
+        void* handle = dlopen(normalized_path, RTLD_NOLOAD | RTLD_NOW | RTLD_GLOBAL);
+        if (!handle) {
+            char lib_path[MAX_PATH + 4];
+            const char* last_slash = strrchr(normalized_path, '/');
+            if (last_slash) {
+                int dir_len = last_slash - normalized_path + 1;
+                strncpy(lib_path, normalized_path, dir_len);
+                strcpy(lib_path + dir_len, "lib");
+                strcpy(lib_path + dir_len + 3, last_slash + 1);
+            } else {
+                strcpy(lib_path, "lib");
+                strcpy(lib_path + 3, normalized_path);
+            }
+            handle = dlopen(lib_path, RTLD_NOLOAD | RTLD_NOW | RTLD_GLOBAL);
+        }
+        return (HMODULE)handle;
+    }
+
+    void TerminateProcess(HANDLE hProcess, UINT uExitCode) {
+        exit(uExitCode);
+    }
+
+    HANDLE GetCurrentProcess() {
+        return (HANDLE)1;
+    }
+
+    void RaiseException(DWORD dwExceptionCode, DWORD dwExceptionFlags, DWORD nNumberOfArguments, const ULONG_PTR* lpArguments) {
+        fprintf(stderr, "Exception Raised: 0x%08X\n", dwExceptionCode);
+    }
+
+    BOOL GetLogicalProcessorInformation(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, PDWORD ReturnedLength) {
+        int n_cores = sysconf(_SC_NPROCESSORS_ONLN);
+        if (n_cores < 1) n_cores = 1;
+
+        DWORD needed_size = n_cores * sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+
+        if (*ReturnedLength < needed_size) {
+            *ReturnedLength = needed_size;
+            return FALSE;
+        }
+
+        memset(Buffer, 0, needed_size);
+        for (int i = 0; i < n_cores; i++) {
+            Buffer[i].Relationship = RelationProcessorCore;
+            Buffer[i].ProcessorMask = (ULONG_PTR)1 << i;
+        }
+
+        *ReturnedLength = needed_size;
+        return TRUE;
+    }
+
+    BOOL GetProcessAffinityMask(HANDLE hProcess, PDWORD_PTR lpProcessAffinityMask, PDWORD_PTR lpSystemAffinityMask) {
+        *lpProcessAffinityMask = 0x1;
+        *lpSystemAffinityMask = 0x1;
+        return TRUE;
+    }
+
+    static void* thread_wrapper(void* args) {
+        struct {
+            thread_start_t fn;
+            void* arg;
+        }* data = (decltype(data))args;
+        thread_start_t fn = data->fn;
+        void* arg = data->arg;
+        free(data);
+        fn(arg);
+        return NULL;
+    }
+
+    uintptr_t _beginthread(thread_start_t start_address, unsigned stack_size, void *arglist) {
+        pthread_t thread;
+        auto data = (struct { thread_start_t fn; void* arg; }*)malloc(sizeof(*data));
+        data->fn = start_address;
+        data->arg = arglist;
+        if (pthread_create(&thread, NULL, thread_wrapper, data) != 0) {
+            free(data);
+            return -1;
+        }
+        return (uintptr_t)thread;
+    }
+
+    void timeBeginPeriod(UINT uPeriod) {}
+    void timeEndPeriod(UINT uPeriod) {}
 }
 #endif
 

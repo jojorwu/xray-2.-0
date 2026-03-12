@@ -71,6 +71,7 @@
 #include <stdio.h>
 
 typedef uint32_t DWORD;
+typedef uint32_t* PDWORD;
 typedef uint32_t UINT;
 typedef uint32_t UINT32;
 typedef uint16_t WORD;
@@ -78,14 +79,33 @@ typedef uint8_t BYTE;
 typedef int32_t BOOL;
 typedef void* HANDLE;
 typedef void* HWND;
+typedef void* HINSTANCE;
 typedef const char* LPCSTR;
 typedef char* LPSTR;
 typedef void* LPVOID;
+typedef void* PVOID;
 typedef const void* LPCVOID;
-typedef long LONG;
-typedef unsigned long ULONG;
-typedef long long HRESULT;
+typedef int32_t LONG;
+typedef uint32_t ULONG;
+typedef uintptr_t ULONG_PTR;
+typedef uintptr_t DWORD_PTR;
+typedef uintptr_t* PDWORD_PTR;
+typedef int32_t HRESULT;
 typedef void* HMODULE;
+
+typedef union _LARGE_INTEGER {
+    struct {
+        DWORD LowPart;
+        LONG HighPart;
+    } DUMMYSTRUCTNAME;
+    struct {
+        DWORD LowPart;
+        LONG HighPart;
+    } u;
+    long long QuadPart;
+} LARGE_INTEGER;
+
+typedef LARGE_INTEGER* PLARGE_INTEGER;
 
 typedef struct {
     long left, top, right, bottom;
@@ -95,10 +115,10 @@ typedef long long LRESULT;
 typedef unsigned long long WPARAM;
 typedef long long LPARAM;
 
-#define S_OK 0ll
-#define E_FAIL -1ll
-#define E_NOTIMPL -2ll
-#define S_FALSE 1ll
+#define S_OK ((HRESULT)0x00000000L)
+#define E_FAIL ((HRESULT)0x80004005L)
+#define E_NOTIMPL ((HRESULT)0x80004001L)
+#define S_FALSE ((HRESULT)0x00000001L)
 typedef uint64_t UINT64;
 typedef int64_t INT64;
 
@@ -158,10 +178,22 @@ typedef void* SRWLOCK;
 #define STDMETHODCALLTYPE
 #define WINAPI
 #define CALLBACK
+#define APIENTRY WINAPI
 #define _cdecl
 #define __cdecl
 #define __stdcall
 #define __forceinline __attribute__((always_inline)) inline
+
+#ifdef __cplusplus
+#define __try try
+#define __except(x) catch(...) if (false) { (void)(x); } else
+#define __finally { }
+#else
+#define __try if(true)
+#define __except(x) if(false)
+#define __finally
+#endif
+#define GetExceptionCode() 0
 
 #define DLL_PROCESS_ATTACH 1
 #define DLL_THREAD_ATTACH 2
@@ -271,22 +303,119 @@ extern "C" {
     BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock);
     void DeleteSRWLock(SRWLOCK* SRWLock);
 
+    void Sleep(DWORD dwMilliseconds);
+    DWORD GetTickCount();
+    BOOL QueryPerformanceCounter(PLARGE_INTEGER lpPerformanceCount);
+    BOOL QueryPerformanceFrequency(PLARGE_INTEGER lpFrequency);
+
+    typedef void (*FARPROC)();
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName);
+    #define LoadLibrary LoadLibraryA
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+    BOOL FreeLibrary(HMODULE hLibModule);
+    HMODULE GetModuleHandleA(LPCSTR lpModuleName);
+    #define GetModuleHandle GetModuleHandleA
+
+    void TerminateProcess(HANDLE hProcess, UINT uExitCode);
+    HANDLE GetCurrentProcess();
+    void RaiseException(DWORD dwExceptionCode, DWORD dwExceptionFlags, DWORD nNumberOfArguments, const ULONG_PTR* lpArguments);
+
+    typedef struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION {
+        ULONG_PTR ProcessorMask;
+        int Relationship;
+        union {
+            struct {
+                BYTE Flags;
+            } ProcessorCore;
+            struct {
+                DWORD NodeNumber;
+            } NumaNode;
+            struct {
+                BYTE Type;
+                BYTE Level;
+                WORD LineSize;
+                DWORD Size;
+                int Associativity;
+            } Cache;
+            uint64_t Reserved[2];
+        } DUMMYUNIONNAME;
+    } SYSTEM_LOGICAL_PROCESSOR_INFORMATION, *PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+
+    BOOL GetLogicalProcessorInformation(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, PDWORD ReturnedLength);
+    BOOL GetProcessAffinityMask(HANDLE hProcess, PDWORD_PTR lpProcessAffinityMask, PDWORD_PTR lpSystemAffinityMask);
+
+    typedef void (__cdecl *thread_start_t)(void *);
+    uintptr_t _beginthread(thread_start_t start_address, unsigned stack_size, void *arglist);
+
+    void timeBeginPeriod(UINT uPeriod);
+    void timeEndPeriod(UINT uPeriod);
+
 #ifdef __cplusplus
 }
 #endif
 
-#define GetModuleHandle(x) (void*)0
-#define GetModuleFileName(h, p, s) (p[0]=0, 0)
+inline DWORD GetModuleFileName(HMODULE h, LPSTR p, DWORD s) {
+    ssize_t len = readlink("/proc/self/exe", p, s - 1);
+    if (len != -1) {
+        p[len] = 0;
+        return (DWORD)len;
+    }
+    p[0] = 0;
+    return 0;
+}
 #define GetCurrentDirectory(s, b) (getcwd(b, s) ? (DWORD)strlen(b) : 0)
 #define SetCurrentDirectory(b) (chdir(b) == 0)
 #define GetUserName(b, s) (strcpy(b, "linux_user"), *s = 10, TRUE)
 #define GetComputerName(b, s) (gethostname(b, *s) == 0 ? (*s = (DWORD)strlen(b), TRUE) : FALSE)
-#define GetProcessHeap() (void*)0
+#define GetProcessHeap() ((HANDLE)1)
 #define GetLastError() errno
 
 #define GetCommandLine() "" // Will be handled in xrCore.cpp
 
 #define RGB(r,g,b)          ((DWORD)(((BYTE)(r)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(b))<<16)))
+
+#define MB_OK                       0x00000000L
+#define MB_ICONERROR                0x00000010L
+#define MB_SYSTEMMODAL              0x00001000L
+
+inline int MessageBox(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType) {
+    fprintf(stderr, "MessageBox: [%s] %s\n", lpCaption, lpText);
+    return 1;
+}
+
+inline void DebugBreak() { abort(); }
+#define IsDebuggerPresent() false
+
+#define EXCEPTION_STACK_OVERFLOW 0xC00000FD
+#define EXCEPTION_EXECUTE_HANDLER 1
+#define EXCEPTION_CONTINUE_SEARCH 0
+#define EXCEPTION_CONTINUE_EXECUTION -1
+
+inline void _resetstkoflw() {}
+
+#define SPI_GETSCREENSAVEACTIVE 0x0010
+#define SPI_SETSCREENSAVEACTIVE 0x0011
+#define SPI_GETSTICKYKEYS 0x003A
+#define SPI_SETSTICKYKEYS 0x003B
+#define SPI_GETFILTERKEYS 0x0032
+#define SPI_SETFILTERKEYS 0x0033
+#define SPI_GETTOGGLEKEYS 0x0034
+#define SPI_SETTOGGLEKEYS 0x0035
+
+#define SKF_AVAILABLE 0x00000002
+#define FKF_AVAILABLE 0x00000002
+#define TKF_AVAILABLE 0x00000002
+
+typedef struct { DWORD cbSize; DWORD dwFlags; } STICKYKEYS, FILTERKEYS, TOGGLEKEYS;
+
+inline BOOL SystemParametersInfo(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni) { return TRUE; }
+
+inline void PostQuitMessage(int nExitCode) { exit(nExitCode); }
+
+#define CREATE_MUTEX_INITIAL_OWNER 0x00000001
+inline HANDLE CreateMutex(void* lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName) { return (HANDLE)1; }
+
+#define RelationProcessorCore 0
 
 #endif
 
