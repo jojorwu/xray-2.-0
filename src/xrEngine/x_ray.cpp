@@ -22,12 +22,14 @@
 #include "LightAnimLibrary.h"
 #include "../xrCDB/ispatial.h"
 #include "Text_Console.h"
+#ifdef _WIN32
 #include <process.h>
+#endif
 #include <locale.h>
 
-#include <unicode\unistr.h>
-#include <unicode\ucnv.h>
-#include <discord\discord.h>
+#include <unicode/unistr.h>
+#include <unicode/ucnv.h>
+#include <discord/discord.h>
 #include "../xrCore/profiler.h"
 
 #include "xrSash.h"
@@ -749,6 +751,7 @@ IntroDSHOW_wnd (g_hInstance,g_hPrevInstance,"GameData\\Stalker_Intro.avi",g_nCmd
 g_bIntroFinished = TRUE ;
 }
 */
+#ifdef _WIN32
 #define dwStickyKeysStructSize sizeof( STICKYKEYS )
 #define dwFilterKeysStructSize sizeof( FILTERKEYS )
 #define dwToggleKeysStructSize sizeof( TOGGLEKEYS )
@@ -855,6 +858,7 @@ struct damn_keys_filter
 #undef dwStickyKeysStructSize
 #undef dwFilterKeysStructSize
 #undef dwToggleKeysStructSize
+#endif
 
 #include "xr_ioc_cmd.h"
 
@@ -1191,6 +1195,22 @@ extern BOOL DllMainXrPhysics(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lp
 //extern BOOL DllMainXrRenderR2(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 //extern BOOL DllMainXrRenderR3(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 //extern BOOL DllMainXrRenderR4(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
+
+#ifdef __linux__
+int main(int argc, char* argv[])
+{
+    // Join argv into a single string for lpCmdLine
+    xr_vector<char> cmd_line;
+    for (int i = 1; i < argc; i++)
+    {
+        for (char* p = argv[i]; *p; p++) cmd_line.push_back(*p);
+        if (i < argc - 1) cmd_line.push_back(' ');
+    }
+    cmd_line.push_back(0);
+
+    return WinMain(NULL, NULL, cmd_line.data(), 1);
+}
+#endif
 
 int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,

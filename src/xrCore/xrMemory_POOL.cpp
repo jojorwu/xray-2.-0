@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #pragma hdrstop
 
-#include "xrMemory_POOL.h"
+#include "xrMEMORY_POOL.h"
 #include "xrMemory_align.h"
 
 void MEMPOOL::block_create()
@@ -14,7 +14,7 @@ void MEMPOOL::block_create()
 	for (u32 it = 0; it < (s_count - 1); it++)
 	{
 		u8* E = list + it * s_element;
-		*access(E) = E + s_element;
+		*access(E) = (void*)(uintptr_t)(E + s_element);
 	}
 	*access(list + (s_count - 1) * s_element) = nullptr;
 	block_count++;

@@ -30,9 +30,9 @@ ICF u8* acc_header(void* P)
 ICF u32 get_header(void* P) { return (u32)*acc_header(P); }
 ICF u32 get_pool(size_t size)
 {
-	u32 pid = u32(size / mem_pools_ebase);
+	size_t pid = size / mem_pools_ebase;
 	if (pid >= mem_pools_count) return mem_generic;
-	else return pid;
+	else return (u32)pid;
 }
 
 #ifdef PURE_ALLOC
@@ -268,7 +268,7 @@ void* xrMemory::mem_realloc(void* P, size_t size
 		// pooled realloc
 		R_ASSERT2(p_current < mem_pools_count, "Memory corruption");
 		u32 s_current = mem_pools[p_current].get_element();
-		u32 s_dest = (u32)size;
+		size_t s_dest = size;
 		void* p_old = P;
 
 		void* p_new = mem_alloc(size
@@ -278,7 +278,7 @@ void* xrMemory::mem_realloc(void* P, size_t size
 		);
 		// Igor: Reserve 1 byte for xrMemory header
 		// Don't bother in this case?
-		mem_copy(p_new, p_old, _min(s_current - 1, s_dest));
+		mem_copy(p_new, p_old, _min((size_t)s_current - 1, s_dest));
 		//mem_copy (p_new,p_old,_min(s_current,s_dest));
 		mem_free(p_old);
 		_ptr = p_new;
@@ -292,7 +292,7 @@ void* xrMemory::mem_realloc(void* P, size_t size
                                 , _name
 # endif // DEBUG_MEMORY_NAME
 		);
-		mem_copy(p_new, p_old, (u32)size);
+		mem_copy(p_new, p_old, size);
 		mem_free(p_old);
 		_ptr = p_new;
 	}

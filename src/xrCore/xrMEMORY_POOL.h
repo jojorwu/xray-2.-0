@@ -36,7 +36,7 @@ public:
 		if (0 == list) block_create();
 
 		void* E = list;
-		list = (u8*)*access(list);
+		list = (u8*)(uintptr_t)*access(list);
 		cs.Leave();
 		return E;
 	}
@@ -44,7 +44,7 @@ public:
 	ICF void destroy(void*& P)
 	{
 		cs.Enter();
-		*access(P) = list;
+		*access(P) = (void*)(uintptr_t)list;
 		list = (u8*)P;
 		cs.Leave();
 	}
