@@ -1,15 +1,19 @@
 #include "stdafx.h"
 #pragma hdrstop
 
+#ifdef _WIN32
 #include <process.h>
+#endif
 
 // mmsystem.h
+#ifdef _WIN32
 #define MMNOSOUND
 #define MMNOMIDI
 #define MMNOAUX
 #define MMNOMIXER
 #define MMNOJOY
 #include <mmsystem.h>
+#endif
 
 #include "profiler.h"
 
@@ -18,7 +22,7 @@ XRCORE_API Fmatrix Fidentity;
 XRCORE_API Dmatrix Didentity;
 XRCORE_API CRandom Random;
 
-#ifdef _M_AMD64
+#if defined(_M_AMD64) || defined(__linux__)
 u16 getFPUsw() { return 0; }
 
 namespace FPU
@@ -61,6 +65,9 @@ namespace FPU
 
 	void initialize()
 	{
+#ifdef __linux__
+        ::Random.seed(u32(CPU::GetCLK() % (1ULL << 32ULL)));
+#endif
 	}
 };
 #else
@@ -162,7 +169,13 @@ namespace CPU
 	XRCORE_API u64 QPC()
 	{
 		u64 _dest;
+#ifdef _WIN32
 		QueryPerformanceCounter((PLARGE_INTEGER)&_dest);
+#else
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        _dest = (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+#endif
 		qpc_counter++;
 		return _dest;
 	}
@@ -185,7 +198,11 @@ void Detect()
 
 	// 2. Use QueryPerformanceFrequency as the stable frequency reference
 	// QPC is constant even if the CPU frequency boosts or throttles.
+#ifdef _WIN32
 	QueryPerformanceFrequency((PLARGE_INTEGER)&qpc_freq);
+#else
+    qpc_freq = 1000000000ULL;
+#endif
 
 	// 3. Detect clk_per_second (RDTSC Frequency)
 	// We time this for 100ms instead of 1000ms to avoid long startup hangs
@@ -240,7 +257,9 @@ void Detect()
 	clk_to_microsec = float(a / b);
 
 	// Ensure the OS timer resolution is set to 1ms globally for the engine
+#ifdef _WIN32
 	timeBeginPeriod(1);
+#endif
 }
 };
 

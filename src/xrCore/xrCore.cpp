@@ -29,6 +29,27 @@
 static std::map<const void*, size_t> g_mapping_sizes;
 static xrCriticalSection g_mapping_mutex;
 
+enum linux_handle_type {
+    LHT_FILE,
+    LHT_MAPPING,
+    LHT_EVENT,
+    LHT_MUTEX
+};
+
+struct linux_handle {
+    linux_handle_type type;
+    union {
+        int fd;
+        struct {
+            pthread_mutex_t mutex;
+            pthread_cond_t cond;
+            bool manual_reset;
+            bool signaled;
+        } ev;
+        pthread_mutex_t* mutex_ptr;
+    };
+};
+
 extern "C" {
     HANDLE CreateFile(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void* lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
         int flags = 0;
@@ -36,66 +57,117 @@ extern "C" {
         else if (dwDesiredAccess & GENERIC_WRITE) flags = O_WRONLY;
         else flags = O_RDONLY;
 
-        if (dwCreationDisposition == CREATE_ALWAYS) flags |= O_CREAT | O_TRUNC;
-        else if (dwCreationDisposition == OPEN_EXISTING) {}
-        else if (dwCreationDisposition == TRUNCATE_EXISTING) flags |= O_TRUNC;
+        switch (dwCreationDisposition) {
+            case CREATE_NEW:
+                flags |= O_CREAT | O_EXCL;
+                break;
+            case CREATE_ALWAYS:
+                flags |= O_CREAT | O_TRUNC;
+                break;
+            case OPEN_EXISTING:
+                break;
+            case OPEN_ALWAYS:
+                flags |= O_CREAT;
+                break;
+            case TRUNCATE_EXISTING:
+                flags |= O_TRUNC;
+                break;
+        }
 
         int fd = open(lpFileName, flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if (fd == -1) return INVALID_HANDLE_VALUE;
-        return (HANDLE)(intptr_t)fd;
+
+        linux_handle* h = (linux_handle*)xr_malloc(sizeof(linux_handle));
+        h->type = LHT_FILE;
+        h->fd = fd;
+        return (HANDLE)h;
     }
 
     BOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, DWORD* lpNumberOfBytesRead, void* lpOverlapped) {
-        ssize_t res = read((int)(intptr_t)hFile, lpBuffer, nNumberOfBytesToRead);
+        linux_handle* h = (linux_handle*)hFile;
+        if (!h || h->type != LHT_FILE) return FALSE;
+        ssize_t res = read(h->fd, lpBuffer, nNumberOfBytesToRead);
         if (res == -1) return FALSE;
         if (lpNumberOfBytesRead) *lpNumberOfBytesRead = (DWORD)res;
         return TRUE;
     }
 
     BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, DWORD* lpNumberOfBytesWritten, void* lpOverlapped) {
-        ssize_t res = write((int)(intptr_t)hFile, lpBuffer, nNumberOfBytesToWrite);
+        linux_handle* h = (linux_handle*)hFile;
+        if (!h || h->type != LHT_FILE) return FALSE;
+        ssize_t res = write(h->fd, lpBuffer, nNumberOfBytesToWrite);
         if (res == -1) return FALSE;
         if (lpNumberOfBytesWritten) *lpNumberOfBytesWritten = (DWORD)res;
         return TRUE;
     }
 
     BOOL CloseHandle(HANDLE hObject) {
-        return close((int)(intptr_t)hObject) == 0;
+        if (hObject == NULL || hObject == INVALID_HANDLE_VALUE) return FALSE;
+        linux_handle* h = (linux_handle*)hObject;
+        switch (h->type) {
+            case LHT_FILE:
+            case LHT_MAPPING:
+                close(h->fd);
+                break;
+            case LHT_EVENT:
+                pthread_mutex_destroy(&h->ev.mutex);
+                pthread_cond_destroy(&h->ev.cond);
+                break;
+            case LHT_MUTEX:
+                pthread_mutex_destroy(h->mutex_ptr);
+                xr_free(h->mutex_ptr);
+                break;
+        }
+        xr_free(h);
+        return TRUE;
     }
 
     DWORD GetFileSize(HANDLE hFile, DWORD* lpFileSizeHigh) {
+        linux_handle* h = (linux_handle*)hFile;
+        if (!h || h->type != LHT_FILE) return (DWORD)-1;
         struct stat st;
-        if (fstat((int)(intptr_t)hFile, &st) == -1) return (DWORD)-1;
+        if (fstat(h->fd, &st) == -1) return (DWORD)-1;
         if (lpFileSizeHigh) *lpFileSizeHigh = (DWORD)(st.st_size >> 32);
         return (DWORD)st.st_size;
     }
 
     DWORD SetFilePointer(HANDLE hFile, long lDistanceToMove, long* lpDistanceToMoveHigh, DWORD dwMoveMethod) {
+        linux_handle* h = (linux_handle*)hFile;
+        if (!h || h->type != LHT_FILE) return (DWORD)-1;
         off_t offset = lDistanceToMove;
         if (lpDistanceToMoveHigh) offset |= ((off_t)*lpDistanceToMoveHigh << 32);
         int whence = SEEK_SET;
         if (dwMoveMethod == 1) whence = SEEK_CUR;
         else if (dwMoveMethod == 2) whence = SEEK_END;
-        off_t res = lseek((int)(intptr_t)hFile, offset, whence);
+        off_t res = lseek(h->fd, offset, whence);
         if (res == (off_t)-1) return (DWORD)-1;
         if (lpDistanceToMoveHigh) *lpDistanceToMoveHigh = (long)(res >> 32);
         return (DWORD)res;
     }
 
     HANDLE CreateFileMapping(HANDLE hFile, void* lpFileMappingAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCSTR lpName) {
-        return hFile; // On POSIX we can just use the fd
+        linux_handle* hfile = (linux_handle*)hFile;
+        if (!hfile || hfile->type != LHT_FILE) return INVALID_HANDLE_VALUE;
+        int fd = dup(hfile->fd);
+        if (fd == -1) return INVALID_HANDLE_VALUE;
+        linux_handle* h = (linux_handle*)xr_malloc(sizeof(linux_handle));
+        h->type = LHT_MAPPING;
+        h->fd = fd;
+        return (HANDLE)h;
     }
 
     LPVOID MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, size_t dwNumberOfBytesToMap) {
+        linux_handle* h = (linux_handle*)hFileMappingObject;
+        if (!h || h->type != LHT_MAPPING) return NULL;
         int prot = PROT_READ;
         if (dwDesiredAccess & FILE_MAP_WRITE) prot |= PROT_WRITE;
         off_t offset = ((off_t)dwFileOffsetHigh << 32) | dwFileOffsetLow;
         if (dwNumberOfBytesToMap == 0) {
             struct stat st;
-            fstat((int)(intptr_t)hFileMappingObject, &st);
+            if (fstat(h->fd, &st) == -1) return NULL;
             dwNumberOfBytesToMap = st.st_size - offset;
         }
-        void* addr = mmap(NULL, dwNumberOfBytesToMap, prot, MAP_SHARED, (int)(intptr_t)hFileMappingObject, offset);
+        void* addr = mmap(NULL, dwNumberOfBytesToMap, prot, MAP_SHARED, h->fd, offset);
         if (addr == MAP_FAILED) return NULL;
 
         xrCriticalSectionGuard guard(g_mapping_mutex);
@@ -113,6 +185,318 @@ extern "C" {
             return munmap((void*)lpBaseAddress, size) == 0;
         }
         return FALSE;
+    }
+
+    HMODULE LoadLibraryA(LPCSTR lpLibFileName) {
+        std::string name = lpLibFileName;
+        // Convert .dll to .so
+        size_t pos = name.find(".dll");
+        if (pos != std::string::npos) {
+            name.replace(pos, 4, ".so");
+        }
+
+        void* handle = dlopen(name.c_str(), RTLD_LAZY);
+        if (!handle) {
+            // Try with lib prefix
+            if (name.find('/') == std::string::npos && name.compare(0, 3, "lib") != 0) {
+                std::string lib_name = "lib" + name;
+                handle = dlopen(lib_name.c_str(), RTLD_LAZY);
+            }
+        }
+
+        if (!handle) {
+            // Try lowercase
+            std::string lower_name = name;
+            for (auto& c : lower_name) c = (char)tolower(c);
+            handle = dlopen(lower_name.c_str(), RTLD_LAZY);
+
+            if (!handle && lower_name.find('/') == std::string::npos && lower_name.compare(0, 3, "lib") != 0) {
+                std::string lib_lower_name = "lib" + lower_name;
+                handle = dlopen(lib_lower_name.c_str(), RTLD_LAZY);
+            }
+        }
+
+        return handle;
+    }
+
+    HMODULE LoadLibrary(LPCSTR lpLibFileName) {
+        return LoadLibraryA(lpLibFileName);
+    }
+
+    FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
+        if (!hModule) return NULL;
+        return dlsym(hModule, lpProcName);
+    }
+
+    BOOL FreeLibrary(HMODULE hLibModule) {
+        return dlclose(hLibModule) == 0;
+    }
+
+    struct linux_event {
+        pthread_mutex_t mutex;
+        pthread_cond_t cond;
+        bool manual_reset;
+        bool signaled;
+    };
+
+    HANDLE CreateEvent(void* lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName) {
+        linux_handle* h = (linux_handle*)xr_malloc(sizeof(linux_handle));
+        h->type = LHT_EVENT;
+        pthread_mutex_init(&h->ev.mutex, NULL);
+        pthread_cond_init(&h->ev.cond, NULL);
+        h->ev.manual_reset = bManualReset != 0;
+        h->ev.signaled = bInitialState != 0;
+        return (HANDLE)h;
+    }
+
+    BOOL SetEvent(HANDLE hEvent) {
+        linux_handle* h = (linux_handle*)hEvent;
+        if (!h || h->type != LHT_EVENT) return FALSE;
+        pthread_mutex_lock(&h->ev.mutex);
+        h->ev.signaled = true;
+        if (h->ev.manual_reset) {
+            pthread_cond_broadcast(&h->ev.cond);
+        } else {
+            pthread_cond_signal(&h->ev.cond);
+        }
+        pthread_mutex_unlock(&h->ev.mutex);
+        return TRUE;
+    }
+
+    BOOL ResetEvent(HANDLE hEvent) {
+        linux_handle* h = (linux_handle*)hEvent;
+        if (!h || h->type != LHT_EVENT) return FALSE;
+        pthread_mutex_lock(&h->ev.mutex);
+        h->ev.signaled = false;
+        pthread_mutex_unlock(&h->ev.mutex);
+        return TRUE;
+    }
+
+    DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds) {
+        linux_handle* h = (linux_handle*)hHandle;
+        if (!h) return WAIT_FAILED;
+
+        if (h->type == LHT_MUTEX) {
+            if (dwMilliseconds == 0) {
+                if (pthread_mutex_trylock(h->mutex_ptr) == 0) return WAIT_OBJECT_0;
+                return WAIT_TIMEOUT;
+            } else if (dwMilliseconds == INFINITE) {
+                pthread_mutex_lock(h->mutex_ptr);
+                return WAIT_OBJECT_0;
+            } else {
+                struct timespec ts;
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += dwMilliseconds / 1000;
+                ts.tv_nsec += (dwMilliseconds % 1000) * 1000000;
+                if (ts.tv_nsec >= 1000000000) {
+                    ts.tv_sec++;
+                    ts.tv_nsec -= 1000000000;
+                }
+                // pthread_mutex_timedlock might not be available or need special defines
+                // For simplicity in this engine which uses it for short locks usually:
+                while (pthread_mutex_trylock(h->mutex_ptr) != 0) {
+                    struct timespec now;
+                    clock_gettime(CLOCK_REALTIME, &now);
+                    if (now.tv_sec > ts.tv_sec || (now.tv_sec == ts.tv_sec && now.tv_nsec >= ts.tv_nsec)) {
+                        return WAIT_TIMEOUT;
+                    }
+                    usleep(100);
+                }
+                return WAIT_OBJECT_0;
+            }
+        }
+
+        if (h->type != LHT_EVENT) return WAIT_FAILED;
+
+        pthread_mutex_lock(&h->ev.mutex);
+        DWORD result = WAIT_OBJECT_0;
+
+        if (!h->ev.signaled) {
+            if (dwMilliseconds == 0) {
+                result = WAIT_TIMEOUT;
+            } else if (dwMilliseconds == INFINITE) {
+                while (!h->ev.signaled) {
+                    pthread_cond_wait(&h->ev.cond, &h->ev.mutex);
+                }
+            } else {
+                struct timespec ts;
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += dwMilliseconds / 1000;
+                ts.tv_nsec += (dwMilliseconds % 1000) * 1000000;
+                if (ts.tv_nsec >= 1000000000) {
+                    ts.tv_sec++;
+                    ts.tv_nsec -= 1000000000;
+                }
+
+                while (!h->ev.signaled) {
+                    int res = pthread_cond_timedwait(&h->ev.cond, &h->ev.mutex, &ts);
+                    if (res == ETIMEDOUT) {
+                        result = WAIT_TIMEOUT;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (result == WAIT_OBJECT_0 && !h->ev.manual_reset) {
+            h->ev.signaled = false;
+        }
+
+        pthread_mutex_unlock(&h->ev.mutex);
+        return result;
+    }
+
+    HANDLE CreateMutex(void* lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName) {
+        linux_handle* h = (linux_handle*)xr_malloc(sizeof(linux_handle));
+        h->type = LHT_MUTEX;
+        h->mutex_ptr = (pthread_mutex_t*)xr_malloc(sizeof(pthread_mutex_t));
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(h->mutex_ptr, &attr);
+        pthread_mutexattr_destroy(&attr);
+        if (bInitialOwner) pthread_mutex_lock(h->mutex_ptr);
+        return (HANDLE)h;
+    }
+
+    BOOL ReleaseMutex(HANDLE hMutex) {
+        linux_handle* h = (linux_handle*)hMutex;
+        if (!h || h->type != LHT_MUTEX) return FALSE;
+        pthread_mutex_unlock(h->mutex_ptr);
+        return TRUE;
+    }
+
+    BOOL GetProcessAffinityMask(HANDLE hProcess, ULONG_PTR* lpProcessAffinityMask, ULONG_PTR* lpSystemAffinityMask) {
+        if (lpProcessAffinityMask) *lpProcessAffinityMask = 1;
+        if (lpSystemAffinityMask) *lpSystemAffinityMask = 1;
+        return TRUE;
+    }
+
+    BOOL GetLogicalProcessorInformation(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, DWORD* ReturnedLength) {
+        if (ReturnedLength) *ReturnedLength = 0;
+        return FALSE;
+    }
+
+    LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, size_t dwBytes) {
+        return xr_malloc(dwBytes);
+    }
+
+    BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem) {
+        xr_free(lpMem);
+        return TRUE;
+    }
+
+    LRESULT SendMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+        return 0;
+    }
+
+    BOOL PostMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+        return TRUE;
+    }
+
+    void OutputDebugString(LPCSTR lpOutputString) {
+        fprintf(stderr, "%s", lpOutputString);
+    }
+
+    void OutputDebugStringA(LPCSTR lpOutputString) {
+        fprintf(stderr, "%s", lpOutputString);
+    }
+
+    BOOL IsDebuggerPresent() {
+        return FALSE;
+    }
+
+    int MessageBox(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType) {
+        fprintf(stderr, "MessageBox: [%s] %s\n", lpCaption, lpText);
+        return 1; // IDOK
+    }
+
+    HMODULE GetModuleHandle(LPCSTR lpModuleName) {
+        if (!lpModuleName) return NULL;
+        return dlopen(lpModuleName, RTLD_LAZY | RTLD_NOLOAD);
+    }
+
+    DWORD GetModuleFileName(HMODULE hModule, LPSTR lpFilename, DWORD nSize) {
+        if (hModule == NULL) {
+            ssize_t len = readlink("/proc/self/exe", lpFilename, nSize - 1);
+            if (len != -1) {
+                lpFilename[len] = 0;
+                return (DWORD)len;
+            }
+        }
+        return 0;
+    }
+
+    BOOL CreateProcess(LPCSTR lpApplicationName, LPSTR lpCommandLine, void* lpProcessAttributes, void* lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, void* lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFO lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation) {
+        return FALSE; // Not implemented
+    }
+
+    BOOL GetClientRect(HWND hWnd, LPRECT lpRect) {
+        if (lpRect) {
+            lpRect->left = 0;
+            lpRect->top = 0;
+            lpRect->right = 1024; // Dummy
+            lpRect->bottom = 768; // Dummy
+        }
+        return TRUE;
+    }
+
+    BOOL GetWindowRect(HWND hWnd, LPRECT lpRect) {
+        return GetClientRect(hWnd, lpRect);
+    }
+
+    BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags) {
+        return TRUE;
+    }
+
+    BOOL ShowWindow(HWND hWnd, int nCmdShow) {
+        return TRUE;
+    }
+
+    BOOL UpdateWindow(HWND hWnd) {
+        return TRUE;
+    }
+
+    HWND GetDlgItem(HWND hDlg, int nIDDlgItem) {
+        return (HWND)1;
+    }
+
+    HWND CreateDialog(HINSTANCE hInstance, LPCSTR lpTemplateName, HWND hWndParent, void* lpDialogFunc) {
+        return (HWND)1;
+    }
+
+    BOOL DestroyWindow(HWND hWnd) {
+        return TRUE;
+    }
+
+    BOOL SetWindowText(HWND hWnd, LPCSTR lpString) {
+        return TRUE;
+    }
+
+    BOOL ShowCursor(BOOL bShow) {
+        return TRUE;
+    }
+
+    static char* g_linux_cmdline = NULL;
+    LPCSTR GetCommandLine() {
+        if (!g_linux_cmdline) {
+            int fd = open("/proc/self/cmdline", O_RDONLY);
+            if (fd != -1) {
+                char buf[2048];
+                ssize_t n = read(fd, buf, sizeof(buf) - 1);
+                if (n > 0) {
+                    buf[n] = 0;
+                    for (int i = 0; i < n; i++) if (buf[i] == 0) buf[i] = ' ';
+                    g_linux_cmdline = xr_strdup(buf);
+                } else {
+                    g_linux_cmdline = xr_strdup("");
+                }
+                close(fd);
+            } else {
+                g_linux_cmdline = xr_strdup("");
+            }
+        }
+        return g_linux_cmdline;
     }
 
     void DeleteSRWLock(SRWLOCK* SRWLock) {

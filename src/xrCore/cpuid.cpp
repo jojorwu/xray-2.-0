@@ -2,7 +2,20 @@
 #pragma hdrstop
 
 #include "cpuid.h"
+#ifdef _WIN32
 #include <intrin.h>
+#else
+#include <cpuid.h>
+#ifndef __cpuid_count
+#define __cpuid_count(level, count, a, b, c, d) \
+  __asm__ __volatile__ ("cpuid\n\t" \
+            : "=a" (a), "=b" (b), "=c" (c), "=d" (d) \
+            : "0" (level), "2" (count))
+#endif
+#ifndef __get_cpuid
+#define __get_cpuid(level, a, b, c, d) __cpuid_count(level, 0, *a, *b, *c, *d)
+#endif
+#endif
 
 #include <array>
 #include <bitset>
@@ -63,12 +76,20 @@ int _cpuid(_processor_info* pinfo)
 	xr_vector<std::array<int, 4>> data;
 	std::array<int, 4> cpui;
 
+#ifdef _WIN32
 	__cpuid(cpui.data(), 0);
+#else
+    __get_cpuid(0, (unsigned int*)&cpui[0], (unsigned int*)&cpui[1], (unsigned int*)&cpui[2], (unsigned int*)&cpui[3]);
+#endif
 	const int nIds = cpui[0];
 
 	for (int i = 0; i <= nIds; ++i)
 	{
+#ifdef _WIN32
 		__cpuidex(cpui.data(), i, 0);
+#else
+        __cpuid_count(i, 0, cpui[0], cpui[1], cpui[2], cpui[3]);
+#endif
 		data.push_back(cpui);
 	}
 
@@ -94,13 +115,21 @@ int _cpuid(_processor_info* pinfo)
 	f_7_ECX = data[7][2];
 	}*/
 
+#ifdef _WIN32
 	__cpuid(cpui.data(), 0x80000000);
+#else
+    __get_cpuid(0x80000000, (unsigned int*)&cpui[0], (unsigned int*)&cpui[1], (unsigned int*)&cpui[2], (unsigned int*)&cpui[3]);
+#endif
 	const int nExIds_ = cpui[0];
 	data.clear();
 
 	for (int i = 0x80000000; i <= nExIds_; ++i)
 	{
+#ifdef _WIN32
 		__cpuidex(cpui.data(), i, 0);
+#else
+        __cpuid_count(i, 0, cpui[0], cpui[1], cpui[2], cpui[3]);
+#endif
 		data.push_back(cpui);
 	}
 
@@ -131,7 +160,11 @@ int _cpuid(_processor_info* pinfo)
 	if (f_1_ECX[19]) pinfo->feature |= static_cast<u32>(_CPU_FEATURE_SSE4_1);
 	if (f_1_ECX[20]) pinfo->feature |= static_cast<u32>(_CPU_FEATURE_SSE4_2);
 
+#ifdef _WIN32
 	__cpuid(cpui.data(), 1);
+#else
+    __get_cpuid(1, (unsigned int*)&cpui[0], (unsigned int*)&cpui[1], (unsigned int*)&cpui[2], (unsigned int*)&cpui[3]);
+#endif
 
 	const bool hasMWait = (cpui[2] & 0x8) > 0;
 	if (hasMWait) pinfo->feature |= static_cast<u32>(_CPU_FEATURE_MWAIT);

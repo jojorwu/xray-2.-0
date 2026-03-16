@@ -1192,6 +1192,24 @@ extern BOOL DllMainXrPhysics(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lp
 //extern BOOL DllMainXrRenderR3(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 //extern BOOL DllMainXrRenderR4(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 
+#ifdef __linux__
+int main(int argc, char* argv[])
+{
+	std::string command_line;
+	for (int i = 1; i < argc; ++i)
+	{
+		command_line += argv[i];
+		if (i < argc - 1)
+			command_line += " ";
+	}
+
+    xr_vector<char> mutable_cmd(command_line.begin(), command_line.end());
+    mutable_cmd.push_back(0);
+
+	return WinMain(nullptr, nullptr, mutable_cmd.data(), 0);
+}
+#endif
+
 int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      char* lpCmdLine,

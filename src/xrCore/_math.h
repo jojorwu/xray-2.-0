@@ -30,7 +30,7 @@ namespace CPU
 	XRCORE_API extern _processor_info ID;
 	XRCORE_API extern u64 QPC();
 
-#ifdef M_VISUAL
+#if defined(M_VISUAL) && !defined(__linux__)
 #ifndef _M_AMD64
 #pragma warning(push)
 #pragma warning(disable:4035)
@@ -50,6 +50,15 @@ IC u64 GetCLK(void)
 
 #ifdef M_BORLAND
 XRCORE_API u64 __fastcall GetCLK (void);
+#endif
+
+#ifdef __linux__
+	IC u64 GetCLK(void)
+	{
+		unsigned int hi, lo;
+		__asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+		return ((u64)hi << 32) | lo;
+	}
 #endif
 };
 
